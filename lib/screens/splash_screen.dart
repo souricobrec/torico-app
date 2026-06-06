@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
 import 'login_screen.dart';
+import '../services/local_storage_service.dart';
+import 'connected_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,17 +16,35 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
+  @override
   void initState() {
     super.initState();
 
-    Timer(const Duration(seconds: 6), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      }
-    });
+    _verificarPlataformaConectada();
+  }
+
+  Future<void> _verificarPlataformaConectada() async {
+    final storage = LocalStorageService();
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    final plataforma = await storage.getConnectedPlatform();
+
+    if (!mounted) return;
+
+    if (plataforma != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConnectedScreen(plataforma: plataforma),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override

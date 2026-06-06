@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../services/local_storage_service.dart';
 import '../core/app_colors.dart';
 import '../services/integration_service.dart';
 import 'connected_screen.dart';
@@ -15,6 +15,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final IntegrationService _integrationService = IntegrationService();
+  final LocalStorageService _localStorageService = LocalStorageService();
 
   bool carregando = false;
 
@@ -26,6 +27,8 @@ class _AuthScreenState extends State<AuthScreen> {
     final conectado = await _integrationService.connect(widget.plataforma);
 
     if (conectado && mounted) {
+      await _localStorageService.saveConnectedPlatform(widget.plataforma);
+
       Navigator.push(
         context,
         MaterialPageRoute(
