@@ -166,7 +166,37 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               ),
 
               const SizedBox(height: 18),
+              TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: AppColors.gold,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      margin: const EdgeInsets.all(20),
+                      content: const Text(
+                        'Recuperação de senha será adicionada em breve.',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Esqueci minha senha',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
 
+              const SizedBox(height: 5),
               TextButton(
                 onPressed: () {
                   Navigator.pushReplacement(
