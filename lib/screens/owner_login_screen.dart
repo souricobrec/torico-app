@@ -116,7 +116,26 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                             );
                             return;
                           }
-
+                          if (!email.contains('@') || !email.contains('.')) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppColors.gold,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                margin: const EdgeInsets.all(20),
+                                content: const Text(
+                                  'Digite um e-mail válido.',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           setState(() {
                             carregando = true;
                           });
