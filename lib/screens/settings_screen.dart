@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'about_screen.dart';
-
+import '../services/local_storage_service.dart';
+import 'login_screen.dart';
 import '../core/app_colors.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -119,51 +120,18 @@ class SettingsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        backgroundColor: AppColors.background,
-                        title: const Text(
-                          'Desconectar plataforma?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        content: const Text(
-                          'Você deseja realmente desconectar esta plataforma?',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text(
-                              'Cancelar',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.popUntil(
-                                context,
-                                (route) => route.isFirst,
-                              );
-                            },
-                            child: const Text(
-                              'Desconectar',
-                              style: TextStyle(
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                onPressed: () async {
+                  final storage = LocalStorageService();
+
+                  await storage.clearConnectedPlatform();
+                  await storage.clearTotalSold();
+
+                  if (!context.mounted) return;
+
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
                   );
                 },
                 child: const Text(

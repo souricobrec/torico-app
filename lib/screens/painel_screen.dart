@@ -20,18 +20,34 @@ class PainelScreen extends StatefulWidget {
 class _PainelScreenState extends State<PainelScreen> {
   final SalesController _salesController = SalesController();
 
+  @override
+  @override
+  void initState() {
+    super.initState();
+    carregarTotalSalvo();
+  }
+
+  Future<void> carregarTotalSalvo() async {
+    await _salesController.loadTotalSold();
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   bool mostrarMoedas = false;
   bool mostrarGanho = false;
 
   int vendaId = 0;
   final AudioService _audioService = AudioService();
 
-  void novaVenda() {
+  Future<void> novaVenda() async {
     vendaId++;
     final venda = SaleSimulatorService.generateSale();
 
+    await _salesController.addSale(venda);
+
     setState(() {
-      _salesController.addSale(venda);
       mostrarMoedas = true;
       mostrarGanho = true;
     });
@@ -64,6 +80,12 @@ class _PainelScreenState extends State<PainelScreen> {
   }
 
   @override
+  void dispose() {
+    _audioService.dispose();
+    _salesController.dispose();
+    super.dispose();
+  }
+
   Widget build(BuildContext context) {
     final largura = MediaQuery.of(context).size.width;
     final altura = MediaQuery.of(context).size.height;
