@@ -1,5 +1,6 @@
 import '../core/app_colors.dart';
 import 'package:flutter/material.dart';
+import '../core/app_texts.dart';
 import 'auth_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -21,11 +22,10 @@ class LoginScreen extends StatelessWidget {
                 'assets/images/torico_logo.png',
                 width: largura < 600 ? largura * 0.75 : 420,
               ),
-
               const SizedBox(height: 25),
 
               const Text(
-                'Seu negócio vendendo. Onde você estiver.',
+                AppTexts.slogan,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70, fontSize: 18),
               ),
