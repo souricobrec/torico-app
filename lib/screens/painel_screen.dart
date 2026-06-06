@@ -9,7 +9,9 @@ import 'package:torico/controllers/sales_controller.dart';
 import 'settings_screen.dart';
 
 class PainelScreen extends StatefulWidget {
-  const PainelScreen({super.key});
+  final String plataforma;
+
+  const PainelScreen({super.key, required this.plataforma});
 
   @override
   State<PainelScreen> createState() => _PainelScreenState();
@@ -74,7 +76,7 @@ class _PainelScreenState extends State<PainelScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const SettingsScreen(plataforma: 'Mercado Pago'),
+              builder: (_) => SettingsScreen(plataforma: widget.plataforma),
             ),
           );
         },

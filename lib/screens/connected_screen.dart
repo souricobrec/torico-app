@@ -56,7 +56,9 @@ class ConnectedScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const PainelScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => PainelScreen(plataforma: plataforma),
+                      ),
                     );
                   },
                   child: const Text(
