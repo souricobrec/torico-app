@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-
+import 'owner_login_screen.dart';
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
 import 'login_screen.dart';
@@ -42,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const OwnerLoginScreen()),
       );
     }
   }
