@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_colors.dart';
 import '../widgets/coin_rain.dart';
 
 class PainelScreen extends StatefulWidget {
@@ -54,7 +55,7 @@ class _PainelScreenState extends State<PainelScreen> {
     final altura = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF031226),
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           SafeArea(
@@ -76,7 +77,7 @@ class _PainelScreenState extends State<PainelScreen> {
                 const Text(
                   'VENDIDO HOJE',
                   style: TextStyle(
-                    color: Color(0xFFD4AF37),
+                    color: AppColors.gold,
                     letterSpacing: 3,
                     fontSize: 16,
                   ),
@@ -125,7 +126,7 @@ class _PainelScreenState extends State<PainelScreen> {
                     'R\$ ${totalVendido.toStringAsFixed(2)}',
                     key: ValueKey(totalVendido),
                     style: TextStyle(
-                      color: const Color(0xFFFFD54F),
+                      color: AppColors.goldLight,
                       fontSize: largura < 600 ? largura * 0.10 : 58,
                       fontWeight: FontWeight.bold,
                     ),

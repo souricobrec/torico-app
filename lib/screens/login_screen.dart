@@ -1,3 +1,4 @@
+import '../core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'auth_screen.dart';
 
@@ -9,7 +10,7 @@ class LoginScreen extends StatelessWidget {
     final largura = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF031226),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 25),

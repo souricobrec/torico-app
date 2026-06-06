@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_colors.dart';
 import 'connected_screen.dart';
 
 class AuthScreen extends StatelessWidget {
@@ -11,18 +12,14 @@ class AuthScreen extends StatelessWidget {
     final largura = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF031226),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.lock_outline,
-                color: Color(0xFFD4AF37),
-                size: 70,
-              ),
+              const Icon(Icons.lock_outline, color: AppColors.gold, size: 70),
 
               const SizedBox(height: 30),
 

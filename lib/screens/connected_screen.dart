@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_colors.dart';
 import 'painel_screen.dart';
 
 class ConnectedScreen extends StatelessWidget {
