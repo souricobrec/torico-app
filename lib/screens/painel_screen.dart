@@ -5,6 +5,7 @@ import '../widgets/coin_rain.dart';
 import '../services/sale_simulator_service.dart';
 import '../services/audio_service.dart';
 import '../core/currency_formatter.dart';
+import 'package:torico/controllers/sales_controller.dart';
 
 class PainelScreen extends StatefulWidget {
   const PainelScreen({super.key});
@@ -14,8 +15,7 @@ class PainelScreen extends StatefulWidget {
 }
 
 class _PainelScreenState extends State<PainelScreen> {
-  double totalVendido = 0.00;
-  Sale? ultimaVenda;
+  final SalesController _salesController = SalesController();
 
   bool mostrarMoedas = false;
   bool mostrarGanho = false;
@@ -28,8 +28,7 @@ class _PainelScreenState extends State<PainelScreen> {
     final venda = SaleSimulatorService.generateSale();
 
     setState(() {
-      totalVendido += venda.amount;
-      ultimaVenda = venda;
+      _salesController.addSale(venda);
       mostrarMoedas = true;
       mostrarGanho = true;
     });
@@ -118,7 +117,7 @@ class _PainelScreenState extends State<PainelScreen> {
                             );
                           },
                           child: Text(
-                            '+ ${CurrencyFormatter.format(ultimaVenda?.amount ?? 0)}',
+                            '+ ${CurrencyFormatter.format(_salesController.lastSale?.amount ?? 0)}',
                             style: TextStyle(
                               color: Colors.greenAccent,
                               fontSize: 28,
@@ -135,8 +134,8 @@ class _PainelScreenState extends State<PainelScreen> {
                     return ScaleTransition(scale: animation, child: child);
                   },
                   child: Text(
-                    CurrencyFormatter.format(totalVendido),
-                    key: ValueKey(totalVendido),
+                    CurrencyFormatter.format(_salesController.totalSold),
+                    key: ValueKey(_salesController.totalSold),
                     style: TextStyle(
                       color: AppColors.goldLight,
                       fontSize: largura < 600 ? largura * 0.10 : 58,
