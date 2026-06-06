@@ -6,6 +6,7 @@ import '../services/sale_simulator_service.dart';
 import '../services/audio_service.dart';
 import '../core/currency_formatter.dart';
 import 'package:torico/controllers/sales_controller.dart';
+import 'settings_screen.dart';
 
 class PainelScreen extends StatefulWidget {
   const PainelScreen({super.key});
@@ -67,6 +68,18 @@ class _PainelScreenState extends State<PainelScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.gold,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const SettingsScreen(plataforma: 'Mercado Pago'),
+            ),
+          );
+        },
+        child: const Icon(Icons.settings, color: Colors.black),
+      ),
       body: Stack(
         children: [
           SafeArea(
