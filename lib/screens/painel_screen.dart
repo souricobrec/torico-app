@@ -4,6 +4,7 @@ import '../core/app_colors.dart';
 import '../widgets/coin_rain.dart';
 import '../services/sale_simulator_service.dart';
 import '../services/audio_service.dart';
+import '../core/currency_formatter.dart';
 
 class PainelScreen extends StatefulWidget {
   const PainelScreen({super.key});
@@ -54,7 +55,7 @@ class _PainelScreenState extends State<PainelScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Nova venda recebida! + R\$ ${venda.amount.toStringAsFixed(2)}',
+          'Nova venda recebida! + ${CurrencyFormatter.format(venda.amount)}',
         ),
       ),
     );
@@ -117,7 +118,7 @@ class _PainelScreenState extends State<PainelScreen> {
                             );
                           },
                           child: Text(
-                            '+ R\$ ${ultimaVenda?.amount.toStringAsFixed(2) ?? '0.00'}',
+                            '+ ${CurrencyFormatter.format(ultimaVenda?.amount ?? 0)}',
                             style: TextStyle(
                               color: Colors.greenAccent,
                               fontSize: 28,
@@ -134,7 +135,7 @@ class _PainelScreenState extends State<PainelScreen> {
                     return ScaleTransition(scale: animation, child: child);
                   },
                   child: Text(
-                    'R\$ ${totalVendido.toStringAsFixed(2)}',
+                    CurrencyFormatter.format(totalVendido),
                     key: ValueKey(totalVendido),
                     style: TextStyle(
                       color: AppColors.goldLight,
