@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:torico/models/sale.dart';
 import '../core/app_colors.dart';
 import '../widgets/coin_rain.dart';
-import 'dart:math';
+import '../services/sale_simulator_service.dart';
 
 class PainelScreen extends StatefulWidget {
   const PainelScreen({super.key});
@@ -13,7 +13,7 @@ class PainelScreen extends StatefulWidget {
 }
 
 class _PainelScreenState extends State<PainelScreen> {
-  double totalVendido = 5348.00;
+  double totalVendido = 0.00;
   Sale? ultimaVenda;
 
   bool mostrarMoedas = false;
@@ -24,22 +24,7 @@ class _PainelScreenState extends State<PainelScreen> {
 
   void novaVenda() {
     vendaId++;
-    final random = Random();
-
-    final valorVenda = [
-      7.00,
-      10.00,
-      15.00,
-      18.00,
-      22.00,
-      25.00,
-      30.00,
-      35.00,
-      42.00,
-      50.00,
-    ][random.nextInt(10)];
-
-    final venda = Sale(amount: valorVenda, createdAt: DateTime.now());
+    final venda = SaleSimulatorService.generateSale();
 
     setState(() {
       totalVendido += venda.amount;
