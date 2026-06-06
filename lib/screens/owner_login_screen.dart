@@ -93,13 +93,37 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                   onPressed: carregando
                       ? null
                       : () async {
+                          final email = emailController.text.trim();
+                          final senha = senhaController.text.trim();
+
+                          if (email.isEmpty || senha.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppColors.gold,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                margin: const EdgeInsets.all(20),
+                                content: const Text(
+                                  'Preencha e-mail e senha para continuar.',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
                           setState(() {
                             carregando = true;
                           });
 
                           await _authService.login(
-                            email: emailController.text,
-                            password: senhaController.text,
+                            email: email,
+                            password: senha,
                           );
 
                           if (mounted) {
