@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
-
+import '../services/auth_service.dart';
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
 import 'login_screen.dart';
 
-class OwnerLoginScreen extends StatelessWidget {
+class OwnerLoginScreen extends StatefulWidget {
   const OwnerLoginScreen({super.key});
+
+  @override
+  State<OwnerLoginScreen> createState() => _OwnerLoginScreenState();
+}
+
+class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
+  final AuthService _authService = AuthService();
+
+  bool carregando = false;
 
   @override
   Widget build(BuildContext context) {
@@ -70,15 +79,30 @@ class OwnerLoginScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(40),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  },
-                  child: const Text(
-                    'Entrar',
-                    style: TextStyle(
+                  onPressed: carregando
+                      ? null
+                      : () async {
+                          setState(() {
+                            carregando = true;
+                          });
+
+                          await _authService.login(
+                            email: 'dono@torico.com',
+                            password: '123456',
+                          );
+
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          }
+                        },
+                  child: Text(
+                    carregando ? 'Entrando...' : 'Entrar',
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
