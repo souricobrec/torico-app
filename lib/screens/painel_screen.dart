@@ -1,9 +1,9 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:torico/models/sale.dart';
 import '../core/app_colors.dart';
 import '../widgets/coin_rain.dart';
 import '../services/sale_simulator_service.dart';
+import '../services/audio_service.dart';
 
 class PainelScreen extends StatefulWidget {
   const PainelScreen({super.key});
@@ -20,7 +20,7 @@ class _PainelScreenState extends State<PainelScreen> {
   bool mostrarGanho = false;
 
   int vendaId = 0;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioService _audioService = AudioService();
 
   void novaVenda() {
     vendaId++;
@@ -32,7 +32,7 @@ class _PainelScreenState extends State<PainelScreen> {
       mostrarMoedas = true;
       mostrarGanho = true;
     });
-    _audioPlayer.play(AssetSource('sounds/cash.mp3'));
+    _audioService.playCashSound();
     final vendaAtual = vendaId;
 
     Future.delayed(const Duration(seconds: 12), () {
