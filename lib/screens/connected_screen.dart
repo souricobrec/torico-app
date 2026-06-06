@@ -12,7 +12,7 @@ class ConnectedScreen extends StatelessWidget {
     final largura = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF031226),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(25),
@@ -48,7 +48,7 @@ class ConnectedScreen extends StatelessWidget {
                 height: largura < 600 ? 60 : 75,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4AF37),
+                    backgroundColor: AppColors.gold,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(35),
                     ),
