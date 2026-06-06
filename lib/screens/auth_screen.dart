@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import 'connected_screen.dart';
+import '../services/integration_service.dart';
 
 class AuthScreen extends StatelessWidget {
   final String plataforma;
 
-  const AuthScreen({super.key, required this.plataforma});
+  AuthScreen({super.key, required this.plataforma});
+  final IntegrationService _integrationService = IntegrationService();
 
   @override
   Widget build(BuildContext context) {
@@ -47,13 +49,20 @@ class AuthScreen extends StatelessWidget {
                 width: double.infinity,
                 height: largura < 600 ? 60 : 75,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ConnectedScreen(plataforma: plataforma),
-                      ),
+                  onPressed: () async {
+                    final conectado = await _integrationService.connect(
+                      plataforma,
                     );
+
+                    if (conectado && context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ConnectedScreen(plataforma: plataforma),
+                        ),
+                      );
+                    }
                   },
                   child: const Text(
                     'Simular Conexão',
