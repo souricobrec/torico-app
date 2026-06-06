@@ -163,10 +163,19 @@ class _PainelScreenState extends State<PainelScreen> {
 
                 Expanded(
                   child: Center(
-                    child: Image.asset(
-                      'assets/images/money_bag.png',
-                      height: altura * 0.30,
-                    ),
+                    child: _salesController.totalSold == 0
+                        ? const Text(
+                            'Aguardando a primeira venda...',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 20,
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/images/money_bag.png',
+                            height: altura * 0.30,
+                          ),
                   ),
                 ),
 
