@@ -16,7 +16,16 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
 
   bool carregando = false;
 
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController senhaController = TextEditingController();
+
   @override
+  void dispose() {
+    emailController.dispose();
+    senhaController.dispose();
+    super.dispose();
+  }
+
   Widget build(BuildContext context) {
     final largura = MediaQuery.of(context).size.width;
 
@@ -37,6 +46,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               const SizedBox(height: 50),
 
               TextField(
+                controller: emailController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'E-mail',
@@ -53,6 +63,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               const SizedBox(height: 15),
 
               TextField(
+                controller: senhaController,
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -87,8 +98,8 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                           });
 
                           await _authService.login(
-                            email: 'dono@torico.com',
-                            password: '123456',
+                            email: emailController.text,
+                            password: senhaController.text,
                           );
 
                           if (mounted) {
