@@ -1,7 +1,9 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:torico/models/sale.dart';
 import '../core/app_colors.dart';
 import '../widgets/coin_rain.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'dart:math';
 
 class PainelScreen extends StatefulWidget {
   const PainelScreen({super.key});
@@ -12,6 +14,7 @@ class PainelScreen extends StatefulWidget {
 
 class _PainelScreenState extends State<PainelScreen> {
   double totalVendido = 5348.00;
+  Sale? ultimaVenda;
 
   bool mostrarMoedas = false;
   bool mostrarGanho = false;
@@ -21,9 +24,26 @@ class _PainelScreenState extends State<PainelScreen> {
 
   void novaVenda() {
     vendaId++;
+    final random = Random();
+
+    final valorVenda = [
+      7.00,
+      10.00,
+      15.00,
+      18.00,
+      22.00,
+      25.00,
+      30.00,
+      35.00,
+      42.00,
+      50.00,
+    ][random.nextInt(10)];
+
+    final venda = Sale(amount: valorVenda, createdAt: DateTime.now());
 
     setState(() {
-      totalVendido += 10.00;
+      totalVendido += venda.amount;
+      ultimaVenda = venda;
       mostrarMoedas = true;
       mostrarGanho = true;
     });
@@ -47,7 +67,11 @@ class _PainelScreenState extends State<PainelScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nova venda recebida! + R\$ 10,00')),
+      SnackBar(
+        content: Text(
+          'Nova venda recebida! + R\$ ${venda.amount.toStringAsFixed(2)}',
+        ),
+      ),
     );
   }
 
@@ -107,8 +131,8 @@ class _PainelScreenState extends State<PainelScreen> {
                               ),
                             );
                           },
-                          child: const Text(
-                            '+ R\$ 10,00',
+                          child: Text(
+                            '+ R\$ ${ultimaVenda?.amount.toStringAsFixed(2) ?? '0.00'}',
                             style: TextStyle(
                               color: Colors.greenAccent,
                               fontSize: 28,
