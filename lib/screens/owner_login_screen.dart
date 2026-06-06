@@ -3,6 +3,8 @@ import '../services/auth_service.dart';
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
 import 'login_screen.dart';
+import '../widgets/app_snackbar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class OwnerLoginScreen extends StatefulWidget {
   const OwnerLoginScreen({super.key});
@@ -97,42 +99,16 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                           final senha = senhaController.text.trim();
 
                           if (email.isEmpty || senha.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: AppColors.gold,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                margin: const EdgeInsets.all(20),
-                                content: const Text(
-                                  'Preencha e-mail e senha para continuar.',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                            AppSnackBar.show(
+                              context,
+                              'Preencha e-mail e senha para continuar.',
                             );
                             return;
                           }
                           if (!email.contains('@') || !email.contains('.')) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: AppColors.gold,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                margin: const EdgeInsets.all(20),
-                                content: const Text(
-                                  'Digite um e-mail válido.',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                            AppSnackBar.show(
+                              context,
+                              'Digite um e-mail válido.',
                             );
                             return;
                           }
@@ -140,18 +116,51 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                             carregando = true;
                           });
 
-                          await _authService.login(
-                            email: email,
-                            password: senha,
-                          );
-
-                          if (mounted) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
-                              ),
+                          try {
+                            await _authService.login(
+                              email: email,
+                              password: senha,
                             );
+
+                            if (mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                              );
+                            }
+                          } on FirebaseAuthException catch (e) {
+                            String mensagem = 'E-mail ou senha inválidos.';
+
+                            if (e.code == 'user-not-found') {
+                              mensagem = 'Conta não encontrada.';
+                            } else if (e.code == 'wrong-password') {
+                              mensagem = 'Senha incorreta.';
+                            } else if (e.code == 'invalid-email') {
+                              mensagem = 'Digite um e-mail válido.';
+                            } else if (e.code == 'invalid-credential') {
+                              mensagem = 'E-mail ou senha inválidos.';
+                            }
+
+                            if (mounted) {
+                              AppSnackBar.show(context, mensagem);
+
+                              setState(() {
+                                carregando = false;
+                              });
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              AppSnackBar.show(
+                                context,
+                                'Erro ao tentar entrar.',
+                              );
+
+                              setState(() {
+                                carregando = false;
+                              });
+                            }
                           }
                         },
                   child: Text(
@@ -168,22 +177,9 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
               const SizedBox(height: 18),
               TextButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: AppColors.gold,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      margin: const EdgeInsets.all(20),
-                      content: const Text(
-                        'Recuperação de senha será adicionada em breve.',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                  AppSnackBar.show(
+                    context,
+                    'Recuperação de senha será adicionada em breve.',
                   );
                 },
                 child: const Text(
@@ -198,12 +194,64 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
 
               const SizedBox(height: 5),
               TextButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
+                onPressed: carregando
+                    ? null
+                    : () async {
+                        final email = emailController.text.trim();
+                        final senha = senhaController.text.trim();
+
+                        if (email.isEmpty || senha.isEmpty) {
+                          AppSnackBar.show(
+                            context,
+                            'Preencha e-mail e senha para criar sua conta.',
+                          );
+                          return;
+                        }
+
+                        if (!email.contains('@') || !email.contains('.')) {
+                          AppSnackBar.show(context, 'Digite um e-mail válido.');
+                          return;
+                        }
+
+                        if (senha.length < 6) {
+                          AppSnackBar.show(
+                            context,
+                            'A senha precisa ter pelo menos 6 caracteres.',
+                          );
+                          return;
+                        }
+
+                        setState(() {
+                          carregando = true;
+                        });
+
+                        try {
+                          await _authService.register(
+                            email: email,
+                            password: senha,
+                          );
+
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            AppSnackBar.show(
+                              context,
+                              'Não foi possível criar a conta.',
+                            );
+
+                            setState(() {
+                              carregando = false;
+                            });
+                          }
+                        }
+                      },
                 child: const Text(
                   'Criar conta grátis',
                   style: TextStyle(

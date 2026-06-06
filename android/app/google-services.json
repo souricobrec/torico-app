@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "16783123127",
+    "project_id": "torico-ca479",
+    "storage_bucket": "torico-ca479.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:16783123127:android:f5550d8d3eaf96278e6332",
+        "android_client_info": {
+          "package_name": "com.example.vendaon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6_78B6JKZluSA8krp1S88M4ab5Ail3Oc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
