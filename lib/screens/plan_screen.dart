@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
+import '../services/user_plan_service.dart';
 import '../widgets/app_snackbar.dart';
 
 class PlanScreen extends StatelessWidget {
@@ -8,6 +9,8 @@ class PlanScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userPlanService = UserPlanService();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -24,105 +27,136 @@ class PlanScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _CurrentPlanCard(),
+        child: StreamBuilder<UserPlan>(
+          stream: userPlanService.watchCurrentPlan(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.goldLight),
+              );
+            }
 
-              const SizedBox(height: 22),
+            if (snapshot.hasError) {
+              return const _PlanErrorState();
+            }
 
-              const _SectionTitle('Incluído no Plano Básico'),
+            final plan = snapshot.data ?? UserPlan.basic();
 
-              const SizedBox(height: 12),
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CurrentPlanCard(plan: plan),
 
-              const _FeatureTile(
-                icon: Icons.today_rounded,
-                title: 'Vendido hoje em tempo real',
-                text: 'Acompanhe o total vendido no dia atual.',
-              ),
+                  const SizedBox(height: 22),
 
-              const SizedBox(height: 10),
+                  _SectionTitle(
+                    plan.isPlus
+                        ? 'Recursos disponíveis no seu plano'
+                        : 'Incluído no Plano Básico',
+                  ),
 
-              const _FeatureTile(
-                icon: Icons.receipt_long_rounded,
-                title: 'Histórico das vendas de hoje',
-                text: 'Veja as vendas registradas no dia, com valor e horário.',
-              ),
+                  const SizedBox(height: 12),
 
-              const SizedBox(height: 10),
+                  const _FeatureTile(
+                    icon: Icons.today_rounded,
+                    title: 'Vendido hoje em tempo real',
+                    text: 'Acompanhe o total vendido no dia atual.',
+                  ),
 
-              const _FeatureTile(
-                icon: Icons.filter_alt_rounded,
-                title: 'Filtro por plataforma',
-                text: 'Filtre vendas por Mercado Pago, Stone ou PagBank.',
-              ),
+                  const SizedBox(height: 10),
 
-              const SizedBox(height: 10),
+                  const _FeatureTile(
+                    icon: Icons.receipt_long_rounded,
+                    title: 'Histórico das vendas de hoje',
+                    text:
+                        'Veja as vendas registradas no dia, com valor e horário.',
+                  ),
 
-              const _FeatureTile(
-                icon: Icons.hub_rounded,
-                title: 'Múltiplas plataformas',
-                text: 'Conecte mais de uma fonte de vendas ao mesmo negócio.',
-              ),
+                  const SizedBox(height: 10),
 
-              const SizedBox(height: 10),
+                  const _FeatureTile(
+                    icon: Icons.filter_alt_rounded,
+                    title: 'Filtro por plataforma',
+                    text: 'Filtre vendas por Mercado Pago, Stone ou PagBank.',
+                  ),
 
-              const _FeatureTile(
-                icon: Icons.notifications_active_rounded,
-                title: 'Alertas visuais e sonoros',
-                text: 'Receba sinais quando uma nova venda entrar.',
-              ),
+                  const SizedBox(height: 10),
 
-              const SizedBox(height: 26),
+                  const _FeatureTile(
+                    icon: Icons.hub_rounded,
+                    title: 'Múltiplas plataformas',
+                    text:
+                        'Conecte mais de uma fonte de vendas ao mesmo negócio.',
+                  ),
 
-              const _PlusCard(),
+                  const SizedBox(height: 10),
 
-              const SizedBox(height: 22),
+                  const _FeatureTile(
+                    icon: Icons.notifications_active_rounded,
+                    title: 'Alertas visuais e sonoros',
+                    text: 'Receba sinais quando uma nova venda entrar.',
+                  ),
 
-              SizedBox(
-                width: double.infinity,
-                height: 58,
-                child: ElevatedButton(
-                  onPressed: () {
-                    AppSnackBar.show(
-                      context,
-                      'O TORICO Plus estará disponível em breve.',
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: Colors.black,
-                    elevation: 8,
-                    shadowColor: AppColors.gold.withOpacity(0.30),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+                  const SizedBox(height: 26),
+
+                  _PlusCard(plan: plan),
+
+                  const SizedBox(height: 22),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 58,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        AppSnackBar.show(
+                          context,
+                          plan.isPlus
+                              ? 'Você já está no TORICO Plus.'
+                              : 'O TORICO Plus estará disponível em breve.',
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: Colors.black,
+                        elevation: 8,
+                        shadowColor: AppColors.gold.withOpacity(0.30),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      child: Text(
+                        plan.isPlus
+                            ? 'Plano Plus ativo'
+                            : 'Conhecer o TORICO Plus',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Conhecer o TORICO Plus',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-              Center(
-                child: Text(
-                  'Básico = tempo real do dia atual • Plus = relatórios e análise histórica',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.42),
-                    fontSize: 12.5,
-                    height: 1.35,
+                  Center(
+                    child: Text(
+                      'Básico = tempo real do dia atual • Plus = relatórios e análise histórica',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.42),
+                        fontSize: 12.5,
+                        height: 1.35,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -130,10 +164,14 @@ class PlanScreen extends StatelessWidget {
 }
 
 class _CurrentPlanCard extends StatelessWidget {
-  const _CurrentPlanCard();
+  final UserPlan plan;
+
+  const _CurrentPlanCard({required this.plan});
 
   @override
   Widget build(BuildContext context) {
+    final bool isPlus = plan.isPlus;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -175,8 +213,10 @@ class _CurrentPlanCard extends StatelessWidget {
                   color: AppColors.gold.withOpacity(0.13),
                   border: Border.all(color: AppColors.gold.withOpacity(0.28)),
                 ),
-                child: const Icon(
-                  Icons.workspace_premium_rounded,
+                child: Icon(
+                  isPlus
+                      ? Icons.diamond_rounded
+                      : Icons.workspace_premium_rounded,
                   color: AppColors.goldLight,
                   size: 32,
                 ),
@@ -184,23 +224,25 @@ class _CurrentPlanCard extends StatelessWidget {
 
               const SizedBox(width: 16),
 
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'TORICO Básico',
-                      style: TextStyle(
+                      plan.name,
+                      style: const TextStyle(
                         color: AppColors.goldLight,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         height: 1.1,
                       ),
                     ),
-                    SizedBox(height: 5),
+                    const SizedBox(height: 5),
                     Text(
-                      'Focado no acompanhamento do dia atual.',
-                      style: TextStyle(
+                      isPlus
+                          ? 'Relatórios, comparativos e análise histórica.'
+                          : 'Focado no acompanhamento do dia atual.',
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14.5,
                         height: 1.3,
@@ -219,6 +261,11 @@ class _CurrentPlanCard extends StatelessWidget {
           const _PlanBadge(text: 'Histórico de hoje'),
           const SizedBox(height: 8),
           const _PlanBadge(text: 'Múltiplas plataformas'),
+
+          if (isPlus) ...[
+            const SizedBox(height: 8),
+            const _PlanBadge(text: 'Relatórios avançados'),
+          ],
         ],
       ),
     );
@@ -226,10 +273,14 @@ class _CurrentPlanCard extends StatelessWidget {
 }
 
 class _PlusCard extends StatelessWidget {
-  const _PlusCard();
+  final UserPlan plan;
+
+  const _PlusCard({required this.plan});
 
   @override
   Widget build(BuildContext context) {
+    final bool isPlus = plan.isPlus;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -245,32 +296,38 @@ class _PlusCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.gold.withOpacity(0.32)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'TORICO Plus',
-            style: TextStyle(
+            isPlus ? 'TORICO Plus ativo' : 'TORICO Plus',
+            style: const TextStyle(
               color: AppColors.goldLight,
               fontSize: 25,
               fontWeight: FontWeight.bold,
             ),
           ),
 
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
 
           Text(
-            'Para quem quer analisar desempenho e tomar decisões com histórico.',
-            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.35),
+            isPlus
+                ? 'Você já tem acesso aos recursos avançados quando eles forem liberados no app.'
+                : 'Para quem quer analisar desempenho e tomar decisões com histórico.',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 15,
+              height: 1.35,
+            ),
           ),
 
-          SizedBox(height: 18),
+          const SizedBox(height: 18),
 
-          _PlusFeature(text: 'Relatórios dos últimos 7 dias'),
-          _PlusFeature(text: 'Relatórios mensais'),
-          _PlusFeature(text: 'Comparativos por período'),
-          _PlusFeature(text: 'Gráficos de desempenho'),
-          _PlusFeature(text: 'Exportação de dados'),
+          const _PlusFeature(text: 'Relatórios dos últimos 7 dias'),
+          const _PlusFeature(text: 'Relatórios mensais'),
+          const _PlusFeature(text: 'Comparativos por período'),
+          const _PlusFeature(text: 'Gráficos de desempenho'),
+          const _PlusFeature(text: 'Exportação de dados'),
         ],
       ),
     );
@@ -414,6 +471,24 @@ class _SectionTitle extends StatelessWidget {
         color: AppColors.goldLight,
         fontSize: 18,
         fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+class _PlanErrorState extends StatelessWidget {
+  const _PlanErrorState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Text(
+          'Não foi possível carregar o plano agora.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 16),
+        ),
       ),
     );
   }
