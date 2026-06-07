@@ -8,20 +8,30 @@ class CoinRain extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tamanhoTela = MediaQuery.of(context).size;
+    final screenWidth = tamanhoTela.width;
+    final screenHeight = tamanhoTela.height;
+    final bool isMobile = screenWidth < 600;
+
     return IgnorePointer(
       child: Stack(
         key: ValueKey(vendaId),
-        children: List.generate(18, (index) {
+        children: List.generate(isMobile ? 16 : 20, (index) {
           final random = Random(vendaId * 1000 + index);
-          final screenWidth = MediaQuery.of(context).size.width;
-          final screenHeight = MediaQuery.of(context).size.height;
 
-          final left = random.nextDouble() * (screenWidth + 160) - 80;
-          final inicio = -20.0 - random.nextInt(260);
-          final fim = screenHeight + 120;
+          final left = random.nextDouble() * (screenWidth + 140) - 70;
+          final inicio = -30.0 - random.nextInt(isMobile ? 180 : 260);
+          final fim = screenHeight + 100;
 
-          final duracao = 28000 + random.nextInt(15000);
-          final tamanho = 45.0 + random.nextInt(24);
+          final duracao = isMobile
+              ? 8500 + random.nextInt(4500)
+              : 22000 + random.nextInt(12000);
+
+          final tamanho = isMobile
+              ? 34.0 + random.nextInt(18)
+              : 45.0 + random.nextInt(24);
+
+          final atraso = random.nextInt(isMobile ? 900 : 1800);
 
           return Positioned(
             left: left,
@@ -30,12 +40,23 @@ class CoinRain extends StatelessWidget {
               key: ValueKey('$vendaId-$index'),
               duration: Duration(milliseconds: duracao),
               tween: Tween(begin: inicio, end: fim),
+              curve: Curves.linear,
               builder: (context, value, child) {
-                final movimentoLateral = sin(value / 55 + index) * 45;
+                final movimentoLateral =
+                    sin(value / 55 + index) * (isMobile ? 28 : 45);
 
-                return Transform.translate(
-                  offset: Offset(movimentoLateral, value),
-                  child: Transform.rotate(angle: value / 160, child: child),
+                return FutureBuilder(
+                  future: Future.delayed(Duration(milliseconds: atraso)),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Transform.translate(
+                      offset: Offset(movimentoLateral, value),
+                      child: Transform.rotate(angle: value / 135, child: child),
+                    );
+                  },
                 );
               },
               child: Image.asset('assets/images/coin.png', width: tamanho),
