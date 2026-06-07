@@ -44,6 +44,8 @@ class _PainelScreenState extends State<PainelScreen> {
     vendaId++;
     final Sale venda = SaleSimulatorService.generateSale();
 
+    _audioService.playCashSound();
+
     await _salesController.addSale(venda);
 
     if (!mounted) return;
@@ -52,8 +54,6 @@ class _PainelScreenState extends State<PainelScreen> {
       mostrarMoedas = true;
       mostrarGanho = true;
     });
-
-    _audioService.playCashSound();
 
     final vendaAtual = vendaId;
 
@@ -65,7 +65,7 @@ class _PainelScreenState extends State<PainelScreen> {
       }
     });
 
-    Future.delayed(const Duration(seconds: 14), () {
+    Future.delayed(const Duration(seconds: 9), () {
       if (mounted && vendaAtual == vendaId) {
         setState(() {
           mostrarMoedas = false;
