@@ -207,10 +207,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
   Widget build(BuildContext context) {
     final tamanhoTela = MediaQuery.of(context).size;
     final largura = tamanhoTela.width;
-    final altura = tamanhoTela.height;
-
     final bool isMobile = largura < 600;
-    final bool telaBaixa = altura < 760;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -219,18 +216,18 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
           physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             isMobile ? 22 : 40,
-            isMobile ? 12 : 42,
+            isMobile ? 10 : 42,
             isMobile ? 22 : 40,
-            20,
+            isMobile ? 14 : 20,
           ),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
               child: Column(
                 children: [
-                  _LoginHeader(isMobile: isMobile, telaBaixa: telaBaixa),
+                  _LoginHeader(isMobile: isMobile),
 
-                  SizedBox(height: isMobile ? 18 : 42),
+                  SizedBox(height: isMobile ? 14 : 42),
 
                   _LoginCard(
                     emailController: emailController,
@@ -253,18 +250,14 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                     onCriarConta: criarConta,
                   ),
 
-                  SizedBox(height: isMobile ? 16 : 30),
-
-                  const _ValueMessage(),
-
                   if (!isMobile) ...[
+                    const SizedBox(height: 30),
+                    const _ValueMessage(),
                     const SizedBox(height: 28),
                     const _BenefitsRow(),
+                    const SizedBox(height: 26),
+                    const _SecurityMessage(),
                   ],
-
-                  SizedBox(height: isMobile ? 14 : 26),
-
-                  const _SecurityMessage(),
                 ],
               ),
             ),
@@ -277,15 +270,14 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
 
 class _LoginHeader extends StatelessWidget {
   final bool isMobile;
-  final bool telaBaixa;
 
-  const _LoginHeader({required this.isMobile, required this.telaBaixa});
+  const _LoginHeader({required this.isMobile});
 
   @override
   Widget build(BuildContext context) {
-    final double iconSize = isMobile ? (telaBaixa ? 78 : 88) : 140;
-    final double titleSize = isMobile ? (telaBaixa ? 36 : 40) : 54;
-    final double sloganSize = isMobile ? (telaBaixa ? 16 : 18) : 24;
+    final double iconSize = isMobile ? 72 : 140;
+    final double titleSize = isMobile ? 36 : 54;
+    final double sloganSize = isMobile ? 16 : 24;
 
     return Column(
       children: [
@@ -305,7 +297,7 @@ class _LoginHeader extends StatelessWidget {
           child: Image.asset('assets/images/app_icon.png', fit: BoxFit.contain),
         ),
 
-        SizedBox(height: isMobile ? 8 : 18),
+        SizedBox(height: isMobile ? 6 : 18),
 
         Text(
           'TORICO',
@@ -326,7 +318,7 @@ class _LoginHeader extends StatelessWidget {
           ),
         ),
 
-        SizedBox(height: isMobile ? 8 : 16),
+        SizedBox(height: isMobile ? 6 : 16),
 
         RichText(
           textAlign: TextAlign.center,
@@ -386,9 +378,9 @@ class _LoginCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
         isMobile ? 18 : 22,
-        isMobile ? 18 : 26,
+        isMobile ? 17 : 26,
         isMobile ? 18 : 22,
-        isMobile ? 16 : 22,
+        isMobile ? 14 : 22,
       ),
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
@@ -412,7 +404,7 @@ class _LoginCard extends StatelessWidget {
               Icon(
                 Icons.admin_panel_settings_rounded,
                 color: AppColors.goldLight,
-                size: isMobile ? 34 : 42,
+                size: isMobile ? 32 : 42,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -423,18 +415,18 @@ class _LoginCard extends StatelessWidget {
                       'Acesse sua conta',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 23 : 27,
+                        fontSize: isMobile ? 22 : 27,
                         fontWeight: FontWeight.bold,
                         height: 1.15,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Text(
                       'Entre para acompanhar suas vendas em tempo real.',
                       style: TextStyle(
                         color: Colors.white70,
-                        fontSize: isMobile ? 14 : 16,
-                        height: 1.3,
+                        fontSize: isMobile ? 13.5 : 16,
+                        height: 1.25,
                       ),
                     ),
                   ],
@@ -443,7 +435,7 @@ class _LoginCard extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: isMobile ? 18 : 30),
+          SizedBox(height: isMobile ? 16 : 30),
 
           const Text(
             'E-mail',
@@ -454,7 +446,7 @@ class _LoginCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 7),
+          const SizedBox(height: 6),
 
           _PremiumTextField(
             controller: emailController,
@@ -463,7 +455,7 @@ class _LoginCard extends StatelessWidget {
             keyboardType: TextInputType.emailAddress,
           ),
 
-          SizedBox(height: isMobile ? 12 : 20),
+          SizedBox(height: isMobile ? 10 : 20),
 
           const Text(
             'Senha',
@@ -474,7 +466,7 @@ class _LoginCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 7),
+          const SizedBox(height: 6),
 
           _PremiumTextField(
             controller: senhaController,
@@ -492,11 +484,11 @@ class _LoginCard extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isMobile ? 18 : 28),
+          SizedBox(height: isMobile ? 16 : 28),
 
           SizedBox(
             width: double.infinity,
-            height: isMobile ? 54 : 62,
+            height: isMobile ? 52 : 62,
             child: ElevatedButton(
               onPressed: carregando ? null : onEntrar,
               style: ElevatedButton.styleFrom(
@@ -524,21 +516,21 @@ class _LoginCard extends StatelessWidget {
                         Text(
                           'Entrar no TORICO',
                           style: TextStyle(
-                            fontSize: isMobile ? 18 : 21,
+                            fontSize: isMobile ? 17.5 : 21,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(width: 10),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: isMobile ? 24 : 27,
+                          size: isMobile ? 23 : 27,
                         ),
                       ],
                     ),
             ),
           ),
 
-          SizedBox(height: isMobile ? 8 : 14),
+          SizedBox(height: isMobile ? 6 : 14),
 
           Center(
             child: TextButton.icon(
@@ -546,13 +538,13 @@ class _LoginCard extends StatelessWidget {
               icon: const Icon(
                 Icons.lock_reset_rounded,
                 color: Colors.white60,
-                size: 20,
+                size: 19,
               ),
               label: const Text(
                 'Esqueci minha senha',
                 style: TextStyle(
                   color: Colors.white70,
-                  fontSize: 15,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -597,13 +589,13 @@ class _PremiumTextField extends StatelessWidget {
           color: Colors.white.withOpacity(0.38),
           fontSize: isMobile ? 16 : 17,
         ),
-        prefixIcon: Icon(icon, color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.white70, size: isMobile ? 22 : 24),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.black.withOpacity(0.16),
         contentPadding: EdgeInsets.symmetric(
           horizontal: 18,
-          vertical: isMobile ? 16 : 20,
+          vertical: isMobile ? 14 : 20,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
@@ -644,8 +636,8 @@ class _CreateAccountCard extends StatelessWidget {
         child: Container(
           width: double.infinity,
           padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 16 : 20,
-            vertical: isMobile ? 14 : 20,
+            horizontal: isMobile ? 15 : 20,
+            vertical: isMobile ? 12 : 20,
           ),
           decoration: BoxDecoration(
             color: const Color(0xFF06182C),
@@ -658,8 +650,8 @@ class _CreateAccountCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: isMobile ? 46 : 54,
-                height: isMobile ? 46 : 54,
+                width: isMobile ? 42 : 54,
+                height: isMobile ? 42 : 54,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.gold.withOpacity(0.10),
@@ -668,11 +660,11 @@ class _CreateAccountCard extends StatelessWidget {
                 child: Icon(
                   Icons.person_add_alt_1_rounded,
                   color: AppColors.goldLight,
-                  size: isMobile ? 24 : 28,
+                  size: isMobile ? 23 : 28,
                 ),
               ),
 
-              const SizedBox(width: 14),
+              const SizedBox(width: 13),
 
               Expanded(
                 child: Column(
@@ -682,16 +674,16 @@ class _CreateAccountCard extends StatelessWidget {
                       'Ainda não tem conta?',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 15 : 17,
+                        fontSize: isMobile ? 14.5 : 17,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       'Criar conta grátis',
                       style: TextStyle(
                         color: AppColors.goldLight,
-                        fontSize: isMobile ? 18 : 21,
+                        fontSize: isMobile ? 17 : 21,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -702,7 +694,7 @@ class _CreateAccountCard extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.goldLight,
-                size: isMobile ? 30 : 34,
+                size: isMobile ? 28 : 34,
               ),
             ],
           ),
@@ -717,15 +709,12 @@ class _ValueMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final largura = MediaQuery.of(context).size.width;
-    final bool isMobile = largura < 600;
-
-    return Text(
+    return const Text(
       'Simples, rápido e em tempo real.\nTudo que você precisa para vender mais.',
       textAlign: TextAlign.center,
       style: TextStyle(
         color: Colors.white,
-        fontSize: isMobile ? 15 : 18,
+        fontSize: 18,
         height: 1.3,
         fontWeight: FontWeight.w500,
       ),
@@ -821,24 +810,18 @@ class _SecurityMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final largura = MediaQuery.of(context).size.width;
-    final bool isMobile = largura < 600;
-
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 18,
-        vertical: isMobile ? 12 : 16,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: Colors.white.withOpacity(0.10))),
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.verified_user_rounded,
             color: AppColors.goldLight,
-            size: isMobile ? 26 : 32,
+            size: 32,
           ),
 
           const SizedBox(width: 12),
@@ -848,7 +831,7 @@ class _SecurityMessage extends StatelessWidget {
               text: TextSpan(
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.72),
-                  fontSize: isMobile ? 13 : 15,
+                  fontSize: 15,
                   height: 1.32,
                 ),
                 children: const [
