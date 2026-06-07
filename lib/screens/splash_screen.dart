@@ -1,11 +1,12 @@
-import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'owner_login_screen.dart';
+
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
-import 'login_screen.dart';
 import '../services/local_storage_service.dart';
 import 'connected_screen.dart';
+import 'login_screen.dart';
+import 'owner_login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,22 +16,29 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  @override
+  final LocalStorageService _storage = LocalStorageService();
+
   @override
   void initState() {
     super.initState();
-
-    _verificarPlataformaConectada();
+    verificarFluxoInicial();
   }
 
-  Future<void> _verificarPlataformaConectada() async {
-    final storage = LocalStorageService();
-
+  Future<void> verificarFluxoInicial() async {
     await Future.delayed(const Duration(seconds: 3));
 
-    final plataforma = await storage.getConnectedPlatform();
+    final usuario = FirebaseAuth.instance.currentUser;
+    final plataforma = await _storage.getConnectedPlatform();
 
     if (!mounted) return;
+
+    if (usuario == null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OwnerLoginScreen()),
+      );
+      return;
+    }
 
     if (plataforma != null) {
       Navigator.pushReplacement(
@@ -39,12 +47,13 @@ class _SplashScreenState extends State<SplashScreen> {
           builder: (_) => ConnectedScreen(plataforma: plataforma),
         ),
       );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const OwnerLoginScreen()),
-      );
+      return;
     }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
   @override
