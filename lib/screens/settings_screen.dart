@@ -3,6 +3,8 @@ import 'about_screen.dart';
 import '../services/local_storage_service.dart';
 import 'login_screen.dart';
 import '../core/app_colors.dart';
+import '../services/auth_service.dart';
+import 'owner_login_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final String plataforma;
@@ -138,6 +140,87 @@ class SettingsScreen extends StatelessWidget {
                   'Desconectar plataforma',
                   style: TextStyle(
                     color: Colors.redAccent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white38),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        backgroundColor: AppColors.background,
+                        title: const Text(
+                          'Sair da conta?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: const Text(
+                          'Você deseja sair da sua conta TORICO?',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final storage = LocalStorageService();
+                              final authService = AuthService();
+
+                              await storage.clearConnectedPlatform();
+                              await storage.clearTotalSold();
+                              await authService.logout();
+
+                              if (!context.mounted) return;
+
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const OwnerLoginScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            },
+                            child: const Text(
+                              'Sair',
+                              style: TextStyle(
+                                color: AppColors.goldLight,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: const Text(
+                  'Sair da conta',
+                  style: TextStyle(
+                    color: Colors.white70,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
