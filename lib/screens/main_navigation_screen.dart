@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import 'painel_screen.dart';
+import 'plan_screen.dart';
 import 'sales_history_screen.dart';
 import 'settings_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String plataforma;
 
-  const MainNavigationScreen({
-    super.key,
-    required this.plataforma,
-  });
+  const MainNavigationScreen({super.key, required this.plataforma});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -24,23 +22,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final pages = [
       PainelScreen(plataforma: widget.plataforma),
-      SalesHistoryScreen(),
+      const SalesHistoryScreen(),
+      const PlanScreen(),
       SettingsScreen(plataforma: widget.plataforma),
     ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: currentIndex,
-        children: pages,
-      ),
+      body: IndexedStack(index: currentIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: const Color(0xFF06182C),
           border: Border(
-            top: BorderSide(
-              color: AppColors.gold.withOpacity(0.18),
-            ),
+            top: BorderSide(color: AppColors.gold.withOpacity(0.18)),
           ),
           boxShadow: [
             BoxShadow(
@@ -66,11 +60,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             unselectedItemColor: Colors.white54,
             selectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 12.5,
+              fontSize: 12.2,
             ),
             unselectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w500,
-              fontSize: 12,
+              fontSize: 11.6,
             ),
             items: const [
               BottomNavigationBarItem(
@@ -80,6 +74,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.receipt_long_rounded),
                 label: 'Histórico',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.workspace_premium_rounded),
+                label: 'Plano',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.settings_rounded),
