@@ -18,218 +18,480 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: AppColors.goldLight),
         title: const Text(
           'Configurações',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.4,
+          ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(25),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Plataforma conectada',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
-            ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _HeaderCard(),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 22),
 
-            Text(
-              plataforma,
-              style: const TextStyle(
-                color: AppColors.goldLight,
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+              _ConnectedPlatformCard(plataforma: plataforma),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 18),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.greenAccent, size: 32),
+              const _StatusCard(),
 
-                  SizedBox(width: 15),
+              const SizedBox(height: 28),
 
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Status',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Conectado',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
+              const Text(
+                'Conta e aplicativo',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
-                onPressed: () {
+              ),
+
+              const SizedBox(height: 12),
+
+              _SettingsActionTile(
+                icon: Icons.info_outline_rounded,
+                title: 'Sobre o TORICO',
+                subtitle: 'Conheça a proposta do aplicativo',
+                iconColor: AppColors.goldLight,
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AboutScreen()),
                   );
                 },
-                child: const Text(
-                  'Sobre o TORICO',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
-            ),
-            const SizedBox(height: 15),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.redAccent),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                onPressed: () async {
-                  final storage = LocalStorageService();
+              const SizedBox(height: 12),
 
-                  await storage.clearConnectedPlatform();
-                  await storage.clearTotalSold();
-
-                  if (!context.mounted) return;
-
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
+              _SettingsActionTile(
+                icon: Icons.link_off_rounded,
+                title: 'Desconectar plataforma',
+                subtitle: 'Remove a integração e zera o total vendido',
+                iconColor: Colors.redAccent,
+                danger: true,
+                onTap: () {
+                  _showDisconnectDialog(context);
                 },
-                child: const Text(
-                  'Desconectar plataforma',
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
-            ),
-            const SizedBox(height: 15),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white38),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        backgroundColor: AppColors.background,
-                        title: const Text(
-                          'Sair da conta?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        content: const Text(
-                          'Você deseja sair da sua conta TORICO?',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text(
-                              'Cancelar',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              final storage = LocalStorageService();
-                              final authService = AuthService();
+              const SizedBox(height: 12),
 
-                              await storage.clearConnectedPlatform();
-                              await storage.clearTotalSold();
-                              await authService.logout();
-
-                              if (!context.mounted) return;
-
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const OwnerLoginScreen(),
-                                ),
-                                (route) => false,
-                              );
-                            },
-                            child: const Text(
-                              'Sair',
-                              style: TextStyle(
-                                color: AppColors.goldLight,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
+              _SettingsActionTile(
+                icon: Icons.logout_rounded,
+                title: 'Sair da conta',
+                subtitle: 'Encerra sua sessão neste dispositivo',
+                iconColor: Colors.white70,
+                onTap: () {
+                  _showLogoutDialog(context);
                 },
-                child: const Text(
-                  'Sair da conta',
+              ),
+
+              const SizedBox(height: 28),
+
+              Center(
+                child: Text(
+                  'TORICO • Seu negócio vendendo. Onde você estiver.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.white.withOpacity(0.38),
+                    fontSize: 12,
+                    height: 1.4,
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _showDisconnectDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return _ToricoDialog(
+          title: 'Desconectar plataforma?',
+          message:
+              'Isso removerá a plataforma conectada e também limpará o total vendido salvo neste dispositivo.',
+          primaryText: 'Desconectar',
+          primaryColor: Colors.redAccent,
+          onPrimary: () async {
+            final storage = LocalStorageService();
+
+            await storage.clearConnectedPlatform();
+            await storage.clearTotalSold();
+
+            if (!context.mounted) return;
+
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return _ToricoDialog(
+          title: 'Sair da conta?',
+          message:
+              'Você deseja sair da sua conta TORICO? Os dados locais deste dispositivo serão limpos.',
+          primaryText: 'Sair',
+          primaryColor: AppColors.goldLight,
+          onPrimary: () async {
+            final storage = LocalStorageService();
+            final authService = AuthService();
+
+            await storage.clearConnectedPlatform();
+            await storage.clearTotalSold();
+            await authService.logout();
+
+            if (!context.mounted) return;
+
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const OwnerLoginScreen()),
+              (route) => false,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.gold.withOpacity(0.22),
+            Colors.white.withOpacity(0.045),
+          ],
+        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TORICO',
+            style: TextStyle(
+              color: AppColors.goldLight,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.6,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Seu negócio vendendo. Onde você estiver.',
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.35),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectedPlatformCard extends StatelessWidget {
+  final String plataforma;
+
+  const _ConnectedPlatformCard({required this.plataforma});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.055),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.gold.withOpacity(0.14),
+              border: Border.all(color: AppColors.gold.withOpacity(0.35)),
+            ),
+            child: const Icon(
+              Icons.storefront_rounded,
+              color: AppColors.goldLight,
+              size: 28,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Plataforma conectada',
+                  style: TextStyle(color: Colors.white60, fontSize: 14),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  plataforma,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.goldLight,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.greenAccent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.greenAccent.withOpacity(0.22)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.greenAccent.withOpacity(0.14),
+            ),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.greenAccent,
+              size: 30,
+            ),
+          ),
+
+          const SizedBox(width: 15),
+
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Status da conexão',
+                  style: TextStyle(color: Colors.white60, fontSize: 14),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'Conectado e monitorando vendas',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color iconColor;
+  final bool danger;
+  final VoidCallback onTap;
+
+  const _SettingsActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.iconColor,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: danger
+                ? Colors.redAccent.withOpacity(0.055)
+                : Colors.white.withOpacity(0.045),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: danger
+                  ? Colors.redAccent.withOpacity(0.20)
+                  : Colors.white.withOpacity(0.09),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: iconColor.withOpacity(0.12),
+                ),
+                child: Icon(icon, color: iconColor, size: 24),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: danger ? Colors.redAccent : Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.52),
+                        fontSize: 13,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withOpacity(0.35),
+                size: 26,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToricoDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final String primaryText;
+  final Color primaryColor;
+  final Future<void> Function() onPrimary;
+
+  const _ToricoDialog({
+    required this.title,
+    required this.message,
+    required this.primaryText,
+    required this.primaryColor,
+    required this.onPrimary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: AppColors.gold.withOpacity(0.25)),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        message,
+        style: const TextStyle(color: Colors.white70, height: 1.35),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text(
+            'Cancelar',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+        TextButton(
+          onPressed: onPrimary,
+          child: Text(
+            primaryText,
+            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }
