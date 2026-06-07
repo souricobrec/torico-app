@@ -19,6 +19,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final LocalStorageService _storage = LocalStorageService();
 
+  static const List<String> allPlatforms = ['Mercado Pago', 'Stone', 'PagBank'];
+
   List<String> connectedPlatforms = [];
   bool carregando = true;
 
@@ -39,11 +41,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  String get _platformsLabel {
-    if (connectedPlatforms.isEmpty) return widget.plataforma;
-    if (connectedPlatforms.length == 1) return connectedPlatforms.first;
+  List<String> get disconnectedPlatforms {
+    return allPlatforms
+        .where((platform) => !connectedPlatforms.contains(platform))
+        .toList();
+  }
 
-    return connectedPlatforms.join(' + ');
+  String get _statusText {
+    if (connectedPlatforms.isEmpty) {
+      return 'Nenhuma plataforma conectada';
+    }
+
+    if (connectedPlatforms.length == 1) {
+      return 'Monitorando ${connectedPlatforms.first}';
+    }
+
+    return 'Monitorando ${connectedPlatforms.length} plataformas';
   }
 
   @override
@@ -56,7 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.goldLight),
         title: const Text(
-          'Configurações',
+          'Conta',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -74,15 +87,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 22),
 
-              _ConnectedPlatformsCard(
-                platforms: connectedPlatforms,
-                fallbackLabel: _platformsLabel,
+              _PlatformsOverviewCard(
+                connectedPlatforms: connectedPlatforms,
+                disconnectedPlatforms: disconnectedPlatforms,
                 carregando: carregando,
               ),
 
               const SizedBox(height: 18),
 
-              const _StatusCard(),
+              _StatusCard(statusText: _statusText),
 
               const SizedBox(height: 28),
 
@@ -99,15 +112,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 12),
 
               _SettingsActionTile(
-                icon: Icons.add_link_rounded,
-                title: 'Conectar outra plataforma',
-                subtitle: 'Adicionar Mercado Pago, Stone ou PagBank ao negócio',
+                icon: Icons.hub_rounded,
+                title: 'Gerenciar plataformas',
+                subtitle: 'Conectar ou revisar Mercado Pago, Stone e PagBank',
                 iconColor: AppColors.goldLight,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
+
+                  _loadPlatforms();
                 },
               ),
 
@@ -247,9 +262,7 @@ class _HeaderCard extends StatelessWidget {
             Colors.white.withOpacity(0.045),
           ],
         ),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.28),
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.28)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.25),
@@ -273,11 +286,7 @@ class _HeaderCard extends StatelessWidget {
           SizedBox(height: 8),
           Text(
             'Seu negócio vendendo. Onde você estiver.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              height: 1.35,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.35),
           ),
         ],
       ),
@@ -285,109 +294,204 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
-class _ConnectedPlatformsCard extends StatelessWidget {
-  final List<String> platforms;
-  final String fallbackLabel;
+class _PlatformsOverviewCard extends StatelessWidget {
+  final List<String> connectedPlatforms;
+  final List<String> disconnectedPlatforms;
   final bool carregando;
 
-  const _ConnectedPlatformsCard({
-    required this.platforms,
-    required this.fallbackLabel,
+  const _PlatformsOverviewCard({
+    required this.connectedPlatforms,
+    required this.disconnectedPlatforms,
     required this.carregando,
   });
 
   @override
   Widget build(BuildContext context) {
-    final count = platforms.length;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.055),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.10),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.14),
-              border: Border.all(
-                color: AppColors.gold.withOpacity(0.35),
-              ),
-            ),
-            child: const Icon(
-              Icons.hub_rounded,
-              color: AppColors.goldLight,
-              size: 28,
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          Expanded(
-            child: Column(
+      child: carregando
+          ? const LinearProgressIndicator(color: AppColors.goldLight)
+          : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  count <= 1
-                      ? 'Plataforma conectada'
-                      : 'Plataformas conectadas',
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (carregando)
-                  const LinearProgressIndicator(
-                    color: AppColors.goldLight,
-                  )
-                else if (platforms.isEmpty)
-                  Text(
-                    fallbackLabel,
-                    style: const TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.gold.withOpacity(0.14),
+                        border: Border.all(
+                          color: AppColors.gold.withOpacity(0.35),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.hub_rounded,
+                        color: AppColors.goldLight,
+                        size: 28,
+                      ),
                     ),
+
+                    const SizedBox(width: 16),
+
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Plataformas do negócio',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Controle quais fontes de venda estão vinculadas ao TORICO.',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 13.5,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 22),
+
+                const _PlatformSectionTitle(
+                  title: 'Conectadas',
+                  icon: Icons.check_circle_rounded,
+                  color: Colors.greenAccent,
+                ),
+
+                const SizedBox(height: 10),
+
+                if (connectedPlatforms.isEmpty)
+                  const _EmptyPlatformMessage(
+                    text: 'Nenhuma plataforma conectada ainda.',
                   )
                 else
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: platforms.map((platform) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(100),
-                          border: Border.all(
-                            color: AppColors.gold.withOpacity(0.24),
-                          ),
-                        ),
-                        child: Text(
-                          platform,
-                          style: const TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    children: connectedPlatforms.map((platform) {
+                      return _PlatformChip(platform: platform, connected: true);
+                    }).toList(),
+                  ),
+
+                const SizedBox(height: 20),
+
+                const _PlatformSectionTitle(
+                  title: 'Desconectadas',
+                  icon: Icons.radio_button_unchecked_rounded,
+                  color: Colors.white54,
+                ),
+
+                const SizedBox(height: 10),
+
+                if (disconnectedPlatforms.isEmpty)
+                  const _EmptyPlatformMessage(
+                    text: 'Todas as plataformas disponíveis estão conectadas.',
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: disconnectedPlatforms.map((platform) {
+                      return _PlatformChip(
+                        platform: platform,
+                        connected: false,
                       );
                     }).toList(),
                   ),
               ],
+            ),
+    );
+  }
+}
+
+class _PlatformSectionTitle extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+
+  const _PlatformSectionTitle({
+    required this.title,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            color: color,
+            fontSize: 14.5,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlatformChip extends StatelessWidget {
+  final String platform;
+  final bool connected;
+
+  const _PlatformChip({required this.platform, required this.connected});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = connected ? Colors.greenAccent : Colors.white54;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: connected
+            ? Colors.greenAccent.withOpacity(0.10)
+            : Colors.white.withOpacity(0.055),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: connected
+              ? Colors.greenAccent.withOpacity(0.28)
+              : Colors.white.withOpacity(0.12),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            connected
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: color,
+            size: 15,
+          ),
+          const SizedBox(width: 7),
+          Text(
+            platform,
+            style: TextStyle(
+              color: connected ? Colors.white : Colors.white70,
+              fontSize: 13.5,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -396,19 +500,45 @@ class _ConnectedPlatformsCard extends StatelessWidget {
   }
 }
 
-class _StatusCard extends StatelessWidget {
-  const _StatusCard();
+class _EmptyPlatformMessage extends StatelessWidget {
+  final String text;
+
+  const _EmptyPlatformMessage({required this.text});
 
   @override
   Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: Colors.white.withOpacity(0.50),
+        fontSize: 13.5,
+        height: 1.3,
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  final String statusText;
+
+  const _StatusCard({required this.statusText});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasPlatform = !statusText.contains('Nenhuma');
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.greenAccent.withOpacity(0.08),
+        color: hasPlatform
+            ? Colors.greenAccent.withOpacity(0.08)
+            : AppColors.gold.withOpacity(0.08),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.greenAccent.withOpacity(0.22),
+          color: hasPlatform
+              ? Colors.greenAccent.withOpacity(0.22)
+              : AppColors.gold.withOpacity(0.22),
         ),
       ),
       child: Row(
@@ -418,32 +548,33 @@ class _StatusCard extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.greenAccent.withOpacity(0.14),
+              color: hasPlatform
+                  ? Colors.greenAccent.withOpacity(0.14)
+                  : AppColors.gold.withOpacity(0.12),
             ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              color: Colors.greenAccent,
+            child: Icon(
+              hasPlatform
+                  ? Icons.check_circle_rounded
+                  : Icons.info_outline_rounded,
+              color: hasPlatform ? Colors.greenAccent : AppColors.goldLight,
               size: 30,
             ),
           ),
 
           const SizedBox(width: 15),
 
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Status do painel',
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white60, fontSize: 14),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
-                  'Monitorando vendas do negócio',
-                  style: TextStyle(
+                  statusText,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
@@ -507,11 +638,7 @@ class _SettingsActionTile extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: iconColor.withOpacity(0.12),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 24,
-                ),
+                child: Icon(icon, color: iconColor, size: 24),
               ),
 
               const SizedBox(width: 14),
@@ -575,9 +702,7 @@ class _ToricoDialog extends StatelessWidget {
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(
-          color: AppColors.gold.withOpacity(0.25),
-        ),
+        side: BorderSide(color: AppColors.gold.withOpacity(0.25)),
       ),
       title: Text(
         title,
@@ -588,10 +713,7 @@ class _ToricoDialog extends StatelessWidget {
       ),
       content: Text(
         message,
-        style: const TextStyle(
-          color: Colors.white70,
-          height: 1.35,
-        ),
+        style: const TextStyle(color: Colors.white70, height: 1.35),
       ),
       actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
       actions: [
@@ -608,10 +730,7 @@ class _ToricoDialog extends StatelessWidget {
           onPressed: onPrimary,
           child: Text(
             primaryText,
-            style: TextStyle(
-              color: primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
           ),
         ),
       ],
