@@ -7,18 +7,24 @@ class ToricoSaleRecord {
   final String id;
   final double amount;
   final String platform;
+  final String platformId;
   final String status;
   final String source;
   final String dateKey;
+  final String? externalId;
+  final Map<String, dynamic>? rawPayload;
   final DateTime? createdAt;
 
   const ToricoSaleRecord({
     required this.id,
     required this.amount,
     required this.platform,
+    required this.platformId,
     required this.status,
     required this.source,
     required this.dateKey,
+    required this.externalId,
+    required this.rawPayload,
     required this.createdAt,
   });
 
@@ -39,14 +45,18 @@ class ToricoSaleRecord {
     }
 
     final amount = data['amount'];
+    final rawPayload = data['rawPayload'];
 
     return ToricoSaleRecord(
       id: doc.id,
       amount: amount is num ? amount.toDouble() : 0.0,
       platform: (data['platform'] ?? 'Simulador').toString(),
+      platformId: (data['platformId'] ?? 'simulator').toString(),
       status: (data['status'] ?? 'approved').toString(),
       source: (data['source'] ?? 'simulator').toString(),
       dateKey: (data['dateKey'] ?? '').toString(),
+      externalId: data['externalId']?.toString(),
+      rawPayload: rawPayload is Map<String, dynamic> ? rawPayload : null,
       createdAt: createdAt,
     );
   }
@@ -71,29 +81,95 @@ class FirestoreSalesService {
   }
 
   String _todayKey() {
-    final now = DateTime.now();
+    return _dateKeyFromDate(DateTime.now());
+  }
 
-    final year = now.year.toString().padLeft(4, '0');
-    final month = now.month.toString().padLeft(2, '0');
-    final day = now.day.toString().padLeft(2, '0');
+  String _dateKeyFromDate(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
 
     return '$year-$month-$day';
   }
 
-  Future<void> addSale({
-    required Sale sale,
-    required String plataforma,
-  }) async {
-    final now = DateTime.now();
+  String platformIdFromName(String platform) {
+    final normalized = platform.trim().toLowerCase();
+
+    if (normalized.contains('mercado')) {
+      return 'mercado_pago';
+    }
+
+    if (normalized.contains('stone')) {
+      return 'stone';
+    }
+
+    if (normalized.contains('pagbank') || normalized.contains('pag bank')) {
+      return 'pagbank';
+    }
+
+    if (normalized.isEmpty) {
+      return 'simulator';
+    }
+
+    return normalized
+        .replaceAll('ã', 'a')
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
+  Future<void> addSale({required Sale sale, required String plataforma}) async {
+    final platformId = platformIdFromName(plataforma);
 
     await _salesCollection.add({
       'amount': sale.amount,
       'platform': plataforma,
-      'platformId': plataforma.toLowerCase().replaceAll(' ', '_'),
-      'status': 'approved',
-      'source': 'simulator',
-      'dateKey': _todayKey(),
-      'createdAtClient': Timestamp.fromDate(now),
+      'platformId': platformId,
+      'status': sale.status,
+      'source': sale.source,
+      'externalId': sale.externalId,
+      'rawPayload': sale.rawPayload ?? <String, dynamic>{},
+      'dateKey': _dateKeyFromDate(sale.createdAt),
+      'createdAtClient': Timestamp.fromDate(sale.createdAt),
+      'createdAtServer': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Estrutura preparada para uso futuro por venda real recebida via webhook.
+  ///
+  /// Hoje ainda não temos endpoint/backend chamando este método.
+  /// Ele deixa o padrão de dados pronto para Mercado Pago, Stone, PagBank etc.
+  Future<void> addWebhookSale({
+    required double amount,
+    required String platform,
+    required String externalId,
+    String status = 'approved',
+    DateTime? createdAt,
+    Map<String, dynamic>? rawPayload,
+  }) async {
+    final saleDate = createdAt ?? DateTime.now();
+    final platformId = platformIdFromName(platform);
+
+    await _salesCollection.add({
+      'amount': amount,
+      'platform': platform,
+      'platformId': platformId,
+      'status': status,
+      'source': 'webhook',
+      'externalId': externalId,
+      'rawPayload': rawPayload ?? <String, dynamic>{},
+      'dateKey': _dateKeyFromDate(saleDate),
+      'createdAtClient': Timestamp.fromDate(saleDate),
       'createdAtServer': FieldValue.serverTimestamp(),
     });
   }
@@ -121,17 +197,17 @@ class FirestoreSalesService {
         .where('status', isEqualTo: 'approved')
         .snapshots()
         .map((snapshot) {
-      final sales = snapshot.docs.map(ToricoSaleRecord.fromDoc).toList();
+          final sales = snapshot.docs.map(ToricoSaleRecord.fromDoc).toList();
 
-      sales.sort((a, b) {
-        final dateA = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final dateB = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          sales.sort((a, b) {
+            final dateA = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final dateB = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
-        return dateB.compareTo(dateA);
-      });
+            return dateB.compareTo(dateA);
+          });
 
-      return sales;
-    });
+          return sales;
+        });
   }
 
   double _sumSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {

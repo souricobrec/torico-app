@@ -51,17 +51,11 @@ class SalesController extends ChangeNotifier {
     );
   }
 
-  Future<void> addSale(
-    Sale sale, {
-    required String plataforma,
-  }) async {
+  Future<void> addSale(Sale sale, {required String plataforma}) async {
     lastSale = sale;
 
     try {
-      await _firestoreSalesService.addSale(
-        sale: sale,
-        plataforma: plataforma,
-      );
+      await _firestoreSalesService.addSale(sale: sale, plataforma: plataforma);
 
       totalSold = await _firestoreSalesService.getTodayTotal();
       usingCloud = true;
@@ -72,6 +66,37 @@ class SalesController extends ChangeNotifier {
       usingCloud = false;
 
       await _storage.saveTotalSold(totalSold);
+    }
+
+    notifyListeners();
+  }
+
+  /// Método preparado para uso futuro, quando uma venda real vier de backend/webhook.
+  /// No app atual, o botão "+ Nova Venda" continua usando addSale com source simulator.
+  Future<void> addWebhookSale({
+    required double amount,
+    required String platform,
+    required String externalId,
+    String status = 'approved',
+    DateTime? createdAt,
+    Map<String, dynamic>? rawPayload,
+  }) async {
+    try {
+      await _firestoreSalesService.addWebhookSale(
+        amount: amount,
+        platform: platform,
+        externalId: externalId,
+        status: status,
+        createdAt: createdAt,
+        rawPayload: rawPayload,
+      );
+
+      totalSold = await _firestoreSalesService.getTodayTotal();
+      usingCloud = true;
+
+      await _storage.saveTotalSold(totalSold);
+    } catch (_) {
+      usingCloud = false;
     }
 
     notifyListeners();
