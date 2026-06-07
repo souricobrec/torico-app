@@ -4,10 +4,44 @@ import '../core/app_colors.dart';
 import '../core/currency_formatter.dart';
 import '../services/firestore_sales_service.dart';
 
-class SalesHistoryScreen extends StatelessWidget {
-  SalesHistoryScreen({super.key});
+class SalesHistoryScreen extends StatefulWidget {
+  const SalesHistoryScreen({super.key});
 
+  @override
+  State<SalesHistoryScreen> createState() => _SalesHistoryScreenState();
+}
+
+class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   final FirestoreSalesService _salesService = FirestoreSalesService();
+
+  static const String allFilter = 'Todas';
+
+  final List<String> filters = const [
+    allFilter,
+    'Mercado Pago',
+    'Stone',
+    'PagBank',
+  ];
+
+  String selectedFilter = allFilter;
+
+  List<ToricoSaleRecord> _filteredSales(List<ToricoSaleRecord> sales) {
+    if (selectedFilter == allFilter) {
+      return sales;
+    }
+
+    return sales.where((sale) => sale.platform == selectedFilter).toList();
+  }
+
+  Map<String, double> _totalsByPlatform(List<ToricoSaleRecord> sales) {
+    final totals = <String, double>{};
+
+    for (final sale in sales) {
+      totals[sale.platform] = (totals[sale.platform] ?? 0) + sale.amount;
+    }
+
+    return totals;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,18 +75,15 @@ class SalesHistoryScreen extends StatelessWidget {
               return const _ErrorState();
             }
 
-            final sales = snapshot.data ?? [];
+            final allSales = snapshot.data ?? [];
+            final sales = _filteredSales(allSales);
+
             final total = sales.fold<double>(
               0,
               (sum, sale) => sum + sale.amount,
             );
 
-            final totalsByPlatform = <String, double>{};
-
-            for (final sale in sales) {
-              totalsByPlatform[sale.platform] =
-                  (totalsByPlatform[sale.platform] ?? 0) + sale.amount;
-            }
+            final totalsByPlatform = _totalsByPlatform(sales);
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -60,10 +91,23 @@ class SalesHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _FilterChips(
+                    filters: filters,
+                    selectedFilter: selectedFilter,
+                    onSelected: (filter) {
+                      setState(() {
+                        selectedFilter = filter;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 18),
+
                   _SummaryCard(
                     total: total,
                     salesCount: sales.length,
                     platformsCount: totalsByPlatform.length,
+                    selectedFilter: selectedFilter,
                   ),
 
                   const SizedBox(height: 22),
@@ -73,11 +117,14 @@ class SalesHistoryScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   if (totalsByPlatform.isEmpty)
-                    const _EmptyCard(
+                    _EmptyCard(
                       icon: Icons.hub_rounded,
-                      title: 'Nenhuma plataforma com venda hoje',
-                      text:
-                          'As vendas simuladas aparecerão aqui separadas por plataforma.',
+                      title: selectedFilter == allFilter
+                          ? 'Nenhuma plataforma com venda hoje'
+                          : 'Nenhuma venda em $selectedFilter hoje',
+                      text: selectedFilter == allFilter
+                          ? 'As vendas simuladas aparecerão aqui separadas por plataforma.'
+                          : 'Quando houver uma venda em $selectedFilter, ela aparecerá neste resumo.',
                     )
                   else
                     ...totalsByPlatform.entries.map(
@@ -97,11 +144,14 @@ class SalesHistoryScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   if (sales.isEmpty)
-                    const _EmptyCard(
+                    _EmptyCard(
                       icon: Icons.receipt_long_rounded,
-                      title: 'Nenhuma venda registrada hoje',
-                      text:
-                          'Quando uma venda entrar, ela será exibida aqui com valor, plataforma e horário.',
+                      title: selectedFilter == allFilter
+                          ? 'Nenhuma venda registrada hoje'
+                          : 'Nenhuma venda de $selectedFilter hoje',
+                      text: selectedFilter == allFilter
+                          ? 'Quando uma venda entrar, ela será exibida aqui com valor, plataforma e horário.'
+                          : 'As vendas dessa plataforma aparecerão aqui com valor e horário.',
                     )
                   else
                     ...sales.map(
@@ -120,20 +170,97 @@ class SalesHistoryScreen extends StatelessWidget {
   }
 }
 
+class _FilterChips extends StatelessWidget {
+  final List<String> filters;
+  final String selectedFilter;
+  final ValueChanged<String> onSelected;
+
+  const _FilterChips({
+    required this.filters,
+    required this.selectedFilter,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: filters.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final filter = filters[index];
+          final selected = filter == selectedFilter;
+
+          return GestureDetector(
+            onTap: () => onSelected(filter),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.gold.withOpacity(0.22)
+                    : Colors.white.withOpacity(0.045),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: selected
+                      ? AppColors.goldLight.withOpacity(0.65)
+                      : Colors.white.withOpacity(0.12),
+                  width: selected ? 1.4 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: selected ? AppColors.goldLight : Colors.white54,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    filter,
+                    style: TextStyle(
+                      color: selected ? AppColors.goldLight : Colors.white70,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _SummaryCard extends StatelessWidget {
   final double total;
   final int salesCount;
   final int platformsCount;
+  final String selectedFilter;
 
   const _SummaryCard({
     required this.total,
     required this.salesCount,
     required this.platformsCount,
+    required this.selectedFilter,
   });
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = salesCount == 1 ? '1 venda hoje' : '$salesCount vendas hoje';
+    final subtitle = salesCount == 1
+        ? '1 venda hoje'
+        : '$salesCount vendas hoje';
+
+    final sourceText = selectedFilter == _SalesHistoryScreenState.allFilter
+        ? 'Todas as plataformas'
+        : selectedFilter;
 
     return Container(
       width: double.infinity,
@@ -141,20 +268,14 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.38),
-          width: 1.4,
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.38), width: 1.4),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.30),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
-          BoxShadow(
-            color: AppColors.gold.withOpacity(0.055),
-            blurRadius: 34,
-          ),
+          BoxShadow(color: AppColors.gold.withOpacity(0.055), blurRadius: 34),
         ],
       ),
       child: Column(
@@ -192,12 +313,14 @@ class _SummaryCard extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
+              _Badge(text: sourceText),
               _Badge(text: subtitle),
-              _Badge(
-                text: platformsCount == 1
-                    ? '1 plataforma'
-                    : '$platformsCount plataformas',
-              ),
+              if (selectedFilter == _SalesHistoryScreenState.allFilter)
+                _Badge(
+                  text: platformsCount == 1
+                      ? '1 plataforma'
+                      : '$platformsCount plataformas',
+                ),
             ],
           ),
         ],
@@ -210,10 +333,7 @@ class _PlatformTotalTile extends StatelessWidget {
   final String platform;
   final double total;
 
-  const _PlatformTotalTile({
-    required this.platform,
-    required this.total,
-  });
+  const _PlatformTotalTile({required this.platform, required this.total});
 
   @override
   Widget build(BuildContext context) {
@@ -223,9 +343,7 @@ class _PlatformTotalTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.16),
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.16)),
       ),
       child: Row(
         children: [
@@ -235,9 +353,7 @@ class _PlatformTotalTile extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.gold.withOpacity(0.11),
-              border: Border.all(
-                color: AppColors.gold.withOpacity(0.24),
-              ),
+              border: Border.all(color: AppColors.gold.withOpacity(0.24)),
             ),
             child: const Icon(
               Icons.payments_rounded,
@@ -283,7 +399,7 @@ class _SaleTile extends StatelessWidget {
     final time = sale.createdAt == null
         ? '--:--'
         : '${sale.createdAt!.hour.toString().padLeft(2, '0')}:'
-            '${sale.createdAt!.minute.toString().padLeft(2, '0')}';
+              '${sale.createdAt!.minute.toString().padLeft(2, '0')}';
 
     return Container(
       width: double.infinity,
@@ -291,9 +407,7 @@ class _SaleTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.09),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.09)),
       ),
       child: Row(
         children: [
@@ -377,16 +491,11 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.gold.withOpacity(0.09),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.20),
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
       ),
       child: Text(
         text,
@@ -419,17 +528,11 @@ class _EmptyCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.09),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.09)),
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: AppColors.gold.withOpacity(0.68),
-            size: 42,
-          ),
+          Icon(icon, color: AppColors.gold.withOpacity(0.68), size: 42),
 
           const SizedBox(height: 14),
 
@@ -471,10 +574,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           'Não foi possível carregar o histórico agora.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.70),
-            fontSize: 16,
-          ),
+          style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 16),
         ),
       ),
     );
