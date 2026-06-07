@@ -93,6 +93,7 @@ class _PainelScreenState extends State<PainelScreen> {
     vendaId++;
     final Sale venda = SaleSimulatorService.generateSale();
 
+    // No iPhone/Safari, o som precisa ser disparado diretamente após o toque.
     _audioService.playCashSound();
 
     await _salesController.addSale(
@@ -298,7 +299,7 @@ class _PainelScreenState extends State<PainelScreen> {
                     ),
                   ),
 
-                  SizedBox(height: isMobile ? 16 : 28),
+                  SizedBox(height: isMobile ? 18 : 30),
 
                   Expanded(
                     child: Center(
@@ -309,15 +310,25 @@ class _PainelScreenState extends State<PainelScreen> {
                                 Icon(
                                   Icons.insights_rounded,
                                   color: AppColors.gold.withOpacity(0.65),
-                                  size: isMobile ? 44 : 58,
+                                  size: isMobile ? 42 : 56,
                                 ),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
                                 const Text(
-                                  'Aguardando a primeira venda...',
+                                  'Nenhuma venda registrada hoje ainda.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white70,
-                                    fontSize: 18,
+                                    fontSize: 17,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Quando a primeira venda entrar, o TORICO avisa você.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.48),
+                                    fontSize: 13.5,
                                     height: 1.35,
                                   ),
                                 ),
@@ -379,16 +390,11 @@ class _SourceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.gold.withOpacity(0.08),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.22),
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.22)),
       ),
       child: Text(
         text,
