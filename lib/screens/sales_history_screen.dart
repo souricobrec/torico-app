@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import '../core/currency_formatter.dart';
 import '../services/firestore_sales_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class SalesHistoryScreen extends StatefulWidget {
   const SalesHistoryScreen({super.key});
@@ -160,6 +161,14 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         child: _SaleTile(sale: sale),
                       ),
                     ),
+
+                  const SizedBox(height: 18),
+
+                  const _SectionTitle('Relatórios Plus'),
+
+                  const SizedBox(height: 12),
+
+                  const _PlusReportsSection(),
                 ],
               ),
             );
@@ -460,6 +469,173 @@ class _SaleTile extends StatelessWidget {
             size: 22,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlusReportsSection extends StatelessWidget {
+  const _PlusReportsSection();
+
+  void _showPlusMessage(BuildContext context) {
+    AppSnackBar.show(context, 'Este recurso estará disponível no TORICO Plus.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _LockedPlusTile(
+          icon: Icons.calendar_view_week_rounded,
+          title: 'Últimos 7 dias',
+          text: 'Acompanhe a evolução das vendas da semana.',
+          onTap: () => _showPlusMessage(context),
+        ),
+
+        const SizedBox(height: 10),
+
+        _LockedPlusTile(
+          icon: Icons.calendar_month_rounded,
+          title: 'Relatório mensal',
+          text: 'Veja o desempenho acumulado do mês.',
+          onTap: () => _showPlusMessage(context),
+        ),
+
+        const SizedBox(height: 10),
+
+        _LockedPlusTile(
+          icon: Icons.compare_arrows_rounded,
+          title: 'Comparativos por período',
+          text: 'Compare dias, semanas e plataformas.',
+          onTap: () => _showPlusMessage(context),
+        ),
+
+        const SizedBox(height: 10),
+
+        _LockedPlusTile(
+          icon: Icons.bar_chart_rounded,
+          title: 'Gráficos de desempenho',
+          text: 'Visualize suas vendas com gráficos e tendências.',
+          onTap: () => _showPlusMessage(context),
+        ),
+      ],
+    );
+  }
+}
+
+class _LockedPlusTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String text;
+  final VoidCallback onTap;
+
+  const _LockedPlusTile({
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.gold.withOpacity(0.055),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.gold.withOpacity(0.18)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.gold.withOpacity(0.12),
+                  border: Border.all(color: AppColors.gold.withOpacity(0.24)),
+                ),
+                child: Icon(icon, color: AppColors.goldLight, size: 24),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(100),
+                            border: Border.all(
+                              color: AppColors.gold.withOpacity(0.24),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lock_rounded,
+                                color: AppColors.goldLight,
+                                size: 13,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Plus',
+                                style: TextStyle(
+                                  color: AppColors.goldLight,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.58),
+                        fontSize: 13.5,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
