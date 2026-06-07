@@ -98,7 +98,7 @@ class AboutScreen extends StatelessWidget {
                   'TORICO • ${AppTexts.slogan}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.40),
+                    color: Colors.white.withValues(alpha: 0.40),
                     fontSize: 12,
                     height: 1.4,
                   ),
@@ -128,14 +128,14 @@ class _HeroCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.gold.withOpacity(0.22),
-            Colors.white.withOpacity(0.045),
+            AppColors.gold.withValues(alpha: 0.22),
+            Colors.white.withValues(alpha: 0.045),
           ],
         ),
-        border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.28),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 26,
             offset: const Offset(0, 16),
           ),
@@ -166,7 +166,7 @@ class _HeroCard extends StatelessWidget {
           Text(
             'Venda acompanhada em tempo real, com uma experiência simples, visual e pensada para o comerciante.',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.74),
+              color: Colors.white.withValues(alpha: 0.74),
               fontSize: 16,
               height: 1.45,
             ),
@@ -206,7 +206,7 @@ class _TextBlock extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.72),
+        color: Colors.white.withValues(alpha: 0.72),
         fontSize: 16,
         height: 1.55,
       ),
@@ -231,9 +231,9 @@ class _BenefitTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,8 +243,8 @@ class _BenefitTile extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.13),
-              border: Border.all(color: AppColors.gold.withOpacity(0.25)),
+              color: AppColors.gold.withValues(alpha: 0.13),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
             ),
             child: Icon(icon, color: AppColors.goldLight, size: 24),
           ),
@@ -269,7 +269,7 @@ class _BenefitTile extends StatelessWidget {
                 Text(
                   text,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.60),
+                    color: Colors.white.withValues(alpha: 0.60),
                     fontSize: 14,
                     height: 1.35,
                   ),
@@ -292,9 +292,9 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.08),
+        color: AppColors.gold.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.gold.withOpacity(0.22)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,7 +311,7 @@ class _InfoCard extends StatelessWidget {
             child: Text(
               'Nesta versão de teste, as vendas exibidas no painel são simuladas. A estrutura já prepara o caminho para futuras integrações reais com plataformas de pagamento.',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.72),
+                color: Colors.white.withValues(alpha: 0.72),
                 fontSize: 14,
                 height: 1.45,
               ),

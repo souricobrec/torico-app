@@ -2,10 +2,64 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
+import '../services/local_storage_service.dart';
 import 'auth_screen.dart';
+import 'connected_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final LocalStorageService _storage = LocalStorageService();
+
+  List<String> connectedPlatforms = [];
+  bool carregando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConnectedPlatforms();
+  }
+
+  Future<void> _loadConnectedPlatforms() async {
+    final platforms = await _storage.getConnectedPlatforms();
+
+    if (!mounted) return;
+
+    setState(() {
+      connectedPlatforms = platforms;
+      carregando = false;
+    });
+  }
+
+  bool _isConnected(String plataforma) {
+    return connectedPlatforms.contains(plataforma);
+  }
+
+  void _openPlatform(String plataforma) {
+    if (_isConnected(plataforma)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConnectedScreen(plataforma: plataforma),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AuthScreen(plataforma: plataforma),
+      ),
+    ).then((_) {
+      _loadConnectedPlatforms();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,37 +87,49 @@ class LoginScreen extends StatelessWidget {
 
                   SizedBox(height: isMobile ? 28 : 44),
 
-                  const _IntroCard(),
+                  _IntroCard(connectedPlatforms: connectedPlatforms),
 
                   SizedBox(height: isMobile ? 22 : 30),
 
-                  _PlatformCard(
-                    plataforma: 'Mercado Pago',
-                    subtitle: 'Conecte suas vendas feitas pelo Mercado Pago',
-                    icon: Icons.account_balance_wallet_rounded,
-                    color: Colors.lightBlueAccent,
-                    onTap: () => _abrirConexao(context, 'Mercado Pago'),
-                  ),
+                  if (carregando)
+                    const Padding(
+                      padding: EdgeInsets.all(28),
+                      child: CircularProgressIndicator(
+                        color: AppColors.goldLight,
+                      ),
+                    )
+                  else ...[
+                    _PlatformCard(
+                      plataforma: 'Mercado Pago',
+                      subtitle: 'Conecte suas vendas feitas pelo Mercado Pago',
+                      icon: Icons.account_balance_wallet_rounded,
+                      color: Colors.lightBlueAccent,
+                      conectado: _isConnected('Mercado Pago'),
+                      onTap: () => _openPlatform('Mercado Pago'),
+                    ),
 
-                  const SizedBox(height: 14),
+                    const SizedBox(height: 14),
 
-                  _PlatformCard(
-                    plataforma: 'Stone',
-                    subtitle: 'Acompanhe vendas da sua maquininha Stone',
-                    icon: Icons.payments_rounded,
-                    color: Colors.greenAccent,
-                    onTap: () => _abrirConexao(context, 'Stone'),
-                  ),
+                    _PlatformCard(
+                      plataforma: 'Stone',
+                      subtitle: 'Acompanhe vendas da sua maquininha Stone',
+                      icon: Icons.payments_rounded,
+                      color: Colors.greenAccent,
+                      conectado: _isConnected('Stone'),
+                      onTap: () => _openPlatform('Stone'),
+                    ),
 
-                  const SizedBox(height: 14),
+                    const SizedBox(height: 14),
 
-                  _PlatformCard(
-                    plataforma: 'PagBank',
-                    subtitle: 'Monitore vendas conectadas ao PagBank',
-                    icon: Icons.credit_card_rounded,
-                    color: Colors.orangeAccent,
-                    onTap: () => _abrirConexao(context, 'PagBank'),
-                  ),
+                    _PlatformCard(
+                      plataforma: 'PagBank',
+                      subtitle: 'Monitore vendas conectadas ao PagBank',
+                      icon: Icons.credit_card_rounded,
+                      color: Colors.orangeAccent,
+                      conectado: _isConnected('PagBank'),
+                      onTap: () => _openPlatform('PagBank'),
+                    ),
+                  ],
 
                   SizedBox(height: isMobile ? 20 : 30),
 
@@ -74,13 +140,6 @@ class LoginScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  void _abrirConexao(BuildContext context, String plataforma) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => AuthScreen(plataforma: plataforma)),
     );
   }
 }
@@ -94,7 +153,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Image.asset('assets/images/app_icon.png', width: isMobile ? 76 : 120),
+        Image.asset(
+          'assets/images/app_icon.png',
+          width: isMobile ? 76 : 120,
+        ),
 
         SizedBox(height: isMobile ? 10 : 16),
 
@@ -135,12 +197,22 @@ class _Header extends StatelessWidget {
 }
 
 class _IntroCard extends StatelessWidget {
-  const _IntroCard();
+  final List<String> connectedPlatforms;
+
+  const _IntroCard({required this.connectedPlatforms});
 
   @override
   Widget build(BuildContext context) {
     final largura = MediaQuery.of(context).size.width;
     final bool isMobile = largura < 600;
+
+    final hasConnected = connectedPlatforms.isNotEmpty;
+    final title = hasConnected
+        ? 'Plataformas do negócio'
+        : 'Conecte sua primeira plataforma';
+    final subtitle = hasConnected
+        ? 'Seu painel pode consolidar vendas de ${connectedPlatforms.join(', ')}.'
+        : 'Escolha onde suas vendas acontecem para o TORICO acompanhar tudo em tempo real.';
 
     return Container(
       width: double.infinity,
@@ -148,14 +220,20 @@ class _IntroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.gold.withOpacity(0.40), width: 1.3),
+        border: Border.all(
+          color: AppColors.gold.withOpacity(0.40),
+          width: 1.3,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.30),
             blurRadius: 28,
             offset: const Offset(0, 16),
           ),
-          BoxShadow(color: AppColors.gold.withOpacity(0.055), blurRadius: 36),
+          BoxShadow(
+            color: AppColors.gold.withOpacity(0.055),
+            blurRadius: 36,
+          ),
         ],
       ),
       child: Row(
@@ -167,10 +245,12 @@ class _IntroCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.gold.withOpacity(0.12),
-              border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+              border: Border.all(
+                color: AppColors.gold.withOpacity(0.28),
+              ),
             ),
-            child: const Icon(
-              Icons.link_rounded,
+            child: Icon(
+              hasConnected ? Icons.hub_rounded : Icons.link_rounded,
               color: AppColors.goldLight,
               size: 28,
             ),
@@ -183,7 +263,7 @@ class _IntroCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Conecte sua plataforma',
+                  title,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isMobile ? 21 : 26,
@@ -195,7 +275,7 @@ class _IntroCard extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 Text(
-                  'Escolha onde suas vendas acontecem para o TORICO acompanhar tudo em tempo real.',
+                  subtitle,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.68),
                     fontSize: isMobile ? 14 : 16,
@@ -216,6 +296,7 @@ class _PlatformCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final bool conectado;
   final VoidCallback onTap;
 
   const _PlatformCard({
@@ -223,6 +304,7 @@ class _PlatformCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
+    required this.conectado,
     required this.onTap,
   });
 
@@ -244,9 +326,14 @@ class _PlatformCard extends StatelessWidget {
             vertical: isMobile ? 16 : 22,
           ),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.045),
+            color: conectado
+                ? color.withOpacity(0.075)
+                : Colors.white.withOpacity(0.045),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: color.withOpacity(0.36), width: 1.2),
+            border: Border.all(
+              color: conectado ? color.withOpacity(0.70) : color.withOpacity(0.36),
+              width: conectado ? 1.6 : 1.2,
+            ),
           ),
           child: Row(
             children: [
@@ -256,9 +343,15 @@ class _PlatformCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: color.withOpacity(0.13),
-                  border: Border.all(color: color.withOpacity(0.32)),
+                  border: Border.all(
+                    color: color.withOpacity(0.32),
+                  ),
                 ),
-                child: Icon(icon, color: color, size: isMobile ? 28 : 34),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: isMobile ? 28 : 34,
+                ),
               ),
 
               const SizedBox(width: 16),
@@ -267,19 +360,33 @@ class _PlatformCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      plataforma,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isMobile ? 21 : 25,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            plataforma,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isMobile ? 21 : 25,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (conectado) ...[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.greenAccent,
+                            size: 19,
+                          ),
+                        ],
+                      ],
                     ),
 
                     const SizedBox(height: 4),
 
                     Text(
-                      subtitle,
+                      conectado ? 'Conectado ao negócio' : subtitle,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.56),
                         fontSize: isMobile ? 13 : 15,
@@ -291,7 +398,7 @@ class _PlatformCard extends StatelessWidget {
               ),
 
               Icon(
-                Icons.chevron_right_rounded,
+                conectado ? Icons.dashboard_customize_rounded : Icons.chevron_right_rounded,
                 color: color,
                 size: isMobile ? 30 : 34,
               ),
@@ -320,7 +427,9 @@ class _SimulationNotice extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.gold.withOpacity(0.075),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
+        border: Border.all(
+          color: AppColors.gold.withOpacity(0.20),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,7 +444,7 @@ class _SimulationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Nesta versão de teste, a conexão é simulada para demonstrar o fluxo do TORICO.',
+              'Nesta versão de teste, novas plataformas podem ser conectadas de forma simulada. Na integração real, cada plataforma exigirá autorização própria.',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.70),
                 fontSize: isMobile ? 13 : 14,

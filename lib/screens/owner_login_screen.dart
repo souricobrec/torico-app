@@ -288,7 +288,7 @@ class _LoginHeader extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.gold.withOpacity(0.26),
+                color: AppColors.gold.withValues(alpha: 0.26),
                 blurRadius: 28,
                 offset: const Offset(0, 8),
               ),
@@ -385,14 +385,20 @@ class _LoginCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(isMobile ? 26 : 30),
-        border: Border.all(color: AppColors.gold.withOpacity(0.58), width: 1.4),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.58),
+          width: 1.4,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.34),
+            color: Colors.black.withValues(alpha: 0.34),
             blurRadius: 30,
             offset: const Offset(0, 18),
           ),
-          BoxShadow(color: AppColors.gold.withOpacity(0.06), blurRadius: 40),
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.06),
+            blurRadius: 40,
+          ),
         ],
       ),
       child: Column(
@@ -494,9 +500,9 @@ class _LoginCard extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
                 foregroundColor: Colors.black,
-                disabledBackgroundColor: AppColors.gold.withOpacity(0.45),
+                disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.45),
                 elevation: 10,
-                shadowColor: AppColors.gold.withOpacity(0.30),
+                shadowColor: AppColors.gold.withValues(alpha: 0.30),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -586,13 +592,13 @@ class _PremiumTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
-          color: Colors.white.withOpacity(0.38),
+          color: Colors.white.withValues(alpha: 0.38),
           fontSize: isMobile ? 16 : 17,
         ),
         prefixIcon: Icon(icon, color: Colors.white70, size: isMobile ? 22 : 24),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.black.withOpacity(0.16),
+        fillColor: Colors.black.withValues(alpha: 0.16),
         contentPadding: EdgeInsets.symmetric(
           horizontal: 18,
           vertical: isMobile ? 14 : 20,
@@ -600,7 +606,7 @@ class _PremiumTextField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.20),
+            color: Colors.white.withValues(alpha: 0.20),
             width: 1.2,
           ),
         ),
@@ -643,7 +649,7 @@ class _CreateAccountCard extends StatelessWidget {
             color: const Color(0xFF06182C),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppColors.gold.withOpacity(0.42),
+              color: AppColors.gold.withValues(alpha: 0.42),
               width: 1.2,
             ),
           ),
@@ -654,8 +660,10 @@ class _CreateAccountCard extends StatelessWidget {
                 height: isMobile ? 42 : 54,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.gold.withOpacity(0.10),
-                  border: Border.all(color: AppColors.gold.withOpacity(0.25)),
+                  color: AppColors.gold.withValues(alpha: 0.10),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Icon(
                   Icons.person_add_alt_1_rounded,
@@ -769,8 +777,8 @@ class _BenefitItem extends StatelessWidget {
           height: 62,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.045),
-            border: Border.all(color: AppColors.gold.withOpacity(0.18)),
+            color: Colors.white.withValues(alpha: 0.045),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.18)),
           ),
           child: Icon(icon, color: AppColors.goldLight, size: 30),
         ),
@@ -781,7 +789,7 @@ class _BenefitItem extends StatelessWidget {
           text,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.74),
+            color: Colors.white.withValues(alpha: 0.74),
             fontSize: 13,
             height: 1.25,
           ),
@@ -800,7 +808,7 @@ class _DividerLine extends StatelessWidget {
       width: 1,
       height: 78,
       margin: const EdgeInsets.symmetric(horizontal: 8),
-      color: Colors.white.withOpacity(0.14),
+      color: Colors.white.withValues(alpha: 0.14),
     );
   }
 }
@@ -814,7 +822,9 @@ class _SecurityMessage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.10))),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+        ),
       ),
       child: Row(
         children: [
@@ -830,7 +840,7 @@ class _SecurityMessage extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.72),
+                  color: Colors.white.withValues(alpha: 0.72),
                   fontSize: 15,
                   height: 1.32,
                 ),

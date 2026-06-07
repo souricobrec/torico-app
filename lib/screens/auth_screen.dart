@@ -28,7 +28,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final conectado = await _integrationService.connect(widget.plataforma);
 
     if (conectado && mounted) {
-      await _localStorageService.saveConnectedPlatform(widget.plataforma);
+      await _localStorageService.addConnectedPlatform(widget.plataforma);
 
       if (!mounted) return;
 
@@ -95,9 +95,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
                         foregroundColor: Colors.black,
-                        disabledBackgroundColor: AppColors.gold.withOpacity(
-                          0.45,
-                        ),
+                        disabledBackgroundColor:
+                            AppColors.gold.withOpacity(0.45),
                         elevation: 10,
                         shadowColor: AppColors.gold.withOpacity(0.30),
                         shape: RoundedRectangleBorder(
@@ -152,7 +151,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Image.asset('assets/images/app_icon.png', width: isMobile ? 74 : 112),
+        Image.asset(
+          'assets/images/app_icon.png',
+          width: isMobile ? 74 : 112,
+        ),
 
         SizedBox(height: isMobile ? 10 : 16),
 
@@ -196,7 +198,10 @@ class _ConnectionCard extends StatelessWidget {
   final String plataforma;
   final bool carregando;
 
-  const _ConnectionCard({required this.plataforma, required this.carregando});
+  const _ConnectionCard({
+    required this.plataforma,
+    required this.carregando,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -209,14 +214,20 @@ class _ConnectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppColors.gold.withOpacity(0.46), width: 1.4),
+        border: Border.all(
+          color: AppColors.gold.withOpacity(0.46),
+          width: 1.4,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.34),
             blurRadius: 30,
             offset: const Offset(0, 18),
           ),
-          BoxShadow(color: AppColors.gold.withOpacity(0.06), blurRadius: 40),
+          BoxShadow(
+            color: AppColors.gold.withOpacity(0.06),
+            blurRadius: 40,
+          ),
         ],
       ),
       child: Column(
@@ -230,18 +241,20 @@ class _ConnectionCard extends StatelessWidget {
               color: carregando
                   ? AppColors.gold.withOpacity(0.18)
                   : AppColors.gold.withOpacity(0.11),
-              border: Border.all(color: AppColors.gold.withOpacity(0.36)),
+              border: Border.all(
+                color: AppColors.gold.withOpacity(0.36),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.gold.withOpacity(carregando ? 0.28 : 0.10),
+                  color: AppColors.gold.withOpacity(
+                    carregando ? 0.28 : 0.10,
+                  ),
                   blurRadius: carregando ? 28 : 14,
                 ),
               ],
             ),
             child: Icon(
-              carregando
-                  ? Icons.sync_rounded
-                  : Icons.admin_panel_settings_rounded,
+              carregando ? Icons.sync_rounded : Icons.add_link_rounded,
               color: AppColors.goldLight,
               size: isMobile ? 38 : 46,
             ),
@@ -265,7 +278,7 @@ class _ConnectionCard extends StatelessWidget {
           Text(
             carregando
                 ? 'Conectando ao $plataforma...'
-                : 'Autorize a conexão para o TORICO começar a monitorar suas vendas.',
+                : 'Autorize esta plataforma para adicioná-la às fontes de venda do seu negócio.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withOpacity(0.75),
@@ -297,7 +310,10 @@ class _StepsCard extends StatelessWidget {
   final String plataforma;
   final bool carregando;
 
-  const _StepsCard({required this.plataforma, required this.carregando});
+  const _StepsCard({
+    required this.plataforma,
+    required this.carregando,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -307,25 +323,27 @@ class _StepsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.045),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.09),
+        ),
       ),
       child: Column(
         children: [
           _StepItem(
             icon: Icons.verified_user_rounded,
             title: '1. Autorização segura',
-            text: 'Você confirma a plataforma que deseja acompanhar.',
+            text: 'Você confirma a plataforma que deseja conectar.',
             active: true,
           ),
 
           const SizedBox(height: 16),
 
           _StepItem(
-            icon: Icons.link_rounded,
-            title: '2. Conexão com $plataforma',
+            icon: Icons.hub_rounded,
+            title: '2. Adicionar $plataforma',
             text: carregando
-                ? 'Estamos preparando o monitoramento das vendas.'
-                : 'O TORICO prepara a conexão com sua plataforma.',
+                ? 'Estamos preparando esta fonte de vendas.'
+                : 'O TORICO adicionará esta plataforma ao seu negócio.',
             active: carregando,
           ),
 
@@ -333,8 +351,8 @@ class _StepsCard extends StatelessWidget {
 
           _StepItem(
             icon: Icons.insights_rounded,
-            title: '3. Painel em tempo real',
-            text: 'Depois disso, você acompanha o vendido hoje pelo celular.',
+            title: '3. Painel consolidado',
+            text: 'O painel mostrará o total vendido do negócio no dia.',
             active: false,
           ),
         ],
@@ -421,7 +439,7 @@ class _SimulationNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      'Nesta versão de teste, a autorização é simulada para demonstrar o fluxo do TORICO.',
+      'Nesta versão de teste, a autorização é simulada. Na integração real, cada plataforma exigirá login/autorização própria.',
       textAlign: TextAlign.center,
       style: TextStyle(
         color: Colors.white.withOpacity(0.46),

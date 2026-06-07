@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
 import '../services/local_storage_service.dart';
-import 'connected_screen.dart';
+import 'main_navigation_screen.dart';
 import 'login_screen.dart';
 import 'owner_login_screen.dart';
 
@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ConnectedScreen(plataforma: plataforma),
+          builder: (_) => MainNavigationScreen(plataforma: plataforma),
         ),
       );
       return;

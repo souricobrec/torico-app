@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:torico/models/sale.dart';
+
 import '../core/app_colors.dart';
-import '../widgets/coin_rain.dart';
-import '../services/sale_simulator_service.dart';
-import '../services/audio_service.dart';
 import '../core/currency_formatter.dart';
-import 'package:torico/controllers/sales_controller.dart';
-import 'settings_screen.dart';
+import '../controllers/sales_controller.dart';
+import '../services/audio_service.dart';
+import '../services/local_storage_service.dart';
+import '../services/sale_simulator_service.dart';
+import '../widgets/coin_rain.dart';
 
 class PainelScreen extends StatefulWidget {
   final String plataforma;
@@ -20,16 +21,39 @@ class PainelScreen extends StatefulWidget {
 class _PainelScreenState extends State<PainelScreen> {
   final SalesController _salesController = SalesController();
   final AudioService _audioService = AudioService();
+  final LocalStorageService _storage = LocalStorageService();
 
   bool mostrarMoedas = false;
   bool mostrarGanho = false;
 
   int vendaId = 0;
+  List<String> connectedPlatforms = [];
 
   @override
   void initState() {
     super.initState();
+
+    _salesController.addListener(_atualizarTela);
+
+    carregarPlataformas();
     carregarTotalSalvo();
+    _salesController.startWatchingTodayTotal();
+  }
+
+  void _atualizarTela() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> carregarPlataformas() async {
+    final platforms = await _storage.getConnectedPlatforms();
+
+    if (!mounted) return;
+
+    setState(() {
+      connectedPlatforms = platforms;
+    });
   }
 
   Future<void> carregarTotalSalvo() async {
@@ -40,14 +64,41 @@ class _PainelScreenState extends State<PainelScreen> {
     }
   }
 
+  String get _fonteVendas {
+    if (connectedPlatforms.isEmpty) {
+      return widget.plataforma;
+    }
+
+    if (connectedPlatforms.length == 1) {
+      return connectedPlatforms.first;
+    }
+
+    return connectedPlatforms.join(' + ');
+  }
+
+  String get _plataformaDaVendaSimulada {
+    if (widget.plataforma.isNotEmpty &&
+        widget.plataforma != 'Todas as plataformas') {
+      return widget.plataforma;
+    }
+
+    if (connectedPlatforms.isNotEmpty) {
+      return connectedPlatforms.first;
+    }
+
+    return 'Simulador';
+  }
+
   Future<void> novaVenda() async {
     vendaId++;
     final Sale venda = SaleSimulatorService.generateSale();
 
-    // No iPhone/Safari, o som precisa ser disparado diretamente após o toque.
     _audioService.playCashSound();
 
-    await _salesController.addSale(venda);
+    await _salesController.addSale(
+      venda,
+      plataforma: _plataformaDaVendaSimulada,
+    );
 
     if (!mounted) return;
 
@@ -77,7 +128,7 @@ class _PainelScreenState extends State<PainelScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Nova venda recebida! + ${CurrencyFormatter.format(venda.amount)}',
+          'Nova venda recebida em $_plataformaDaVendaSimulada! + ${CurrencyFormatter.format(venda.amount)}',
         ),
       ),
     );
@@ -85,6 +136,7 @@ class _PainelScreenState extends State<PainelScreen> {
 
   @override
   void dispose() {
+    _salesController.removeListener(_atualizarTela);
     _audioService.dispose();
     _salesController.dispose();
     super.dispose();
@@ -112,31 +164,15 @@ class _PainelScreenState extends State<PainelScreen> {
                 children: [
                   SizedBox(height: isMobile ? 14 : 22),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 48),
-                      Text(
-                        'TORICO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: logoSize,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      _SettingsButton(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  SettingsScreen(plataforma: widget.plataforma),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  Text(
+                    'TORICO',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: logoSize,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
                   ),
 
                   SizedBox(height: isMobile ? 24 : 38),
@@ -144,7 +180,7 @@ class _PainelScreenState extends State<PainelScreen> {
                   Container(
                     width: double.infinity,
                     constraints: BoxConstraints(
-                      minHeight: isMobile ? 210 : 250,
+                      minHeight: isMobile ? 230 : 270,
                     ),
                     padding: EdgeInsets.symmetric(
                       horizontal: isMobile ? 20 : 34,
@@ -184,7 +220,7 @@ class _PainelScreenState extends State<PainelScreen> {
                           ),
                         ),
 
-                        SizedBox(height: isMobile ? 48 : 64),
+                        SizedBox(height: isMobile ? 36 : 50),
 
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 450),
@@ -215,6 +251,14 @@ class _PainelScreenState extends State<PainelScreen> {
                               ),
                             ),
                           ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        _SourceBadge(
+                          text: connectedPlatforms.length <= 1
+                              ? 'Fonte: $_fonteVendas'
+                              : 'Todas as plataformas: $_fonteVendas',
                         ),
 
                         SizedBox(height: isMobile ? 8 : 12),
@@ -327,42 +371,33 @@ class _PainelScreenState extends State<PainelScreen> {
   }
 }
 
-class _SettingsButton extends StatelessWidget {
-  final VoidCallback onTap;
+class _SourceBadge extends StatelessWidget {
+  final String text;
 
-  const _SettingsButton({required this.onTap});
+  const _SourceBadge({required this.text});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.055),
-            border: Border.all(
-              color: AppColors.gold.withOpacity(0.45),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.gold.withOpacity(0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.settings_rounded,
-            color: AppColors.goldLight,
-            size: 24,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: AppColors.gold.withOpacity(0.22),
+        ),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.72),
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          height: 1.25,
         ),
       ),
     );

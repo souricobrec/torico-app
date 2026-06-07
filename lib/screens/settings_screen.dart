@@ -1,15 +1,50 @@
 import 'package:flutter/material.dart';
-import 'about_screen.dart';
-import '../services/local_storage_service.dart';
-import 'login_screen.dart';
+
 import '../core/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/local_storage_service.dart';
+import 'about_screen.dart';
+import 'login_screen.dart';
 import 'owner_login_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   final String plataforma;
 
   const SettingsScreen({super.key, required this.plataforma});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final LocalStorageService _storage = LocalStorageService();
+
+  List<String> connectedPlatforms = [];
+  bool carregando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlatforms();
+  }
+
+  Future<void> _loadPlatforms() async {
+    final platforms = await _storage.getConnectedPlatforms();
+
+    if (!mounted) return;
+
+    setState(() {
+      connectedPlatforms = platforms;
+      carregando = false;
+    });
+  }
+
+  String get _platformsLabel {
+    if (connectedPlatforms.isEmpty) return widget.plataforma;
+    if (connectedPlatforms.length == 1) return connectedPlatforms.first;
+
+    return connectedPlatforms.join(' + ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +74,11 @@ class SettingsScreen extends StatelessWidget {
 
               const SizedBox(height: 22),
 
-              _ConnectedPlatformCard(plataforma: plataforma),
+              _ConnectedPlatformsCard(
+                platforms: connectedPlatforms,
+                fallbackLabel: _platformsLabel,
+                carregando: carregando,
+              ),
 
               const SizedBox(height: 18),
 
@@ -55,6 +94,21 @@ class SettingsScreen extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
+              ),
+
+              const SizedBox(height: 12),
+
+              _SettingsActionTile(
+                icon: Icons.add_link_rounded,
+                title: 'Conectar outra plataforma',
+                subtitle: 'Adicionar Mercado Pago, Stone ou PagBank ao negócio',
+                iconColor: AppColors.goldLight,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
               ),
 
               const SizedBox(height: 12),
@@ -76,8 +130,8 @@ class SettingsScreen extends StatelessWidget {
 
               _SettingsActionTile(
                 icon: Icons.link_off_rounded,
-                title: 'Desconectar plataforma',
-                subtitle: 'Remove a integração e zera o total vendido',
+                title: 'Desconectar plataformas',
+                subtitle: 'Remove as conexões locais deste dispositivo',
                 iconColor: Colors.redAccent,
                 danger: true,
                 onTap: () {
@@ -122,16 +176,14 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return _ToricoDialog(
-          title: 'Desconectar plataforma?',
+          title: 'Desconectar plataformas?',
           message:
-              'Isso removerá a plataforma conectada e também limpará o total vendido salvo neste dispositivo.',
+              'Isso removerá as plataformas conectadas neste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
           primaryText: 'Desconectar',
           primaryColor: Colors.redAccent,
           onPrimary: () async {
-            final storage = LocalStorageService();
-
-            await storage.clearConnectedPlatform();
-            await storage.clearTotalSold();
+            await _storage.clearConnectedPlatform();
+            await _storage.clearTotalSold();
 
             if (!context.mounted) return;
 
@@ -157,11 +209,10 @@ class SettingsScreen extends StatelessWidget {
           primaryText: 'Sair',
           primaryColor: AppColors.goldLight,
           onPrimary: () async {
-            final storage = LocalStorageService();
             final authService = AuthService();
 
-            await storage.clearConnectedPlatform();
-            await storage.clearTotalSold();
+            await _storage.clearConnectedPlatform();
+            await _storage.clearTotalSold();
             await authService.logout();
 
             if (!context.mounted) return;
@@ -196,7 +247,9 @@ class _HeaderCard extends StatelessWidget {
             Colors.white.withOpacity(0.045),
           ],
         ),
-        border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+        border: Border.all(
+          color: AppColors.gold.withOpacity(0.28),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.25),
@@ -220,7 +273,11 @@ class _HeaderCard extends StatelessWidget {
           SizedBox(height: 8),
           Text(
             'Seu negócio vendendo. Onde você estiver.',
-            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.35),
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 15,
+              height: 1.35,
+            ),
           ),
         ],
       ),
@@ -228,22 +285,33 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
-class _ConnectedPlatformCard extends StatelessWidget {
-  final String plataforma;
+class _ConnectedPlatformsCard extends StatelessWidget {
+  final List<String> platforms;
+  final String fallbackLabel;
+  final bool carregando;
 
-  const _ConnectedPlatformCard({required this.plataforma});
+  const _ConnectedPlatformsCard({
+    required this.platforms,
+    required this.fallbackLabel,
+    required this.carregando,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final count = platforms.length;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.055),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.10),
+        ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
@@ -251,10 +319,12 @@ class _ConnectedPlatformCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.gold.withOpacity(0.14),
-              border: Border.all(color: AppColors.gold.withOpacity(0.35)),
+              border: Border.all(
+                color: AppColors.gold.withOpacity(0.35),
+              ),
             ),
             child: const Icon(
-              Icons.storefront_rounded,
+              Icons.hub_rounded,
               color: AppColors.goldLight,
               size: 28,
             ),
@@ -266,21 +336,57 @@ class _ConnectedPlatformCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Plataforma conectada',
-                  style: TextStyle(color: Colors.white60, fontSize: 14),
-                ),
-                const SizedBox(height: 5),
                 Text(
-                  plataforma,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  count <= 1
+                      ? 'Plataforma conectada'
+                      : 'Plataformas conectadas',
                   style: const TextStyle(
-                    color: AppColors.goldLight,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.white60,
+                    fontSize: 14,
                   ),
                 ),
+                const SizedBox(height: 8),
+                if (carregando)
+                  const LinearProgressIndicator(
+                    color: AppColors.goldLight,
+                  )
+                else if (platforms.isEmpty)
+                  Text(
+                    fallbackLabel,
+                    style: const TextStyle(
+                      color: AppColors.goldLight,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: platforms.map((platform) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: AppColors.gold.withOpacity(0.24),
+                          ),
+                        ),
+                        child: Text(
+                          platform,
+                          style: const TextStyle(
+                            color: AppColors.goldLight,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
               ],
             ),
           ),
@@ -301,7 +407,9 @@ class _StatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.greenAccent.withOpacity(0.08),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.22)),
+        border: Border.all(
+          color: Colors.greenAccent.withOpacity(0.22),
+        ),
       ),
       child: Row(
         children: [
@@ -326,12 +434,15 @@ class _StatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Status da conexão',
-                  style: TextStyle(color: Colors.white60, fontSize: 14),
+                  'Status do painel',
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 14,
+                  ),
                 ),
                 SizedBox(height: 5),
                 Text(
-                  'Conectado e monitorando vendas',
+                  'Monitorando vendas do negócio',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -396,7 +507,11 @@ class _SettingsActionTile extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: iconColor.withOpacity(0.12),
                 ),
-                child: Icon(icon, color: iconColor, size: 24),
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: 24,
+                ),
               ),
 
               const SizedBox(width: 14),
@@ -460,7 +575,9 @@ class _ToricoDialog extends StatelessWidget {
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: AppColors.gold.withOpacity(0.25)),
+        side: BorderSide(
+          color: AppColors.gold.withOpacity(0.25),
+        ),
       ),
       title: Text(
         title,
@@ -471,7 +588,10 @@ class _ToricoDialog extends StatelessWidget {
       ),
       content: Text(
         message,
-        style: const TextStyle(color: Colors.white70, height: 1.35),
+        style: const TextStyle(
+          color: Colors.white70,
+          height: 1.35,
+        ),
       ),
       actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
       actions: [
@@ -488,7 +608,10 @@ class _ToricoDialog extends StatelessWidget {
           onPressed: onPrimary,
           child: Text(
             primaryText,
-            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
