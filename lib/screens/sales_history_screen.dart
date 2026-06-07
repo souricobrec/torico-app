@@ -121,10 +121,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                     _EmptyCard(
                       icon: Icons.hub_rounded,
                       title: selectedFilter == allFilter
-                          ? 'Nenhuma plataforma com venda hoje'
+                          ? 'Nenhuma plataforma vendeu hoje ainda'
                           : 'Nenhuma venda em $selectedFilter hoje',
                       text: selectedFilter == allFilter
-                          ? 'As vendas simuladas aparecerão aqui separadas por plataforma.'
+                          ? 'Assim que uma venda entrar, o resumo por plataforma será atualizado automaticamente.'
                           : 'Quando houver uma venda em $selectedFilter, ela aparecerá neste resumo.',
                     )
                   else
@@ -151,7 +151,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ? 'Nenhuma venda registrada hoje'
                           : 'Nenhuma venda de $selectedFilter hoje',
                       text: selectedFilter == allFilter
-                          ? 'Quando uma venda entrar, ela será exibida aqui com valor, plataforma e horário.'
+                          ? 'As vendas do dia aparecerão aqui com valor, plataforma e horário.'
                           : 'As vendas dessa plataforma aparecerão aqui com valor e horário.',
                     )
                   else
@@ -478,7 +478,7 @@ class _PlusReportsSection extends StatelessWidget {
   const _PlusReportsSection();
 
   void _showPlusMessage(BuildContext context) {
-    AppSnackBar.show(context, 'Este recurso estará disponível no TORICO Plus.');
+    AppSnackBar.show(context, 'Este relatório faz parte do TORICO Plus e estará disponível em breve.');
   }
 
   @override

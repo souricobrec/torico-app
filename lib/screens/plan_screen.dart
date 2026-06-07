@@ -116,7 +116,7 @@ class PlanScreen extends StatelessWidget {
                           context,
                           plan.isPlus
                               ? 'Você já está no TORICO Plus.'
-                              : 'O TORICO Plus estará disponível em breve.',
+                              : 'O TORICO Plus estará disponível em breve com relatórios e análises avançadas.',
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -144,7 +144,7 @@ class PlanScreen extends StatelessWidget {
 
                   Center(
                     child: Text(
-                      'Básico = tempo real do dia atual • Plus = relatórios e análise histórica',
+                      'Plano Básico: acompanhe o dia atual • TORICO Plus: relatórios, comparativos e análise histórica',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.42),
@@ -241,7 +241,7 @@ class _CurrentPlanCard extends StatelessWidget {
                     Text(
                       isPlus
                           ? 'Relatórios, comparativos e análise histórica.'
-                          : 'Focado no acompanhamento do dia atual.',
+                          : 'Você está no plano Básico: acompanhamento em tempo real do dia atual.',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14.5,
@@ -313,7 +313,7 @@ class _PlusCard extends StatelessWidget {
           Text(
             isPlus
                 ? 'Você já tem acesso aos recursos avançados quando eles forem liberados no app.'
-                : 'Para quem quer analisar desempenho e tomar decisões com histórico.',
+                : 'Para quem quer ir além do dia atual, com relatórios, comparativos e visão histórica.',
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 15,

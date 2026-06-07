@@ -314,7 +314,7 @@ class _PainelScreenState extends State<PainelScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 const Text(
-                                  'Nenhuma venda registrada hoje ainda.',
+                                  'Nenhuma venda registrada hoje.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white70,
@@ -324,7 +324,7 @@ class _PainelScreenState extends State<PainelScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Quando a primeira venda entrar, o TORICO avisa você.',
+                                  'Quando a primeira venda entrar, o valor aparece aqui e o TORICO avisa você.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.48),

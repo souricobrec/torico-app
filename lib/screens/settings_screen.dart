@@ -114,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SettingsActionTile(
                 icon: Icons.hub_rounded,
                 title: 'Gerenciar plataformas',
-                subtitle: 'Conectar ou revisar Mercado Pago, Stone e PagBank',
+                subtitle: 'Conectar novas fontes de venda ou revisar as atuais',
                 iconColor: AppColors.goldLight,
                 onTap: () async {
                   await Navigator.push(
@@ -355,7 +355,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Controle quais fontes de venda estão vinculadas ao TORICO.',
+                            'Aqui você vê quais fontes já podem enviar vendas para o painel.',
                             style: TextStyle(
                               color: Colors.white60,
                               fontSize: 13.5,
@@ -380,7 +380,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
 
                 if (connectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
-                    text: 'Nenhuma plataforma conectada ainda.',
+                    text: 'Conecte pelo menos uma plataforma para iniciar o monitoramento das vendas.',
                   )
                 else
                   Wrap(
@@ -403,7 +403,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
 
                 if (disconnectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
-                    text: 'Todas as plataformas disponíveis estão conectadas.',
+                    text: 'Todas as fontes disponíveis já estão vinculadas ao TORICO.',
                   )
                 else
                   Wrap(
