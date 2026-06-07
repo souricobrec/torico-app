@@ -44,6 +44,7 @@ class _PainelScreenState extends State<PainelScreen> {
     vendaId++;
     final Sale venda = SaleSimulatorService.generateSale();
 
+    // No iPhone/Safari, o som precisa ser disparado diretamente após o toque.
     _audioService.playCashSound();
 
     await _salesController.addSale(venda);
@@ -97,8 +98,8 @@ class _PainelScreenState extends State<PainelScreen> {
     final bool isMobile = largura < 600;
 
     final double logoSize = isMobile ? largura * 0.075 : 44;
-    final double valorSize = isMobile ? largura * 0.095 : 56;
-    final double sacoMoedasSize = isMobile ? altura * 0.24 : altura * 0.30;
+    final double valorSize = isMobile ? largura * 0.145 : 76;
+    final double sacoMoedasSize = isMobile ? altura * 0.21 : altura * 0.28;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -106,7 +107,7 @@ class _PainelScreenState extends State<PainelScreen> {
         children: [
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 40),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 18 : 40),
               child: Column(
                 children: [
                   SizedBox(height: isMobile ? 14 : 22),
@@ -138,74 +139,52 @@ class _PainelScreenState extends State<PainelScreen> {
                     ],
                   ),
 
-                  SizedBox(height: isMobile ? 26 : 38),
+                  SizedBox(height: isMobile ? 24 : 38),
 
                   Container(
                     width: double.infinity,
+                    constraints: BoxConstraints(
+                      minHeight: isMobile ? 210 : 250,
+                    ),
                     padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 18 : 28,
-                      vertical: isMobile ? 22 : 30,
+                      horizontal: isMobile ? 20 : 34,
+                      vertical: isMobile ? 28 : 36,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.035),
-                      borderRadius: BorderRadius.circular(26),
+                      color: const Color(0xFF06182C),
+                      borderRadius: BorderRadius.circular(isMobile ? 34 : 42),
                       border: Border.all(
-                        color: AppColors.gold.withOpacity(0.28),
-                        width: 1,
+                        color: AppColors.gold.withOpacity(0.34),
+                        width: 1.4,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.25),
-                          blurRadius: 24,
-                          offset: const Offset(0, 14),
+                          color: Colors.black.withOpacity(0.30),
+                          blurRadius: 28,
+                          offset: const Offset(0, 16),
+                        ),
+                        BoxShadow(
+                          color: AppColors.gold.withOpacity(0.055),
+                          blurRadius: 36,
+                          offset: const Offset(0, 0),
                         ),
                       ],
                     ),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'VENDIDO HOJE',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             color: AppColors.gold,
-                            letterSpacing: 3,
-                            fontSize: 14,
+                            letterSpacing: isMobile ? 6 : 8,
+                            fontSize: isMobile ? 17 : 20,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
 
-                        const SizedBox(height: 12),
-
-                        SizedBox(
-                          height: 38,
-                          child: mostrarGanho
-                              ? TweenAnimationBuilder<double>(
-                                  key: ValueKey(vendaId),
-                                  duration: const Duration(seconds: 5),
-                                  tween: Tween(begin: 0, end: 1),
-                                  builder: (context, value, child) {
-                                    final opacity = value < 0.75
-                                        ? 1.0
-                                        : 1.0 - ((value - 0.75) / 0.25);
-
-                                    return Transform.translate(
-                                      offset: Offset(0, -18 * value),
-                                      child: Opacity(
-                                        opacity: opacity.clamp(0.0, 1.0),
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  child: Text(
-                                    '+ ${CurrencyFormatter.format(_salesController.lastSale?.amount ?? 0)}',
-                                    style: const TextStyle(
-                                      color: Colors.greenAccent,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              : const SizedBox(),
-                        ),
+                        SizedBox(height: isMobile ? 48 : 64),
 
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 450),
@@ -218,25 +197,64 @@ class _PainelScreenState extends State<PainelScreen> {
                               ),
                             );
                           },
-                          child: Text(
-                            CurrencyFormatter.format(
-                              _salesController.totalSold,
-                            ),
+                          child: FittedBox(
                             key: ValueKey(_salesController.totalSold),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.goldLight,
-                              fontSize: valorSize,
-                              fontWeight: FontWeight.bold,
-                              height: 1.1,
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              CurrencyFormatter.format(
+                                _salesController.totalSold,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: AppColors.goldLight,
+                                fontSize: valorSize,
+                                fontWeight: FontWeight.bold,
+                                height: 1,
+                                letterSpacing: -1.5,
+                              ),
                             ),
                           ),
+                        ),
+
+                        SizedBox(height: isMobile ? 8 : 12),
+
+                        SizedBox(
+                          height: 28,
+                          child: mostrarGanho
+                              ? TweenAnimationBuilder<double>(
+                                  key: ValueKey(vendaId),
+                                  duration: const Duration(seconds: 5),
+                                  tween: Tween(begin: 0, end: 1),
+                                  builder: (context, value, child) {
+                                    final opacity = value < 0.75
+                                        ? 1.0
+                                        : 1.0 - ((value - 0.75) / 0.25);
+
+                                    return Transform.translate(
+                                      offset: Offset(0, -14 * value),
+                                      child: Opacity(
+                                        opacity: opacity.clamp(0.0, 1.0),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    '+ ${CurrencyFormatter.format(_salesController.lastSale?.amount ?? 0)}',
+                                    style: const TextStyle(
+                                      color: Colors.greenAccent,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox(),
                         ),
                       ],
                     ),
                   ),
 
-                  SizedBox(height: isMobile ? 20 : 32),
+                  SizedBox(height: isMobile ? 16 : 28),
 
                   Expanded(
                     child: Center(
@@ -247,9 +265,9 @@ class _PainelScreenState extends State<PainelScreen> {
                                 Icon(
                                   Icons.insights_rounded,
                                   color: AppColors.gold.withOpacity(0.65),
-                                  size: isMobile ? 46 : 58,
+                                  size: isMobile ? 44 : 58,
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 14),
                                 const Text(
                                   'Aguardando a primeira venda...',
                                   textAlign: TextAlign.center,
