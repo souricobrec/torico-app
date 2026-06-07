@@ -53,9 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => AuthScreen(plataforma: plataforma),
-      ),
+      MaterialPageRoute(builder: (_) => AuthScreen(plataforma: plataforma)),
     ).then((_) {
       _loadConnectedPlatforms();
     });
@@ -153,10 +151,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Image.asset(
-          'assets/images/app_icon.png',
-          width: isMobile ? 76 : 120,
-        ),
+        Image.asset('assets/images/app_icon.png', width: isMobile ? 76 : 120),
 
         SizedBox(height: isMobile ? 10 : 16),
 
@@ -220,20 +215,14 @@ class _IntroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.40),
-          width: 1.3,
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.40), width: 1.3),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.30),
             blurRadius: 28,
             offset: const Offset(0, 16),
           ),
-          BoxShadow(
-            color: AppColors.gold.withOpacity(0.055),
-            blurRadius: 36,
-          ),
+          BoxShadow(color: AppColors.gold.withOpacity(0.055), blurRadius: 36),
         ],
       ),
       child: Row(
@@ -245,9 +234,7 @@ class _IntroCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.gold.withOpacity(0.12),
-              border: Border.all(
-                color: AppColors.gold.withOpacity(0.28),
-              ),
+              border: Border.all(color: AppColors.gold.withOpacity(0.28)),
             ),
             child: Icon(
               hasConnected ? Icons.hub_rounded : Icons.link_rounded,
@@ -313,6 +300,9 @@ class _PlatformCard extends StatelessWidget {
     final largura = MediaQuery.of(context).size.width;
     final bool isMobile = largura < 600;
 
+    final Color statusColor = conectado ? Colors.greenAccent : Colors.white54;
+    final String statusText = conectado ? 'Conectado' : 'Desconectado';
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(24),
@@ -331,7 +321,9 @@ class _PlatformCard extends StatelessWidget {
                 : Colors.white.withOpacity(0.045),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: conectado ? color.withOpacity(0.70) : color.withOpacity(0.36),
+              color: conectado
+                  ? color.withOpacity(0.70)
+                  : Colors.white.withOpacity(0.12),
               width: conectado ? 1.6 : 1.2,
             ),
           ),
@@ -342,14 +334,18 @@ class _PlatformCard extends StatelessWidget {
                 height: isMobile ? 52 : 62,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: color.withOpacity(0.13),
+                  color: conectado
+                      ? color.withOpacity(0.13)
+                      : Colors.white.withOpacity(0.055),
                   border: Border.all(
-                    color: color.withOpacity(0.32),
+                    color: conectado
+                        ? color.withOpacity(0.32)
+                        : Colors.white.withOpacity(0.10),
                   ),
                 ),
                 child: Icon(
                   icon,
-                  color: color,
+                  color: conectado ? color : Colors.white54,
                   size: isMobile ? 28 : 34,
                 ),
               ),
@@ -360,33 +356,29 @@ class _PlatformCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            plataforma,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isMobile ? 21 : 25,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (conectado) ...[
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: Colors.greenAccent,
-                            size: 19,
-                          ),
-                        ],
-                      ],
+                    Text(
+                      plataforma,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 21 : 25,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 7),
+
+                    _StatusBadge(
+                      text: statusText,
+                      color: statusColor,
+                      connected: conectado,
+                    ),
+
+                    const SizedBox(height: 7),
 
                     Text(
-                      conectado ? 'Conectado ao negócio' : subtitle,
+                      conectado
+                          ? 'Esta plataforma já está vinculada ao seu negócio.'
+                          : subtitle,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.56),
                         fontSize: isMobile ? 13 : 15,
@@ -397,14 +389,69 @@ class _PlatformCard extends StatelessWidget {
                 ),
               ),
 
+              const SizedBox(width: 10),
+
               Icon(
-                conectado ? Icons.dashboard_customize_rounded : Icons.chevron_right_rounded,
-                color: color,
+                conectado
+                    ? Icons.dashboard_customize_rounded
+                    : Icons.chevron_right_rounded,
+                color: conectado ? color : Colors.white54,
                 size: isMobile ? 30 : 34,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String text;
+  final Color color;
+  final bool connected;
+
+  const _StatusBadge({
+    required this.text,
+    required this.color,
+    required this.connected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: connected
+            ? Colors.greenAccent.withOpacity(0.12)
+            : Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: connected
+              ? Colors.greenAccent.withOpacity(0.35)
+              : Colors.white.withOpacity(0.12),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            connected
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: color,
+            size: 14,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -427,9 +474,7 @@ class _SimulationNotice extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.gold.withOpacity(0.075),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.gold.withOpacity(0.20),
-        ),
+        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
