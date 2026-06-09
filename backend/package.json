@@ -1,0 +1,17 @@
+{
+  "name": "torico-backend",
+  "version": "0.1.0",
+  "description": "Backend simulado do TORICO para preparar o fluxo de webhook e Firestore.",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2"
+  }
+}

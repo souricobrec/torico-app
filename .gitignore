@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# TORICO Backend / Node.js
+backend/node_modules/
+backend/.env
+backend/firebase-service-account.json
+backend/*.log
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Firebase private keys
+firebase-service-account.json
+*-service-account.json

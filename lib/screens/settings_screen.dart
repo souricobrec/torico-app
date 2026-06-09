@@ -53,10 +53,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     if (connectedPlatforms.length == 1) {
-      return 'Monitorando ${connectedPlatforms.first}';
+      return 'Monitorando ${connectedPlatforms.first} em modo simulado';
     }
 
-    return 'Monitorando ${connectedPlatforms.length} plataformas';
+    return 'Monitorando ${connectedPlatforms.length} plataformas em modo simulado';
   }
 
   @override
@@ -97,6 +97,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _StatusCard(statusText: _statusText),
 
+              const SizedBox(height: 18),
+
+              const _SimulationInfoCard(),
+
               const SizedBox(height: 28),
 
               const Text(
@@ -113,8 +117,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _SettingsActionTile(
                 icon: Icons.hub_rounded,
-                title: 'Gerenciar plataformas',
-                subtitle: 'Conectar novas fontes de venda ou revisar as atuais',
+                title: 'Gerenciar integrações',
+                subtitle:
+                    'Ativar conexões simuladas ou revisar as fontes atuais',
                 iconColor: AppColors.goldLight,
                 onTap: () async {
                   await Navigator.push(
@@ -146,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SettingsActionTile(
                 icon: Icons.link_off_rounded,
                 title: 'Desconectar plataformas',
-                subtitle: 'Remove as conexões locais deste dispositivo',
+                subtitle: 'Remove as conexões simuladas deste dispositivo',
                 iconColor: Colors.redAccent,
                 danger: true,
                 onTap: () {
@@ -193,7 +198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return _ToricoDialog(
           title: 'Desconectar plataformas?',
           message:
-              'Isso removerá as plataformas conectadas neste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
+              'Isso removerá as conexões simuladas deste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
           primaryText: 'Desconectar',
           primaryColor: Colors.redAccent,
           onPrimary: () async {
@@ -355,7 +360,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Aqui você vê quais fontes já podem enviar vendas para o painel.',
+                            'Aqui você vê quais fontes estão configuradas em modo simulado para testes.',
                             style: TextStyle(
                               color: Colors.white60,
                               fontSize: 13.5,
@@ -380,7 +385,8 @@ class _PlatformsOverviewCard extends StatelessWidget {
 
                 if (connectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
-                    text: 'Conecte pelo menos uma plataforma para iniciar o monitoramento das vendas.',
+                    text:
+                        'Ative pelo menos uma conexão simulada para iniciar o teste do painel.',
                   )
                 else
                   Wrap(
@@ -403,7 +409,8 @@ class _PlatformsOverviewCard extends StatelessWidget {
 
                 if (disconnectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
-                    text: 'Todas as fontes disponíveis já estão vinculadas ao TORICO.',
+                    text:
+                        'Todas as fontes disponíveis já estão ativadas em modo simulado.',
                   )
                 else
                   Wrap(
@@ -582,6 +589,44 @@ class _StatusCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SimulationInfoCard extends StatelessWidget {
+  const _SimulationInfoCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withOpacity(0.075),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.goldLight,
+            size: 26,
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Text(
+              'Nesta fase do TORICO, as plataformas aparecem como conexões simuladas. As integrações reais com Mercado Pago, Stone e PagBank serão conectadas depois, com autorização da própria plataforma.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.68),
+                fontSize: 13.5,
+                height: 1.35,
+              ),
             ),
           ),
         ],

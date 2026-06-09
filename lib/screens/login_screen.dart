@@ -99,7 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   else ...[
                     _PlatformCard(
                       plataforma: 'Mercado Pago',
-                      subtitle: 'Use o Mercado Pago como fonte de vendas do seu painel',
+                      subtitle:
+                          'Ative uma conexão simulada do Mercado Pago para testar o painel',
                       icon: Icons.account_balance_wallet_rounded,
                       color: Colors.lightBlueAccent,
                       conectado: _isConnected('Mercado Pago'),
@@ -110,7 +111,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     _PlatformCard(
                       plataforma: 'Stone',
-                      subtitle: 'Use a Stone como fonte de vendas do seu painel',
+                      subtitle:
+                          'Ative uma conexão simulada da Stone para testar o painel',
                       icon: Icons.payments_rounded,
                       color: Colors.greenAccent,
                       conectado: _isConnected('Stone'),
@@ -121,7 +123,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     _PlatformCard(
                       plataforma: 'PagBank',
-                      subtitle: 'Use o PagBank como fonte de vendas do seu painel',
+                      subtitle:
+                          'Ative uma conexão simulada do PagBank para testar o painel',
                       icon: Icons.credit_card_rounded,
                       color: Colors.orangeAccent,
                       conectado: _isConnected('PagBank'),
@@ -206,8 +209,8 @@ class _IntroCard extends StatelessWidget {
         ? 'Plataformas do negócio'
         : 'Comece conectando sua primeira plataforma';
     final subtitle = hasConnected
-        ? 'O TORICO já está pronto para acompanhar vendas de ${connectedPlatforms.join(', ')} em tempo real.'
-        : 'Escolha onde suas vendas acontecem. Depois disso, o painel começa a mostrar o vendido hoje em tempo real.';
+        ? 'O TORICO já está com conexão simulada ativa para ${connectedPlatforms.join(', ')}. As vendas de teste já podem aparecer no painel.'
+        : 'Escolha onde suas vendas acontecem. Nesta versão, a conexão é simulada para você testar o painel do TORICO.';
 
     return Container(
       width: double.infinity,
@@ -377,7 +380,7 @@ class _PlatformCard extends StatelessWidget {
 
                     Text(
                       conectado
-                          ? 'Esta fonte já está vinculada ao TORICO e pode enviar vendas para o painel.'
+                          ? 'Esta fonte está vinculada em modo simulado. A integração real será liberada em uma próxima etapa.'
                           : subtitle,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.56),
@@ -489,7 +492,7 @@ class _SimulationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Nesta versão de teste, a conexão é simulada. Na integração real, cada plataforma exigirá autorização própria antes de enviar vendas ao TORICO.',
+              'Nesta versão de teste, a conexão é simulada. Vendas reais ainda não são recebidas automaticamente. Na integração real, cada plataforma exigirá autorização própria antes de enviar vendas ao TORICO.',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.70),
                 fontSize: isMobile ? 13 : 14,
