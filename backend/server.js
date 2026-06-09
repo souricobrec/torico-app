@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -13,6 +15,9 @@ app.use(express.json({ limit: '1mb' }));
 const PORT = process.env.PORT || 3333;
 const FIREBASE_SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
@@ -96,7 +101,7 @@ function validateSalePayload(payload) {
     errors.push('Campo amount deve ser um número.');
   }
 
-  if (payload.amount <= 0) {
+  if (typeof payload.amount === 'number' && payload.amount <= 0) {
     errors.push('Campo amount deve ser maior que zero.');
   }
 
@@ -122,7 +127,10 @@ async function saveSale({
   const dateKey = getBrazilDateKey(saleDate);
 
   const safeExternalId =
-    externalId || `${source}_${platformId}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    externalId ||
+    `${source}_${platformId}_${Date.now()}_${Math.floor(
+      Math.random() * 100000
+    )}`;
 
   const saleData = {
     amount,
@@ -150,6 +158,14 @@ async function saveSale({
     ...saleData,
   };
 }
+
+app.get('/', (req, res) => {
+  res.redirect('/test-client');
+});
+
+app.get('/test-client', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test-client.html'));
+});
 
 app.get('/health', (req, res) => {
   res.json({
@@ -255,4 +271,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`TORICO Backend rodando em http://localhost:${PORT}`);
+  console.log(`Cliente de teste disponível em http://localhost:${PORT}/test-client`);
 });

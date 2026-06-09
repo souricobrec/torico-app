@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TORICO | Teste de Backend</title>
+    <style>
+      :root {
+        --bg: #031226;
+        --card: #071c38;
+        --card-2: #0d2749;
+        --gold: #d4af37;
+        --gold-light: #ffd54f;
+        --text: #f8fafc;
+        --muted: #a8b3c7;
+        --danger: #ff6b6b;
+        --success: #55d98b;
+        --border: rgba(212, 175, 55, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top, rgba(255, 213, 79, 0.12), transparent 32rem),
+          var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        width: min(920px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0;
+      }
+
+      .hero {
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        color: var(--gold-light);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 10px 0 8px;
+        font-size: clamp(30px, 5vw, 52px);
+        line-height: 1;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, rgba(13, 39, 73, 0.92), rgba(7, 28, 56, 0.96));
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+      }
+
+      label {
+        display: block;
+        margin: 14px 0 8px;
+        color: var(--gold-light);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      input,
+      select {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        background: rgba(3, 18, 38, 0.9);
+        color: var(--text);
+        padding: 14px 14px;
+        font-size: 16px;
+        outline: none;
+      }
+
+      input:focus,
+      select:focus {
+        border-color: var(--gold-light);
+        box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.12);
+      }
+
+      .buttons {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 16px;
+        padding: 14px 16px;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--gold), var(--gold-light));
+        color: #031226;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      button.secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+
+      .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .result {
+        min-height: 240px;
+        white-space: pre-wrap;
+        overflow: auto;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 16px;
+        padding: 14px;
+        color: var(--muted);
+        font-family: Consolas, Monaco, monospace;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--muted);
+      }
+
+      .dot.ok {
+        background: var(--success);
+      }
+
+      .dot.error {
+        background: var(--danger);
+      }
+
+      .note {
+        margin-top: 18px;
+        border-left: 3px solid var(--gold-light);
+        padding: 12px 14px;
+        background: rgba(255, 213, 79, 0.08);
+        border-radius: 0 14px 14px 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .quick-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">TORICO Backend</div>
+        <h1>Teste de venda simulada</h1>
+        <p class="subtitle">
+          Use esta tela local para simular uma venda entrando pelo backend, como preparação para o webhook real futuro.
+        </p>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Nova venda</h2>
+
+          <label for="userId">UID do usuário Firebase</label>
+          <input id="userId" placeholder="Cole aqui o UID do usuário" autocomplete="off" />
+
+          <label for="amount">Valor</label>
+          <input id="amount" type="number" min="0.01" step="0.01" value="49.90" />
+
+          <label for="platform">Plataforma</label>
+          <select id="platform">
+            <option value="Mercado Pago">Mercado Pago</option>
+            <option value="Stone">Stone</option>
+            <option value="PagBank">PagBank</option>
+          </select>
+
+          <div class="buttons">
+            <button id="simulateBtn">Simular venda</button>
+
+            <div class="quick-grid">
+              <button class="secondary" data-platform="Mercado Pago">Mercado Pago</button>
+              <button class="secondary" data-platform="Stone">Stone</button>
+              <button class="secondary" data-platform="PagBank">PagBank</button>
+            </div>
+          </div>
+
+          <div class="note">
+            Esta tela é apenas local, para desenvolvimento. Ela não substitui a integração oficial das plataformas.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Resultado</h2>
+          <div class="result" id="result">Aguardando teste...</div>
+          <div class="status">
+            <span class="dot" id="statusDot"></span>
+            <span id="statusText">Pronto para simular.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const userIdInput = document.getElementById('userId');
+      const amountInput = document.getElementById('amount');
+      const platformSelect = document.getElementById('platform');
+      const simulateBtn = document.getElementById('simulateBtn');
+      const result = document.getElementById('result');
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+
+      const savedUserId = localStorage.getItem('torico_test_user_id');
+
+      if (savedUserId) {
+        userIdInput.value = savedUserId;
+      }
+
+      function setStatus(type, text) {
+        statusDot.className = `dot ${type || ''}`.trim();
+        statusText.textContent = text;
+      }
+
+      function getRandomAmount() {
+        const values = [19.9, 24.9, 32, 39.9, 49.9, 59.9, 79.9, 99.9, 129.9];
+        return values[Math.floor(Math.random() * values.length)];
+      }
+
+      async function simulateSale(platformFromButton) {
+        const userId = userIdInput.value.trim();
+        const platform = platformFromButton || platformSelect.value;
+        const amount = Number(amountInput.value);
+
+        if (!userId) {
+          setStatus('error', 'Informe o UID do usuário.');
+          result.textContent = 'Erro: UID do usuário é obrigatório.';
+          return;
+        }
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+          setStatus('error', 'Informe um valor válido.');
+          result.textContent = 'Erro: valor inválido.';
+          return;
+        }
+
+        localStorage.setItem('torico_test_user_id', userId);
+
+        simulateBtn.disabled = true;
+        setStatus('', 'Enviando venda para o backend...');
+        result.textContent = 'Enviando...';
+
+        try {
+          const response = await fetch('/simulate-sale', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              amount,
+              platform,
+              status: 'approved',
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.ok) {
+            setStatus('error', 'Erro ao simular venda.');
+            result.textContent = JSON.stringify(data, null, 2);
+            return;
+          }
+
+          setStatus('ok', 'Venda simulada gravada no Firestore.');
+          result.textContent = JSON.stringify(data, null, 2);
+          amountInput.value = getRandomAmount().toFixed(2);
+        } catch (error) {
+          setStatus('error', 'Falha ao conectar com o backend.');
+          result.textContent = String(error);
+        } finally {
+          simulateBtn.disabled = false;
+        }
+      }
+
+      simulateBtn.addEventListener('click', () => simulateSale());
+
+      document.querySelectorAll('[data-platform]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const platform = button.getAttribute('data-platform');
+          platformSelect.value = platform;
+          simulateSale(platform);
+        });
+      });
+    </script>
+  </body>
+</html>
