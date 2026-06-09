@@ -101,25 +101,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const _SimulationInfoCard(),
 
+              const SizedBox(height: 26),
+
+              const _SectionTitle(
+                title: 'Integrações',
+                subtitle:
+                    'Conexões simuladas agora. Integrações reais por autorização oficial em breve.',
+              ),
+
+              const SizedBox(height: 12),
+
+              _IntegrationStatusCard(
+                platform: 'Mercado Pago',
+                platformId: 'mercado_pago',
+                connected: connectedPlatforms.contains('Mercado Pago'),
+                realStatus: 'Integração real planejada',
+                description:
+                    'Será a primeira integração real do TORICO, usando OAuth, API oficial e webhook.',
+              ),
+
+              const SizedBox(height: 12),
+
+              _IntegrationStatusCard(
+                platform: 'Stone',
+                platformId: 'stone',
+                connected: connectedPlatforms.contains('Stone'),
+                realStatus: 'Integração futura',
+                description:
+                    'Será conectada futuramente apenas por meios oficiais autorizados pela plataforma.',
+              ),
+
+              const SizedBox(height: 12),
+
+              _IntegrationStatusCard(
+                platform: 'PagBank',
+                platformId: 'pagbank',
+                connected: connectedPlatforms.contains('PagBank'),
+                realStatus: 'Integração futura',
+                description:
+                    'Será conectada futuramente apenas por meios oficiais autorizados pela plataforma.',
+              ),
+
+              const SizedBox(height: 18),
+
+              const _IntegrationSecurityCard(),
+
               const SizedBox(height: 28),
 
-              const Text(
-                'Conta e aplicativo',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
+              const _SectionTitle(
+                title: 'Conta e aplicativo',
+                subtitle:
+                    'Gerencie sua conta, simulações e informações do app.',
               ),
 
               const SizedBox(height: 12),
 
               _SettingsActionTile(
                 icon: Icons.hub_rounded,
-                title: 'Gerenciar integrações',
+                title: 'Gerenciar conexões simuladas',
                 subtitle:
-                    'Ativar conexões simuladas ou revisar as fontes atuais',
+                    'Ativar ou revisar plataformas em modo de demonstração',
                 iconColor: AppColors.goldLight,
                 onTap: () async {
                   await Navigator.push(
@@ -150,7 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _SettingsActionTile(
                 icon: Icons.link_off_rounded,
-                title: 'Desconectar plataformas',
+                title: 'Desconectar plataformas simuladas',
                 subtitle: 'Remove as conexões simuladas deste dispositivo',
                 iconColor: Colors.redAccent,
                 danger: true,
@@ -196,7 +237,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return _ToricoDialog(
-          title: 'Desconectar plataformas?',
+          title: 'Desconectar plataformas simuladas?',
           message:
               'Isso removerá as conexões simuladas deste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
           primaryText: 'Desconectar',
@@ -299,6 +340,40 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.52),
+            fontSize: 13.2,
+            height: 1.3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PlatformsOverviewCard extends StatelessWidget {
   final List<String> connectedPlatforms;
   final List<String> disconnectedPlatforms;
@@ -351,7 +426,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Plataformas do negócio',
+                            'Fontes do negócio',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 20,
@@ -360,7 +435,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Aqui você vê quais fontes estão configuradas em modo simulado para testes.',
+                            'Aqui você vê quais plataformas estão ativadas em modo simulado para testes.',
                             style: TextStyle(
                               color: Colors.white60,
                               fontSize: 13.5,
@@ -376,7 +451,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 const SizedBox(height: 22),
 
                 const _PlatformSectionTitle(
-                  title: 'Conectadas',
+                  title: 'Ativadas em modo simulado',
                   icon: Icons.check_circle_rounded,
                   color: Colors.greenAccent,
                 ),
@@ -400,7 +475,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 const _PlatformSectionTitle(
-                  title: 'Desconectadas',
+                  title: 'Disponíveis para simulação',
                   icon: Icons.radio_button_unchecked_rounded,
                   color: Colors.white54,
                 ),
@@ -621,12 +696,213 @@ class _SimulationInfoCard extends StatelessWidget {
           const SizedBox(width: 13),
           Expanded(
             child: Text(
-              'Nesta fase do TORICO, as plataformas aparecem como conexões simuladas. As integrações reais com Mercado Pago, Stone e PagBank serão conectadas depois, com autorização da própria plataforma.',
+              'Nesta fase do TORICO, as plataformas aparecem como conexões simuladas. As vendas reais ainda não são recebidas automaticamente pelas plataformas.',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.68),
                 fontSize: 13.5,
                 height: 1.35,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntegrationStatusCard extends StatelessWidget {
+  final String platform;
+  final String platformId;
+  final bool connected;
+  final String realStatus;
+  final String description;
+
+  const _IntegrationStatusCard({
+    required this.platform,
+    required this.platformId,
+    required this.connected,
+    required this.realStatus,
+    required this.description,
+  });
+
+  IconData get _platformIcon {
+    if (platformId == 'mercado_pago') {
+      return Icons.account_balance_wallet_rounded;
+    }
+
+    if (platformId == 'stone') {
+      return Icons.credit_card_rounded;
+    }
+
+    if (platformId == 'pagbank') {
+      return Icons.payments_rounded;
+    }
+
+    return Icons.hub_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color simulationColor = connected
+        ? Colors.greenAccent
+        : Colors.white54;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.09)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.gold.withOpacity(0.12),
+              border: Border.all(color: AppColors.gold.withOpacity(0.24)),
+            ),
+            child: Icon(_platformIcon, color: AppColors.goldLight, size: 25),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  platform,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _SmallStatusPill(
+                      icon: connected
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      text: connected
+                          ? 'Simulação ativada'
+                          : 'Simulação desativada',
+                      color: simulationColor,
+                    ),
+                    _SmallStatusPill(
+                      icon: Icons.lock_outline_rounded,
+                      text: realStatus,
+                      color: AppColors.goldLight,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.52),
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallStatusPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  const _SmallStatusPill({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12.2,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntegrationSecurityCard extends StatelessWidget {
+  const _IntegrationSecurityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.greenAccent.withOpacity(0.055),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.greenAccent.withOpacity(0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.verified_user_rounded,
+            color: Colors.greenAccent,
+            size: 26,
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Integrações reais com segurança',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  'O TORICO não pede login, senha, 2FA ou dados de cartão de plataformas externas. Quando as integrações reais forem ativadas, elas usarão autorização oficial, APIs e webhooks das próprias plataformas.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.62),
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
