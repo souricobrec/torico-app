@@ -203,13 +203,21 @@
         <div class="eyebrow">TORICO Backend</div>
         <h1>Teste de venda simulada</h1>
         <p class="subtitle">
-          Use esta tela local para simular uma venda entrando pelo backend, como preparação para o webhook real futuro.
+          Use esta tela para simular uma venda entrando pelo backend, como preparação para o webhook real futuro.
         </p>
       </section>
 
       <section class="grid">
         <div class="card">
           <h2>Nova venda</h2>
+
+          <label for="devKey">Chave de desenvolvimento</label>
+          <input
+            id="devKey"
+            type="password"
+            placeholder="Cole aqui a chave TORICO_DEV_KEY"
+            autocomplete="off"
+          />
 
           <label for="userId">UID do usuário Firebase</label>
           <input id="userId" placeholder="Cole aqui o UID do usuário" autocomplete="off" />
@@ -235,7 +243,7 @@
           </div>
 
           <div class="note">
-            Esta tela é apenas local, para desenvolvimento. Ela não substitui a integração oficial das plataformas.
+            Esta tela é apenas para desenvolvimento. A rota de simulação exige uma chave secreta e não substitui a integração oficial das plataformas.
           </div>
         </div>
 
@@ -251,6 +259,7 @@
     </main>
 
     <script>
+      const devKeyInput = document.getElementById('devKey');
       const userIdInput = document.getElementById('userId');
       const amountInput = document.getElementById('amount');
       const platformSelect = document.getElementById('platform');
@@ -259,7 +268,12 @@
       const statusDot = document.getElementById('statusDot');
       const statusText = document.getElementById('statusText');
 
+      const savedDevKey = localStorage.getItem('torico_test_dev_key');
       const savedUserId = localStorage.getItem('torico_test_user_id');
+
+      if (savedDevKey) {
+        devKeyInput.value = savedDevKey;
+      }
 
       if (savedUserId) {
         userIdInput.value = savedUserId;
@@ -276,9 +290,16 @@
       }
 
       async function simulateSale(platformFromButton) {
+        const devKey = devKeyInput.value.trim();
         const userId = userIdInput.value.trim();
         const platform = platformFromButton || platformSelect.value;
         const amount = Number(amountInput.value);
+
+        if (!devKey) {
+          setStatus('error', 'Informe a chave de desenvolvimento.');
+          result.textContent = 'Erro: chave de desenvolvimento é obrigatória.';
+          return;
+        }
 
         if (!userId) {
           setStatus('error', 'Informe o UID do usuário.');
@@ -292,6 +313,7 @@
           return;
         }
 
+        localStorage.setItem('torico_test_dev_key', devKey);
         localStorage.setItem('torico_test_user_id', userId);
 
         simulateBtn.disabled = true;
@@ -303,6 +325,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'x-torico-dev-key': devKey,
             },
             body: JSON.stringify({
               userId,

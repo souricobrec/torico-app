@@ -19,6 +19,8 @@ const FIREBASE_PROJECT_ID =
   process.env.GOOGLE_CLOUD_PROJECT ||
   process.env.GCLOUD_PROJECT;
 
+const TORICO_DEV_KEY = process.env.TORICO_DEV_KEY;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -84,6 +86,31 @@ function getBrazilDateKey(date = new Date()) {
   });
 
   return formatter.format(date);
+}
+
+function requireDevKey(req, res, next) {
+  if (!TORICO_DEV_KEY) {
+    console.warn(
+      'TORICO_DEV_KEY não configurada. Bloqueando endpoint protegido.'
+    );
+
+    return res.status(503).json({
+      ok: false,
+      message:
+        'Endpoint protegido indisponível. Configure TORICO_DEV_KEY no backend.',
+    });
+  }
+
+  const receivedKey = req.get('x-torico-dev-key');
+
+  if (!receivedKey || receivedKey !== TORICO_DEV_KEY) {
+    return res.status(401).json({
+      ok: false,
+      message: 'Acesso não autorizado.',
+    });
+  }
+
+  next();
 }
 
 function validateSalePayload(payload) {
@@ -175,11 +202,12 @@ app.get('/health', (req, res) => {
     mode: 'simulado',
     environment: process.env.NODE_ENV || 'development',
     projectId: FIREBASE_PROJECT_ID || 'default',
+    protectedSimulation: Boolean(TORICO_DEV_KEY),
     timestamp: new Date().toISOString(),
   });
 });
 
-app.post('/simulate-sale', async (req, res) => {
+app.post('/simulate-sale', requireDevKey, async (req, res) => {
   try {
     const errors = validateSalePayload(req.body);
 
