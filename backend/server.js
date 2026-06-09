@@ -14,7 +14,10 @@ app.use(express.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT || 3333;
 const FIREBASE_SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+const FIREBASE_PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  process.env.GCLOUD_PROJECT;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,20 +30,18 @@ function initializeFirebaseAdmin() {
   if (FIREBASE_SERVICE_ACCOUNT_PATH) {
     admin.initializeApp({
       credential: admin.credential.cert(FIREBASE_SERVICE_ACCOUNT_PATH),
+      projectId: FIREBASE_PROJECT_ID || undefined,
     });
+
+    console.log('Firebase Admin inicializado com service account local.');
     return;
   }
 
-  if (FIREBASE_PROJECT_ID) {
-    admin.initializeApp({
-      projectId: FIREBASE_PROJECT_ID,
-    });
-    return;
-  }
+  admin.initializeApp({
+    projectId: FIREBASE_PROJECT_ID || undefined,
+  });
 
-  throw new Error(
-    'Configure FIREBASE_SERVICE_ACCOUNT_PATH ou FIREBASE_PROJECT_ID no arquivo .env.'
-  );
+  console.log('Firebase Admin inicializado com credencial padrão do ambiente.');
 }
 
 initializeFirebaseAdmin();
@@ -172,6 +173,8 @@ app.get('/health', (req, res) => {
     ok: true,
     app: 'TORICO Backend',
     mode: 'simulado',
+    environment: process.env.NODE_ENV || 'development',
+    projectId: FIREBASE_PROJECT_ID || 'default',
     timestamp: new Date().toISOString(),
   });
 });
@@ -269,7 +272,7 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`TORICO Backend rodando em http://localhost:${PORT}`);
-  console.log(`Cliente de teste disponível em http://localhost:${PORT}/test-client`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`TORICO Backend rodando na porta ${PORT}`);
+  console.log(`Cliente de teste disponível em /test-client`);
 });
