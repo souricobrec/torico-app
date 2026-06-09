@@ -147,6 +147,8 @@ Para vendas simuladas pelo app Flutter, usar:
 source: simulator
 ```
 
+Observação: o uso de `source: simulator` representa o comportamento antigo de desenvolvimento. A criação manual de vendas pelo app foi removida da interface do usuário final.
+
 ## Dados salvos no Firestore
 
 O Firestore pode guardar dados necessários para o funcionamento do produto, como:
@@ -200,6 +202,145 @@ como proteger tokens
 como evitar duplicidade
 como desconectar a integração
 ```
+
+## Proteção do endpoint de simulação
+
+O endpoint de simulação de vendas do backend deve ser usado apenas para desenvolvimento e testes técnicos.
+
+Endpoint protegido:
+
+```text
+POST /simulate-sale
+```
+
+Esse endpoint exige o header:
+
+```text
+x-torico-dev-key
+```
+
+A chave de desenvolvimento é configurada no backend por meio da variável de ambiente:
+
+```text
+TORICO_DEV_KEY
+```
+
+Essa chave nunca deve ser exposta no app Flutter/PWA, no GitHub, no Firestore acessível pelo usuário, em prints compartilhados ou em qualquer outro local público.
+
+A chave deve existir apenas em ambientes controlados, como:
+
+```text
+arquivo .env local do backend
+variáveis de ambiente do Cloud Run
+ambientes seguros de desenvolvimento
+```
+
+## Rotação da TORICO_DEV_KEY
+
+Após a publicação do backend no Google Cloud Run, o endpoint `/simulate-sale` foi protegido com o header `x-torico-dev-key`.
+
+Como a chave anterior apareceu em imagem durante os testes, foi realizada uma nova rotação da variável:
+
+```text
+TORICO_DEV_KEY
+```
+
+### Validação realizada
+
+Foram executados os seguintes testes:
+
+```text
+tentativa de registrar venda simulada usando a chave antiga
+tentativa de registrar venda simulada usando a nova chave
+validação do endpoint /health
+validação do endpoint /test-client
+```
+
+### Resultado
+
+A chave antiga foi negada corretamente pelo backend.
+
+A nova chave foi aceita e autorizou o registro de uma nova venda simulada no Cloud Firestore.
+
+O app TORICO atualizou corretamente o Painel e o Histórico com a venda criada pelo backend publicado no Google Cloud Run.
+
+O endpoint `/health` confirmou que a simulação protegida estava ativa por meio do campo:
+
+```text
+protectedSimulation: true
+```
+
+### Status
+
+A proteção básica do endpoint `/simulate-sale` foi validada com sucesso.
+
+O endpoint de simulação permanece restrito ao uso de desenvolvimento e testes técnicos.
+
+## Remoção da simulação manual no app
+
+Após a validação do backend publicado no Google Cloud Run, o botão **Nova venda** foi removido da interface principal do app TORICO.
+
+A decisão foi tomada para evitar que o usuário final tenha a impressão de que as vendas devem ser lançadas manualmente dentro do app.
+
+O objetivo do TORICO é acompanhar vendas em tempo real a partir de integrações oficiais com plataformas externas, como Mercado Pago, Stone, PagBank e outras.
+
+## Decisão de produto
+
+A tela **Painel** não deve permitir criação manual de vendas pelo usuário final.
+
+As vendas devem entrar no app por meio de:
+
+```text
+integrações oficiais
+APIs autorizadas
+webhooks oficiais
+backend seguro publicado no Google Cloud Run
+```
+
+## Simulação de vendas
+
+A simulação de vendas permanece disponível apenas para desenvolvimento e testes técnicos, por meio do backend e do endpoint protegido:
+
+```text
+POST /simulate-sale
+```
+
+Esse endpoint exige o header:
+
+```text
+x-torico-dev-key
+```
+
+A chave usada para testes fica na variável de ambiente:
+
+```text
+TORICO_DEV_KEY
+```
+
+Essa chave nunca deve ser exposta no app Flutter/PWA, no GitHub, no Firestore público ou em prints compartilhados.
+
+## Validação da remoção do botão Nova venda
+
+Após a remoção do botão **Nova venda**, foi realizado teste criando uma venda pelo backend.
+
+Resultado:
+
+```text
+o botão não aparece mais no Painel
+a venda simulada pelo backend foi registrada no Cloud Firestore
+o app atualizou automaticamente o total vendido hoje
+a chuva de moedas funcionou
+o som de caixa funcionou
+o fluxo visual do Painel permaneceu correto
+```
+
+## Status da simulação manual
+
+A simulação manual foi removida da interface do usuário final.
+
+O TORICO passa a reforçar o comportamento esperado de um app de acompanhamento automático de vendas em tempo real.
+
+A simulação técnica continua existindo somente no backend, protegida pela `TORICO_DEV_KEY`.
 
 ## Regra final
 
