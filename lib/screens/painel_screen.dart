@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:torico/models/sale.dart';
 
 import '../core/app_colors.dart';
 import '../core/currency_formatter.dart';
 import '../controllers/sales_controller.dart';
 import '../services/audio_service.dart';
 import '../services/local_storage_service.dart';
-import '../services/sale_simulator_service.dart';
 import '../widgets/coin_rain.dart';
 
 class PainelScreen extends StatefulWidget {
@@ -25,8 +23,12 @@ class _PainelScreenState extends State<PainelScreen> {
 
   bool mostrarMoedas = false;
   bool mostrarGanho = false;
+  bool _totalInicializado = false;
 
   int vendaId = 0;
+  double _ultimoTotalObservado = 0.0;
+  double _ultimoGanho = 0.0;
+
   List<String> connectedPlatforms = [];
 
   @override
@@ -41,9 +43,58 @@ class _PainelScreenState extends State<PainelScreen> {
   }
 
   void _atualizarTela() {
-    if (mounted) {
+    if (!mounted) return;
+
+    final totalAtual = _salesController.totalSold;
+
+    if (!_totalInicializado) {
+      _ultimoTotalObservado = totalAtual;
+      _totalInicializado = true;
+
       setState(() {});
+      return;
     }
+
+    final diferenca = totalAtual - _ultimoTotalObservado;
+    _ultimoTotalObservado = totalAtual;
+
+    if (diferenca > 0.009) {
+      _dispararEfeitoNovaVenda(diferenca);
+      return;
+    }
+
+    setState(() {});
+  }
+
+  void _dispararEfeitoNovaVenda(double valor) {
+    vendaId++;
+    _ultimoGanho = valor;
+
+    // No iPhone/Safari, o som pode depender de permissão/interação prévia do usuário.
+    _audioService.playCashSound();
+
+    setState(() {
+      mostrarMoedas = true;
+      mostrarGanho = true;
+    });
+
+    final vendaAtual = vendaId;
+
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && vendaAtual == vendaId) {
+        setState(() {
+          mostrarGanho = false;
+        });
+      }
+    });
+
+    Future.delayed(const Duration(seconds: 9), () {
+      if (mounted && vendaAtual == vendaId) {
+        setState(() {
+          mostrarMoedas = false;
+        });
+      }
+    });
   }
 
   Future<void> carregarPlataformas() async {
@@ -74,65 +125,6 @@ class _PainelScreenState extends State<PainelScreen> {
     }
 
     return connectedPlatforms.join(' + ');
-  }
-
-  String get _plataformaDaVendaSimulada {
-    if (widget.plataforma.isNotEmpty &&
-        widget.plataforma != 'Todas as plataformas') {
-      return widget.plataforma;
-    }
-
-    if (connectedPlatforms.isNotEmpty) {
-      return connectedPlatforms.first;
-    }
-
-    return 'Simulador';
-  }
-
-  Future<void> novaVenda() async {
-    vendaId++;
-    final Sale venda = SaleSimulatorService.generateSale();
-
-    // No iPhone/Safari, o som precisa ser disparado diretamente após o toque.
-    _audioService.playCashSound();
-
-    await _salesController.addSale(
-      venda,
-      plataforma: _plataformaDaVendaSimulada,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      mostrarMoedas = true;
-      mostrarGanho = true;
-    });
-
-    final vendaAtual = vendaId;
-
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted && vendaAtual == vendaId) {
-        setState(() {
-          mostrarGanho = false;
-        });
-      }
-    });
-
-    Future.delayed(const Duration(seconds: 9), () {
-      if (mounted && vendaAtual == vendaId) {
-        setState(() {
-          mostrarMoedas = false;
-        });
-      }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Nova venda recebida em $_plataformaDaVendaSimulada! + ${CurrencyFormatter.format(venda.amount)}',
-        ),
-      ),
-    );
   }
 
   @override
@@ -191,17 +183,17 @@ class _PainelScreenState extends State<PainelScreen> {
                       color: const Color(0xFF06182C),
                       borderRadius: BorderRadius.circular(isMobile ? 34 : 42),
                       border: Border.all(
-                        color: AppColors.gold.withOpacity(0.34),
+                        color: AppColors.gold.withValues(alpha: 0.34),
                         width: 1.4,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.30),
+                          color: Colors.black.withValues(alpha: 0.30),
                           blurRadius: 28,
                           offset: const Offset(0, 16),
                         ),
                         BoxShadow(
-                          color: AppColors.gold.withOpacity(0.055),
+                          color: AppColors.gold.withValues(alpha: 0.055),
                           blurRadius: 36,
                           offset: const Offset(0, 0),
                         ),
@@ -285,7 +277,7 @@ class _PainelScreenState extends State<PainelScreen> {
                                     );
                                   },
                                   child: Text(
-                                    '+ ${CurrencyFormatter.format(_salesController.lastSale?.amount ?? 0)}',
+                                    '+ ${CurrencyFormatter.format(_ultimoGanho)}',
                                     style: const TextStyle(
                                       color: Colors.greenAccent,
                                       fontSize: 18,
@@ -309,7 +301,7 @@ class _PainelScreenState extends State<PainelScreen> {
                               children: [
                                 Icon(
                                   Icons.insights_rounded,
-                                  color: AppColors.gold.withOpacity(0.65),
+                                  color: AppColors.gold.withValues(alpha: 0.65),
                                   size: isMobile ? 42 : 56,
                                 ),
                                 const SizedBox(height: 12),
@@ -327,7 +319,7 @@ class _PainelScreenState extends State<PainelScreen> {
                                   'Quando a primeira venda entrar, o valor aparece aqui e o TORICO avisa você.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.48),
+                                    color: Colors.white.withValues(alpha: 0.48),
                                     fontSize: 13.5,
                                     height: 1.35,
                                   ),
@@ -341,35 +333,7 @@ class _PainelScreenState extends State<PainelScreen> {
                     ),
                   ),
 
-                  Padding(
-                    padding: EdgeInsets.only(
-                      bottom: isMobile ? 18 : 24,
-                      top: 10,
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: isMobile ? 58 : 70,
-                      child: ElevatedButton(
-                        onPressed: novaVenda,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.gold,
-                          foregroundColor: Colors.black,
-                          elevation: 8,
-                          shadowColor: AppColors.gold.withOpacity(0.30),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: const Text(
-                          '+ Nova Venda',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  SizedBox(height: isMobile ? 18 : 24),
                 ],
               ),
             ),
@@ -392,15 +356,15 @@ class _SourceBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.08),
+        color: AppColors.gold.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.gold.withOpacity(0.22)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.72),
+          color: Colors.white.withValues(alpha: 0.72),
           fontSize: 12.5,
           fontWeight: FontWeight.w600,
           height: 1.25,
