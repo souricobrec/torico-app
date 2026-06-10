@@ -219,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'TORICO • Seu negócio vendendo. Onde você estiver.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.38),
+                    color: Colors.white.withValues(alpha: 0.38),
                     fontSize: 12,
                     height: 1.4,
                   ),
@@ -304,14 +304,14 @@ class _HeaderCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.gold.withOpacity(0.22),
-            Colors.white.withOpacity(0.045),
+            AppColors.gold.withValues(alpha: 0.22),
+            Colors.white.withValues(alpha: 0.045),
           ],
         ),
-        border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 24,
             offset: const Offset(0, 14),
           ),
@@ -364,7 +364,7 @@ class _SectionTitle extends StatelessWidget {
         Text(
           subtitle,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.52),
+            color: Colors.white.withValues(alpha: 0.52),
             fontSize: 13.2,
             height: 1.3,
           ),
@@ -391,9 +391,9 @@ class _PlatformsOverviewCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.055),
+        color: Colors.white.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: carregando
           ? const LinearProgressIndicator(color: AppColors.goldLight)
@@ -407,9 +407,9 @@ class _PlatformsOverviewCard extends StatelessWidget {
                       height: 54,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.gold.withOpacity(0.14),
+                        color: AppColors.gold.withValues(alpha: 0.14),
                         border: Border.all(
-                          color: AppColors.gold.withOpacity(0.35),
+                          color: AppColors.gold.withValues(alpha: 0.35),
                         ),
                       ),
                       child: const Icon(
@@ -548,13 +548,13 @@ class _PlatformChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: connected
-            ? Colors.greenAccent.withOpacity(0.10)
-            : Colors.white.withOpacity(0.055),
+            ? Colors.greenAccent.withValues(alpha: 0.10)
+            : Colors.white.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(100),
         border: Border.all(
           color: connected
-              ? Colors.greenAccent.withOpacity(0.28)
-              : Colors.white.withOpacity(0.12),
+              ? Colors.greenAccent.withValues(alpha: 0.28)
+              : Colors.white.withValues(alpha: 0.12),
         ),
       ),
       child: Row(
@@ -592,7 +592,7 @@ class _EmptyPlatformMessage extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.50),
+        color: Colors.white.withValues(alpha: 0.50),
         fontSize: 13.5,
         height: 1.3,
       ),
@@ -614,13 +614,13 @@ class _StatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: hasPlatform
-            ? Colors.greenAccent.withOpacity(0.08)
-            : AppColors.gold.withOpacity(0.08),
+            ? Colors.greenAccent.withValues(alpha: 0.08)
+            : AppColors.gold.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: hasPlatform
-              ? Colors.greenAccent.withOpacity(0.22)
-              : AppColors.gold.withOpacity(0.22),
+              ? Colors.greenAccent.withValues(alpha: 0.22)
+              : AppColors.gold.withValues(alpha: 0.22),
         ),
       ),
       child: Row(
@@ -631,8 +631,8 @@ class _StatusCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: hasPlatform
-                  ? Colors.greenAccent.withOpacity(0.14)
-                  : AppColors.gold.withOpacity(0.12),
+                  ? Colors.greenAccent.withValues(alpha: 0.14)
+                  : AppColors.gold.withValues(alpha: 0.12),
             ),
             child: Icon(
               hasPlatform
@@ -681,9 +681,9 @@ class _SimulationInfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.075),
+        color: AppColors.gold.withValues(alpha: 0.075),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.20)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,7 +698,7 @@ class _SimulationInfoCard extends StatelessWidget {
             child: Text(
               'Nesta fase do TORICO, as plataformas aparecem como conexões simuladas. As vendas reais ainda não são recebidas automaticamente pelas plataformas.',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.68),
+                color: Colors.white.withValues(alpha: 0.68),
                 fontSize: 13.5,
                 height: 1.35,
               ),
@@ -751,9 +751,9 @@ class _IntegrationStatusCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,8 +763,8 @@ class _IntegrationStatusCard extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.12),
-              border: Border.all(color: AppColors.gold.withOpacity(0.24)),
+              color: AppColors.gold.withValues(alpha: 0.12),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.24)),
             ),
             child: Icon(_platformIcon, color: AppColors.goldLight, size: 25),
           ),
@@ -806,7 +806,7 @@ class _IntegrationStatusCard extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.52),
+                    color: Colors.white.withValues(alpha: 0.52),
                     fontSize: 13,
                     height: 1.3,
                   ),
@@ -836,9 +836,9 @@ class _SmallStatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.22)),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -868,9 +868,9 @@ class _IntegrationSecurityCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.greenAccent.withOpacity(0.055),
+        color: Colors.greenAccent.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.18)),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -897,7 +897,7 @@ class _IntegrationSecurityCard extends StatelessWidget {
                 Text(
                   'O TORICO não pede login, senha, 2FA ou dados de cartão de plataformas externas. Quando as integrações reais forem ativadas, elas usarão autorização oficial, APIs e webhooks das próprias plataformas.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.62),
+                    color: Colors.white.withValues(alpha: 0.62),
                     fontSize: 13,
                     height: 1.35,
                   ),
@@ -941,13 +941,13 @@ class _SettingsActionTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
             color: danger
-                ? Colors.redAccent.withOpacity(0.055)
-                : Colors.white.withOpacity(0.045),
+                ? Colors.redAccent.withValues(alpha: 0.055)
+                : Colors.white.withValues(alpha: 0.045),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: danger
-                  ? Colors.redAccent.withOpacity(0.20)
-                  : Colors.white.withOpacity(0.09),
+                  ? Colors.redAccent.withValues(alpha: 0.20)
+                  : Colors.white.withValues(alpha: 0.09),
             ),
           ),
           child: Row(
@@ -957,7 +957,7 @@ class _SettingsActionTile extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: iconColor.withOpacity(0.12),
+                  color: iconColor.withValues(alpha: 0.12),
                 ),
                 child: Icon(icon, color: iconColor, size: 24),
               ),
@@ -980,7 +980,7 @@ class _SettingsActionTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.52),
+                        color: Colors.white.withValues(alpha: 0.52),
                         fontSize: 13,
                         height: 1.25,
                       ),
@@ -991,7 +991,7 @@ class _SettingsActionTile extends StatelessWidget {
 
               Icon(
                 Icons.chevron_right_rounded,
-                color: Colors.white.withOpacity(0.35),
+                color: Colors.white.withValues(alpha: 0.35),
                 size: 26,
               ),
             ],
@@ -1023,7 +1023,7 @@ class _ToricoDialog extends StatelessWidget {
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: AppColors.gold.withOpacity(0.25)),
+        side: BorderSide(color: AppColors.gold.withValues(alpha: 0.25)),
       ),
       title: Text(
         title,

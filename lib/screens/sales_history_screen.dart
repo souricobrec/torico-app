@@ -198,7 +198,7 @@ class _FilterChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (context, index) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final filter = filters[index];
           final selected = filter == selectedFilter;
@@ -210,13 +210,13 @@ class _FilterChips extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: selected
-                    ? AppColors.gold.withOpacity(0.22)
-                    : Colors.white.withOpacity(0.045),
+                    ? AppColors.gold.withValues(alpha: 0.22)
+                    : Colors.white.withValues(alpha: 0.045),
                 borderRadius: BorderRadius.circular(100),
                 border: Border.all(
                   color: selected
-                      ? AppColors.goldLight.withOpacity(0.65)
-                      : Colors.white.withOpacity(0.12),
+                      ? AppColors.goldLight.withValues(alpha: 0.65)
+                      : Colors.white.withValues(alpha: 0.12),
                   width: selected ? 1.4 : 1,
                 ),
               ),
@@ -277,14 +277,20 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppColors.gold.withOpacity(0.38), width: 1.4),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.38),
+          width: 1.4,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.30),
+            color: Colors.black.withValues(alpha: 0.30),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
-          BoxShadow(color: AppColors.gold.withOpacity(0.055), blurRadius: 34),
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.055),
+            blurRadius: 34,
+          ),
         ],
       ),
       child: Column(
@@ -350,9 +356,9 @@ class _PlatformTotalTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.gold.withOpacity(0.16)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.16)),
       ),
       child: Row(
         children: [
@@ -361,8 +367,8 @@ class _PlatformTotalTile extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.11),
-              border: Border.all(color: AppColors.gold.withOpacity(0.24)),
+              color: AppColors.gold.withValues(alpha: 0.11),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.24)),
             ),
             child: const Icon(
               Icons.payments_rounded,
@@ -414,9 +420,9 @@ class _SaleTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Row(
         children: [
@@ -425,7 +431,7 @@ class _SaleTile extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.greenAccent.withOpacity(0.10),
+              color: Colors.greenAccent.withValues(alpha: 0.10),
             ),
             child: const Icon(
               Icons.trending_up_rounded,
@@ -454,7 +460,7 @@ class _SaleTile extends StatelessWidget {
                 Text(
                   '${sale.platform} • $time',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.55),
+                    color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 13.5,
                     height: 1.25,
                   ),
@@ -478,7 +484,10 @@ class _PlusReportsSection extends StatelessWidget {
   const _PlusReportsSection();
 
   void _showPlusMessage(BuildContext context) {
-    AppSnackBar.show(context, 'Este relatório faz parte do TORICO Plus e estará disponível em breve.');
+    AppSnackBar.show(
+      context,
+      'Este relatório faz parte do TORICO Plus e estará disponível em breve.',
+    );
   }
 
   @override
@@ -548,9 +557,9 @@ class _LockedPlusTile extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.gold.withOpacity(0.055),
+            color: AppColors.gold.withValues(alpha: 0.055),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.gold.withOpacity(0.18)),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.18)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,8 +569,10 @@ class _LockedPlusTile extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.gold.withOpacity(0.12),
-                  border: Border.all(color: AppColors.gold.withOpacity(0.24)),
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.24),
+                  ),
                 ),
                 child: Icon(icon, color: AppColors.goldLight, size: 24),
               ),
@@ -591,10 +602,10 @@ class _LockedPlusTile extends StatelessWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.gold.withOpacity(0.12),
+                            color: AppColors.gold.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(100),
                             border: Border.all(
-                              color: AppColors.gold.withOpacity(0.24),
+                              color: AppColors.gold.withValues(alpha: 0.24),
                             ),
                           ),
                           child: const Row(
@@ -625,7 +636,7 @@ class _LockedPlusTile extends StatelessWidget {
                     Text(
                       text,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.58),
+                        color: Colors.white.withValues(alpha: 0.58),
                         fontSize: 13.5,
                         height: 1.3,
                       ),
@@ -669,14 +680,14 @@ class _Badge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.09),
+        color: AppColors.gold.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.20)),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.72),
+          color: Colors.white.withValues(alpha: 0.72),
           fontSize: 12.5,
           fontWeight: FontWeight.w600,
         ),
@@ -702,13 +713,13 @@ class _EmptyCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.gold.withOpacity(0.68), size: 42),
+          Icon(icon, color: AppColors.gold.withValues(alpha: 0.68), size: 42),
 
           const SizedBox(height: 14),
 
@@ -728,7 +739,7 @@ class _EmptyCard extends StatelessWidget {
             text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.58),
+              color: Colors.white.withValues(alpha: 0.58),
               fontSize: 14,
               height: 1.35,
             ),
@@ -750,7 +761,10 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           'Não foi possível carregar o histórico agora.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 16),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.70),
+            fontSize: 16,
+          ),
         ),
       ),
     );

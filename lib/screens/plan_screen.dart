@@ -123,7 +123,7 @@ class PlanScreen extends StatelessWidget {
                         backgroundColor: AppColors.gold,
                         foregroundColor: Colors.black,
                         elevation: 8,
-                        shadowColor: AppColors.gold.withOpacity(0.30),
+                        shadowColor: AppColors.gold.withValues(alpha: 0.30),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
@@ -147,7 +147,7 @@ class PlanScreen extends StatelessWidget {
                       'Plano Básico: acompanhe o dia atual • TORICO Plus: relatórios, comparativos e análise histórica',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.42),
+                        color: Colors.white.withValues(alpha: 0.42),
                         fontSize: 12.5,
                         height: 1.35,
                       ),
@@ -178,14 +178,20 @@ class _CurrentPlanCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppColors.gold.withOpacity(0.46), width: 1.4),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.46),
+          width: 1.4,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.30),
+            color: Colors.black.withValues(alpha: 0.30),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
-          BoxShadow(color: AppColors.gold.withOpacity(0.055), blurRadius: 34),
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.055),
+            blurRadius: 34,
+          ),
         ],
       ),
       child: Column(
@@ -210,8 +216,10 @@ class _CurrentPlanCard extends StatelessWidget {
                 height: 58,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.gold.withOpacity(0.13),
-                  border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+                  color: AppColors.gold.withValues(alpha: 0.13),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.28),
+                  ),
                 ),
                 child: Icon(
                   isPlus
@@ -289,12 +297,12 @@ class _PlusCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.gold.withOpacity(0.18),
-            Colors.white.withOpacity(0.045),
+            AppColors.gold.withValues(alpha: 0.18),
+            Colors.white.withValues(alpha: 0.045),
           ],
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.gold.withOpacity(0.32)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.32)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,9 +359,9 @@ class _FeatureTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +371,7 @@ class _FeatureTile extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.12),
+              color: AppColors.gold.withValues(alpha: 0.12),
             ),
             child: Icon(icon, color: AppColors.goldLight, size: 24),
           ),
@@ -388,7 +396,7 @@ class _FeatureTile extends StatelessWidget {
                 Text(
                   text,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.58),
+                    color: Colors.white.withValues(alpha: 0.58),
                     fontSize: 13.5,
                     height: 1.3,
                   ),
@@ -442,14 +450,14 @@ class _PlanBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.09),
+        color: AppColors.gold.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.20)),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.76),
+          color: Colors.white.withValues(alpha: 0.76),
           fontSize: 12.5,
           fontWeight: FontWeight.w600,
         ),
@@ -487,7 +495,10 @@ class _PlanErrorState extends StatelessWidget {
         child: Text(
           'Não foi possível carregar o plano agora.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 16),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.70),
+            fontSize: 16,
+          ),
         ),
       ),
     );

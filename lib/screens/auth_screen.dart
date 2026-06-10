@@ -95,10 +95,11 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
                         foregroundColor: Colors.black,
-                        disabledBackgroundColor:
-                            AppColors.gold.withOpacity(0.45),
+                        disabledBackgroundColor: AppColors.gold.withValues(
+                          alpha: 0.45,
+                        ),
                         elevation: 10,
-                        shadowColor: AppColors.gold.withOpacity(0.30),
+                        shadowColor: AppColors.gold.withValues(alpha: 0.30),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
@@ -151,10 +152,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Image.asset(
-          'assets/images/app_icon.png',
-          width: isMobile ? 74 : 112,
-        ),
+        Image.asset('assets/images/app_icon.png', width: isMobile ? 74 : 112),
 
         SizedBox(height: isMobile ? 10 : 16),
 
@@ -183,7 +181,7 @@ class _Header extends StatelessWidget {
           'Conecte suas vendas ao painel',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.72),
+            color: Colors.white.withValues(alpha: 0.72),
             fontSize: isMobile ? 16 : 22,
             height: 1.3,
             fontWeight: FontWeight.w500,
@@ -198,10 +196,7 @@ class _ConnectionCard extends StatelessWidget {
   final String plataforma;
   final bool carregando;
 
-  const _ConnectionCard({
-    required this.plataforma,
-    required this.carregando,
-  });
+  const _ConnectionCard({required this.plataforma, required this.carregando});
 
   @override
   Widget build(BuildContext context) {
@@ -215,17 +210,17 @@ class _ConnectionCard extends StatelessWidget {
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: AppColors.gold.withOpacity(0.46),
+          color: AppColors.gold.withValues(alpha: 0.46),
           width: 1.4,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.34),
+            color: Colors.black.withValues(alpha: 0.34),
             blurRadius: 30,
             offset: const Offset(0, 18),
           ),
           BoxShadow(
-            color: AppColors.gold.withOpacity(0.06),
+            color: AppColors.gold.withValues(alpha: 0.06),
             blurRadius: 40,
           ),
         ],
@@ -239,15 +234,13 @@ class _ConnectionCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: carregando
-                  ? AppColors.gold.withOpacity(0.18)
-                  : AppColors.gold.withOpacity(0.11),
-              border: Border.all(
-                color: AppColors.gold.withOpacity(0.36),
-              ),
+                  ? AppColors.gold.withValues(alpha: 0.18)
+                  : AppColors.gold.withValues(alpha: 0.11),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.36)),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.gold.withOpacity(
-                    carregando ? 0.28 : 0.10,
+                  color: AppColors.gold.withValues(
+                    alpha: carregando ? 0.28 : 0.10,
                   ),
                   blurRadius: carregando ? 28 : 14,
                 ),
@@ -281,7 +274,7 @@ class _ConnectionCard extends StatelessWidget {
                 : 'Autorize esta plataforma para adicioná-la às fontes de venda do seu negócio.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
               fontSize: isMobile ? 16 : 18,
               height: 1.4,
             ),
@@ -293,7 +286,7 @@ class _ConnectionCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(100),
               child: LinearProgressIndicator(
                 minHeight: 8,
-                backgroundColor: Colors.white.withOpacity(0.10),
+                backgroundColor: Colors.white.withValues(alpha: 0.10),
                 valueColor: const AlwaysStoppedAnimation<Color>(
                   AppColors.goldLight,
                 ),
@@ -310,10 +303,7 @@ class _StepsCard extends StatelessWidget {
   final String plataforma;
   final bool carregando;
 
-  const _StepsCard({
-    required this.plataforma,
-    required this.carregando,
-  });
+  const _StepsCard({required this.plataforma, required this.carregando});
 
   @override
   Widget build(BuildContext context) {
@@ -321,11 +311,9 @@ class _StepsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.09),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Column(
         children: [
@@ -385,12 +373,12 @@ class _StepItem extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: active
-                ? AppColors.gold.withOpacity(0.14)
-                : Colors.white.withOpacity(0.055),
+                ? AppColors.gold.withValues(alpha: 0.14)
+                : Colors.white.withValues(alpha: 0.055),
             border: Border.all(
               color: active
-                  ? AppColors.gold.withOpacity(0.32)
-                  : Colors.white.withOpacity(0.08),
+                  ? AppColors.gold.withValues(alpha: 0.32)
+                  : Colors.white.withValues(alpha: 0.08),
             ),
           ),
           child: Icon(
@@ -420,7 +408,7 @@ class _StepItem extends StatelessWidget {
               Text(
                 text,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.58),
+                  color: Colors.white.withValues(alpha: 0.58),
                   fontSize: 13.5,
                   height: 1.3,
                 ),
@@ -442,7 +430,7 @@ class _SimulationNotice extends StatelessWidget {
       'Nesta versão de teste, a autorização é simulada. Na integração real, cada plataforma exigirá login/autorização própria.',
       textAlign: TextAlign.center,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.46),
+        color: Colors.white.withValues(alpha: 0.46),
         fontSize: 12.5,
         height: 1.35,
       ),

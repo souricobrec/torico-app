@@ -183,7 +183,7 @@ class _Header extends StatelessWidget {
           AppTexts.slogan,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.76),
+            color: Colors.white.withValues(alpha: 0.76),
             fontSize: isMobile ? 16 : 22,
             height: 1.3,
             fontWeight: FontWeight.w500,
@@ -218,14 +218,20 @@ class _IntroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.gold.withOpacity(0.40), width: 1.3),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.40),
+          width: 1.3,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.30),
+            color: Colors.black.withValues(alpha: 0.30),
             blurRadius: 28,
             offset: const Offset(0, 16),
           ),
-          BoxShadow(color: AppColors.gold.withOpacity(0.055), blurRadius: 36),
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.055),
+            blurRadius: 36,
+          ),
         ],
       ),
       child: Row(
@@ -236,8 +242,8 @@ class _IntroCard extends StatelessWidget {
             height: isMobile ? 48 : 58,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.gold.withOpacity(0.12),
-              border: Border.all(color: AppColors.gold.withOpacity(0.28)),
+              color: AppColors.gold.withValues(alpha: 0.12),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
             ),
             child: Icon(
               hasConnected ? Icons.hub_rounded : Icons.link_rounded,
@@ -267,7 +273,7 @@ class _IntroCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.68),
+                    color: Colors.white.withValues(alpha: 0.68),
                     fontSize: isMobile ? 14 : 16,
                     height: 1.38,
                   ),
@@ -320,13 +326,13 @@ class _PlatformCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: conectado
-                ? color.withOpacity(0.075)
-                : Colors.white.withOpacity(0.045),
+                ? color.withValues(alpha: 0.075)
+                : Colors.white.withValues(alpha: 0.045),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: conectado
-                  ? color.withOpacity(0.70)
-                  : Colors.white.withOpacity(0.12),
+                  ? color.withValues(alpha: 0.70)
+                  : Colors.white.withValues(alpha: 0.12),
               width: conectado ? 1.6 : 1.2,
             ),
           ),
@@ -338,12 +344,12 @@ class _PlatformCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: conectado
-                      ? color.withOpacity(0.13)
-                      : Colors.white.withOpacity(0.055),
+                      ? color.withValues(alpha: 0.13)
+                      : Colors.white.withValues(alpha: 0.055),
                   border: Border.all(
                     color: conectado
-                        ? color.withOpacity(0.32)
-                        : Colors.white.withOpacity(0.10),
+                        ? color.withValues(alpha: 0.32)
+                        : Colors.white.withValues(alpha: 0.10),
                   ),
                 ),
                 child: Icon(
@@ -383,7 +389,7 @@ class _PlatformCard extends StatelessWidget {
                           ? 'Esta fonte está vinculada em modo simulado. A integração real será liberada em uma próxima etapa.'
                           : subtitle,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.56),
+                        color: Colors.white.withValues(alpha: 0.56),
                         fontSize: isMobile ? 13 : 15,
                         height: 1.25,
                       ),
@@ -426,13 +432,13 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: connected
-            ? Colors.greenAccent.withOpacity(0.12)
-            : Colors.white.withOpacity(0.06),
+            ? Colors.greenAccent.withValues(alpha: 0.12)
+            : Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(100),
         border: Border.all(
           color: connected
-              ? Colors.greenAccent.withOpacity(0.35)
-              : Colors.white.withOpacity(0.12),
+              ? Colors.greenAccent.withValues(alpha: 0.35)
+              : Colors.white.withValues(alpha: 0.12),
         ),
       ),
       child: Row(
@@ -475,9 +481,9 @@ class _SimulationNotice extends StatelessWidget {
         vertical: isMobile ? 14 : 16,
       ),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.075),
+        color: AppColors.gold.withValues(alpha: 0.075),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold.withOpacity(0.20)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.20)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +500,7 @@ class _SimulationNotice extends StatelessWidget {
             child: Text(
               'Nesta versão de teste, a conexão é simulada. Vendas reais ainda não são recebidas automaticamente. Na integração real, cada plataforma exigirá autorização própria antes de enviar vendas ao TORICO.',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.70),
+                color: Colors.white.withValues(alpha: 0.70),
                 fontSize: isMobile ? 13 : 14,
                 height: 1.35,
               ),

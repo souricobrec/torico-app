@@ -34,11 +34,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF06182C),
           border: Border(
-            top: BorderSide(color: AppColors.gold.withOpacity(0.18)),
+            top: BorderSide(color: AppColors.gold.withValues(alpha: 0.18)),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.30),
+              color: Colors.black.withValues(alpha: 0.30),
               blurRadius: 22,
               offset: const Offset(0, -8),
             ),
