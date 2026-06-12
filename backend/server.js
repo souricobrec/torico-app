@@ -15,6 +15,11 @@ app.use(express.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT || 3333;
 
+const ENABLE_TEST_ENDPOINTS =
+  String(process.env.ENABLE_TEST_ENDPOINTS || '')
+    .toLowerCase()
+    .trim() === 'true';
+
 const FIREBASE_SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 const FIREBASE_PROJECT_ID =
   process.env.FIREBASE_PROJECT_ID ||
@@ -146,6 +151,25 @@ function requireDevKey(req, res, next) {
   }
 
   next();
+}
+
+function requireTestEndpointsEnabled(req, res, next) {
+  if (ENABLE_TEST_ENDPOINTS) {
+    return next();
+  }
+
+  console.warn(
+    'Rota de teste bloqueada porque ENABLE_TEST_ENDPOINTS não está ativo.',
+    {
+      path: req.originalUrl,
+      environment: process.env.NODE_ENV || 'development',
+    }
+  );
+
+  return res.status(403).json({
+    ok: false,
+    message: 'Rota de teste desabilitada neste ambiente.',
+  });
 }
 
 function validateSalePayload(payload) {
@@ -1038,6 +1062,7 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     projectId: FIREBASE_PROJECT_ID || 'default',
     protectedSimulation: Boolean(TORICO_DEV_KEY),
+    testEndpointsEnabled: ENABLE_TEST_ENDPOINTS,
     publicBackendUrl: PUBLIC_BACKEND_URL,
     publicAppUrl: PUBLIC_APP_URL,
     mercadoPago: {
@@ -1276,7 +1301,11 @@ app.post('/simulate-sale', requireDevKey, async (req, res) => {
   }
 });
 
-app.post('/mercado-pago/create-test-preference', requireDevKey, async (req, res) => {
+app.post(
+  '/mercado-pago/create-test-preference',
+  requireTestEndpointsEnabled,
+  requireDevKey,
+  async (req, res) => {
   try {
     if (!isMercadoPagoMvpConfigured()) {
       return res.status(503).json({
