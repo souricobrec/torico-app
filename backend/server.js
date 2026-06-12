@@ -567,6 +567,26 @@ function isMercadoPagoLegacyMerchantOrderNotification(req) {
   return hasMerchantOrderId && isMerchantOrder;
 }
 
+function isMercadoPagoLegacyPaymentNotification(req) {
+  const queryId = String(req.query?.id || '').trim();
+  const queryDataId = String(
+    req.query?.['data.id'] || req.query?.data_id || ''
+  ).trim();
+
+  const queryTopic = String(req.query?.topic || '').toLowerCase().trim();
+  const queryType = String(req.query?.type || '').toLowerCase().trim();
+
+  const hasPaymentId = Boolean(queryId || queryDataId);
+
+  const isPayment =
+    queryTopic === 'payment' ||
+    queryType === 'payment' ||
+    queryTopic.includes('payment') ||
+    queryType.includes('payment');
+
+  return hasPaymentId && isPayment;
+}
+
 function getMercadoPagoMerchantOrderIdFromWebhook(req) {
   const fromQuery =
     req.query?.['data.id'] ||
@@ -1339,7 +1359,13 @@ app.post('/webhooks/mercado-pago', async (req, res) => {
     const isLegacyMerchantOrderNotification =
       isMercadoPagoLegacyMerchantOrderNotification(req);
 
-    if (!signatureValidation.ok && !isLegacyMerchantOrderNotification) {
+    const isLegacyPaymentNotification =
+      isMercadoPagoLegacyPaymentNotification(req);
+
+    const shouldAcceptWithApiVerification =
+      isLegacyMerchantOrderNotification || isLegacyPaymentNotification;
+
+    if (!signatureValidation.ok && !shouldAcceptWithApiVerification) {
       console.warn('Webhook Mercado Pago com assinatura inválida:', {
         reason: signatureValidation.reason,
         query: req.query,
@@ -1354,6 +1380,16 @@ app.post('/webhooks/mercado-pago', async (req, res) => {
     if (!signatureValidation.ok && isLegacyMerchantOrderNotification) {
       console.warn(
         'Webhook Mercado Pago merchant_order em formato legado/data.id recebido sem assinatura moderna válida. O backend seguirá consultando a API oficial antes de processar.',
+        {
+          reason: signatureValidation.reason,
+          query: req.query,
+        }
+      );
+    }
+
+    if (!signatureValidation.ok && isLegacyPaymentNotification) {
+      console.warn(
+        'Webhook Mercado Pago payment em formato legado/data.id recebido sem assinatura moderna valida. O backend seguira consultando a API oficial antes de processar.',
         {
           reason: signatureValidation.reason,
           query: req.query,
@@ -1376,8 +1412,9 @@ app.post('/webhooks/mercado-pago', async (req, res) => {
       query: req.query,
       signatureSkipped:
         signatureValidation.skipped ||
-        (!signatureValidation.ok && isLegacyMerchantOrderNotification),
+        (!signatureValidation.ok && shouldAcceptWithApiVerification),
       legacyMerchantOrderNotification: isLegacyMerchantOrderNotification,
+      legacyPaymentNotification: isLegacyPaymentNotification,
     });
 
     if (!isMercadoPagoMvpConfigured()) {
