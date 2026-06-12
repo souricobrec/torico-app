@@ -472,3 +472,63 @@ MVP Mercado Pago Sandbox: VALIDADO
 Cartão de crédito sandbox: PENDENTE
 Produção real: PENDENTE
 ```
+
+
+---
+
+## Atualização posterior — Webhook payment legado/data.id
+
+Após a validação inicial do fluxo com `merchant_order`, foi identificado que o Mercado Pago também envia notificações diretas de pagamento em formatos diferentes.
+
+Formatos observados:
+
+```txt
+/webhooks/mercado-pago?id=162904334721&topic=payment
+/webhooks/mercado-pago?data.id=162904334721&type=payment
+```
+
+Inicialmente esses eventos retornavam:
+
+```txt
+POST 401
+Webhook Mercado Pago com assinatura inválida
+```
+
+O backend foi ajustado para também aceitar esses eventos `payment` em formato legado/data.id, seguindo a mesma regra de segurança aplicada ao `merchant_order`:
+
+```txt
+Não confiar no body recebido.
+Usar apenas o ID recebido.
+Consultar a API oficial do Mercado Pago.
+Processar somente se o pagamento consultado estiver approved.
+Se estiver rejected, cancelled ou outro status, não gravar venda.
+```
+
+Após o ajuste, os logs passaram a mostrar:
+
+```txt
+POST 201 /webhooks/mercado-pago?id=...&topic=payment
+POST 201 /webhooks/mercado-pago?data.id=...&type=payment
+
+Webhook Mercado Pago payment em formato legado/data.id recebido sem assinatura moderna valida.
+Webhook Mercado Pago recebido:
+eventType: payment
+legacyPaymentNotification: true
+```
+
+Status atualizado:
+
+```txt
+Webhook merchant_order legado: VALIDADO
+Webhook merchant_order data.id/type=topic_merchant_order_wh: VALIDADO
+Webhook payment legado id/topic=payment: VALIDADO
+Webhook payment data.id/type=payment: VALIDADO
+Erro 401 para payment legado/data.id: RESOLVIDO
+```
+
+Conclusão:
+
+```txt
+O backend do TORICO agora está mais robusto para os formatos de notificação enviados pelo Mercado Pago em ambiente sandbox.
+Todos os eventos são tratados consultando a API oficial antes de qualquer gravação no Firestore.
+```
