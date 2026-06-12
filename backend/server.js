@@ -1047,10 +1047,19 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
 }
 
 app.get('/', (req, res) => {
-  res.redirect('/test-client');
+  if (ENABLE_TEST_ENDPOINTS) {
+    return res.redirect('/test-client');
+  }
+
+  return res.status(200).json({
+    ok: true,
+    app: 'TORICO Backend',
+    message: 'TORICO Backend ativo.',
+    health: '/health',
+  });
 });
 
-app.get('/test-client', (req, res) => {
+app.get('/test-client', requireTestEndpointsEnabled, (req, res) => {
   res.sendFile(path.join(__dirname, 'test-client.html'));
 });
 
@@ -1244,7 +1253,11 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
   }
 });
 
-app.post('/simulate-sale', requireDevKey, async (req, res) => {
+app.post(
+  '/simulate-sale',
+  requireTestEndpointsEnabled,
+  requireDevKey,
+  async (req, res) => {
   try {
     const errors = validateSalePayload(req.body);
 
