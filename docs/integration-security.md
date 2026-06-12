@@ -356,3 +356,63 @@ Gravar vendas de forma segura.
 Exibir no app apenas o necessário.
 Nunca pedir senha, 2FA ou credenciais pessoais das plataformas.
 ```
+---
+
+## Proteção de rotas de teste em produção
+
+O backend do TORICO possui rotas criadas apenas para validação, sandbox e desenvolvimento. Essas rotas não devem ficar disponíveis em produção real.
+
+Para controlar esse comportamento, foi criada a variável de ambiente:
+
+ENABLE_TEST_ENDPOINTS=false
+
+Quando ENABLE_TEST_ENDPOINTS=false, as rotas de teste ficam bloqueadas:
+
+/test-client
+/simulate-sale
+/mercado-pago/create-test-preference
+
+A rota raiz / também deixa de redirecionar para /test-client e passa a retornar apenas uma resposta segura informando que o backend está ativo.
+
+As rotas que continuam ativas em produção são:
+
+/health
+/webhooks/mercado-pago
+
+A rota /health é usada para validação operacional do backend.
+
+A rota /webhooks/mercado-pago precisa continuar pública, pois é o endpoint que recebe os eventos oficiais do Mercado Pago. Mesmo sendo pública, ela não confia diretamente no conteúdo recebido. O backend valida assinatura quando disponível e consulta a API oficial do Mercado Pago antes de gravar qualquer venda no Firestore.
+
+Mesmo quando ENABLE_TEST_ENDPOINTS=true, as rotas sensíveis de teste continuam protegidas por x-torico-dev-key, quando aplicável.
+
+Comportamento esperado:
+
+ENABLE_TEST_ENDPOINTS=false
+
+* /test-client bloqueado
+* /simulate-sale bloqueado
+* /mercado-pago/create-test-preference bloqueado
+* /health liberado
+* /webhooks/mercado-pago liberado
+
+ENABLE_TEST_ENDPOINTS=true
+
+* /test-client liberado
+* /simulate-sale liberado com x-torico-dev-key
+* /mercado-pago/create-test-preference liberado com x-torico-dev-key
+
+Em Cloud Run, a configuração segura para produção é:
+
+ENABLE_TEST_ENDPOINTS=false
+
+Validação realizada:
+
+* /health retornou testEndpointsEnabled=false
+* /test-client retornou bloqueado
+* /simulate-sale protegido
+* /mercado-pago/create-test-preference protegido
+* /webhooks/mercado-pago permaneceu ativo
+
+Conclusão:
+
+As rotas de teste do backend TORICO agora ficam desabilitadas por padrão em produção, reduzindo exposição pública e mantendo ativo apenas o necessário para operação real.
