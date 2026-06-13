@@ -198,3 +198,106 @@ Neste momento, o TORICO está tecnicamente validado em sandbox/MVP.
 A próxima fase não deve ser apenas trocar credenciais de teste por produção.
 
 A próxima fase correta é preparar o fluxo multiusuário, onde cada comerciante conecta sua própria conta Mercado Pago com autorização oficial.
+
+
+---
+
+## Validação OAuth Mercado Pago
+
+Foi realizada a validação do fluxo OAuth do Mercado Pago com o backend do TORICO publicado no Cloud Run.
+
+Fluxo validado:
+
+1. Usuário TORICO acessa a rota de conexão Mercado Pago.
+2. Backend gera o state OAuth com o UID do usuário TORICO.
+3. Backend redireciona para a tela oficial de autorização do Mercado Pago.
+4. Usuário autoriza a conexão do aplicativo TORICO.
+5. Mercado Pago redireciona para o callback do backend.
+6. Backend troca o code de autorização por tokens.
+7. Backend criptografa os tokens.
+8. Backend salva a integração no Firestore.
+9. Documento `users/{uid}/integrations/mercado_pago` é criado/atualizado com status `connected`.
+
+Rota usada para iniciar conexão:
+
+```txt
+/integrations/mercado-pago/connect?userId={UID_FIREBASE}
+```
+
+Callback configurado:
+
+```txt
+/integrations/mercado-pago/callback
+```
+
+Resultado validado no navegador:
+
+```txt
+Mercado Pago conectado com sucesso
+A integração foi autorizada e registrada no backend do TORICO.
+```
+
+Resultado validado nos logs do Cloud Run:
+
+```txt
+Integração Mercado Pago conectada
+status: connected
+```
+
+Resultado validado no Firestore:
+
+```txt
+users/{UID_FIREBASE}/integrations/mercado_pago
+```
+
+Campos esperados no documento:
+
+```txt
+platform: Mercado Pago
+platformId: mercado_pago
+status: connected
+mercadoPagoUserId: ...
+liveMode: true/false
+publicKey: ...
+accessTokenEncrypted: {...}
+refreshTokenEncrypted: {...}
+connectedAt: ...
+updatedAt: ...
+expiresAt: ...
+```
+
+Observações importantes:
+
+* O Client ID correto da aplicação foi validado.
+* O Client Secret correto da aplicação foi configurado no Cloud Run.
+* O erro `invalid client_id or client_secret` foi resolvido.
+* O fluxo OAuth não utiliza senha do Mercado Pago no TORICO.
+* O TORICO não salva tokens em texto puro.
+* Os tokens são salvos criptografados no Firestore.
+* O Flutter/PWA não acessa nem recebe Client Secret, Access Token ou Refresh Token.
+
+Status da etapa:
+
+```txt
+OAuth Mercado Pago: VALIDADO
+Callback Cloud Run: VALIDADO
+Criptografia de tokens: VALIDADA
+Persistência da integração no Firestore: VALIDADA
+```
+
+Ponto de atenção para a próxima etapa:
+
+O OAuth já salva a integração por comerciante, porém o webhook do MVP ainda usa `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_DEFAULT_USER_ID`.
+
+Para produção real multi-comerciante, a próxima evolução será fazer o webhook identificar o comerciante correto e usar o token salvo em:
+
+```txt
+users/{UID_FIREBASE}/integrations/mercado_pago
+```
+
+Conclusão:
+
+```txt
+O TORICO já consegue conectar uma conta Mercado Pago via OAuth oficial e salvar a integração de forma segura no backend.
+A próxima fase é adaptar o processamento dos webhooks para o modelo multiusuário.
+```
