@@ -19,32 +19,134 @@ class _AuthScreenState extends State<AuthScreen> {
   final LocalStorageService _localStorageService = LocalStorageService();
 
   bool carregando = false;
+  bool verificandoConexao = false;
+  bool oauthAberto = false;
+
+  bool get isMercadoPago => widget.plataforma == 'Mercado Pago';
 
   Future<void> conectar() async {
+    if (isMercadoPago) {
+      await _abrirOAuthMercadoPago();
+      return;
+    }
+
+    await _conectarSimulado();
+  }
+
+  Future<void> _abrirOAuthMercadoPago() async {
     setState(() {
       carregando = true;
     });
 
-    final conectado = await _integrationService.connect(widget.plataforma);
-
-    if (conectado && mounted) {
-      await _localStorageService.addConnectedPlatform(widget.plataforma);
+    try {
+      final abriu = await _integrationService.connect(widget.plataforma);
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ConnectedScreen(plataforma: widget.plataforma),
-        ),
-      );
-    }
-
-    if (mounted) {
       setState(() {
-        carregando = false;
+        oauthAberto = abriu || oauthAberto;
       });
+
+      if (abriu) {
+        _showMessage(
+          'A autorização do Mercado Pago foi aberta. Depois de autorizar, volte ao TORICO e clique em verificar conexão.',
+        );
+      } else {
+        _showMessage(
+          'Não foi possível abrir a autorização do Mercado Pago.',
+          error: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(e.toString().replaceFirst('Exception: ', ''), error: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          carregando = false;
+        });
+      }
     }
+  }
+
+  Future<void> _verificarConexaoMercadoPago() async {
+    setState(() {
+      verificandoConexao = true;
+    });
+
+    try {
+      final conectado = await _integrationService.isPlatformConnected(
+        widget.plataforma,
+      );
+
+      if (!mounted) return;
+
+      if (!conectado) {
+        _showMessage(
+          'Ainda não encontrei a autorização do Mercado Pago. Confirme se você concluiu a autorização e tente novamente.',
+          error: true,
+        );
+        return;
+      }
+
+      await _finalizarConexaoLocal();
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(e.toString().replaceFirst('Exception: ', ''), error: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          verificandoConexao = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _conectarSimulado() async {
+    setState(() {
+      carregando = true;
+    });
+
+    try {
+      final conectado = await _integrationService.connect(widget.plataforma);
+
+      if (conectado && mounted) {
+        await _finalizarConexaoLocal();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage(e.toString().replaceFirst('Exception: ', ''), error: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          carregando = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _finalizarConexaoLocal() async {
+    await _localStorageService.addConnectedPlatform(widget.plataforma);
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ConnectedScreen(plataforma: widget.plataforma),
+      ),
+    );
+  }
+
+  void _showMessage(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: error ? Colors.redAccent : const Color(0xFF123A2A),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -69,6 +171,19 @@ class _AuthScreenState extends State<AuthScreen> {
               constraints: const BoxConstraints(maxWidth: 560),
               child: Column(
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: carregando || verificandoConexao
+                          ? null
+                          : () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: AppColors.goldLight,
+                      ),
+                    ),
+                  ),
+
                   _Header(isMobile: isMobile),
 
                   SizedBox(height: isMobile ? 28 : 44),
@@ -76,6 +191,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   _ConnectionCard(
                     plataforma: widget.plataforma,
                     carregando: carregando,
+                    isMercadoPago: isMercadoPago,
+                    oauthAberto: oauthAberto,
                   ),
 
                   SizedBox(height: isMobile ? 24 : 34),
@@ -83,6 +200,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   _StepsCard(
                     plataforma: widget.plataforma,
                     carregando: carregando,
+                    isMercadoPago: isMercadoPago,
+                    oauthAberto: oauthAberto,
                   ),
 
                   SizedBox(height: isMobile ? 24 : 34),
@@ -91,7 +210,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     width: double.infinity,
                     height: isMobile ? 58 : 70,
                     child: ElevatedButton(
-                      onPressed: carregando ? null : conectar,
+                      onPressed: carregando || verificandoConexao
+                          ? null
+                          : conectar,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
                         foregroundColor: Colors.black,
@@ -113,26 +234,73 @@ class _AuthScreenState extends State<AuthScreen> {
                                 color: Colors.black,
                               ),
                             )
-                          : const Row(
+                          : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Autorizar conexão',
-                                  style: TextStyle(
+                                  isMercadoPago
+                                      ? 'Autorizar no Mercado Pago'
+                                      : 'Ativar conexão',
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                SizedBox(width: 10),
-                                Icon(Icons.arrow_forward_rounded, size: 26),
+                                const SizedBox(width: 10),
+                                const Icon(Icons.arrow_forward_rounded, size: 26),
                               ],
                             ),
                     ),
                   ),
 
+                  if (isMercadoPago) ...[
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: isMobile ? 56 : 66,
+                      child: OutlinedButton(
+                        onPressed: carregando || verificandoConexao
+                            ? null
+                            : _verificarConexaoMercadoPago,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.goldLight,
+                          side: BorderSide(
+                            color: AppColors.goldLight.withValues(alpha: 0.55),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: verificandoConexao
+                            ? const SizedBox(
+                                width: 25,
+                                height: 25,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  color: AppColors.goldLight,
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.verified_rounded, size: 22),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Já autorizei, verificar conexão',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 18),
 
-                  const _SimulationNotice(),
+                  _IntegrationNotice(isMercadoPago: isMercadoPago),
                 ],
               ),
             ),
@@ -195,13 +363,38 @@ class _Header extends StatelessWidget {
 class _ConnectionCard extends StatelessWidget {
   final String plataforma;
   final bool carregando;
+  final bool isMercadoPago;
+  final bool oauthAberto;
 
-  const _ConnectionCard({required this.plataforma, required this.carregando});
+  const _ConnectionCard({
+    required this.plataforma,
+    required this.carregando,
+    required this.isMercadoPago,
+    required this.oauthAberto,
+  });
 
   @override
   Widget build(BuildContext context) {
     final largura = MediaQuery.of(context).size.width;
     final bool isMobile = largura < 600;
+
+    String description;
+
+    if (isMercadoPago) {
+      if (carregando) {
+        description = 'Abrindo autorização oficial do Mercado Pago...';
+      } else if (oauthAberto) {
+        description =
+            'Depois de autorizar no Mercado Pago, volte para esta tela e confirme a conexão.';
+      } else {
+        description =
+            'Autorize sua conta Mercado Pago usando o fluxo oficial. O TORICO não pede sua senha.';
+      }
+    } else {
+      description = carregando
+          ? 'Conectando ao $plataforma...'
+          : '$plataforma será ativado em modo de teste para validar o painel.';
+    }
 
     return Container(
       width: double.infinity,
@@ -247,7 +440,11 @@ class _ConnectionCard extends StatelessWidget {
               ],
             ),
             child: Icon(
-              carregando ? Icons.sync_rounded : Icons.add_link_rounded,
+              carregando
+                  ? Icons.sync_rounded
+                  : isMercadoPago
+                      ? Icons.verified_user_rounded
+                      : Icons.add_link_rounded,
               color: AppColors.goldLight,
               size: isMobile ? 38 : 46,
             ),
@@ -269,9 +466,7 @@ class _ConnectionCard extends StatelessWidget {
           const SizedBox(height: 16),
 
           Text(
-            carregando
-                ? 'Conectando ao $plataforma...'
-                : 'Autorize esta plataforma para adicioná-la às fontes de venda do seu negócio.',
+            description,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.75),
@@ -302,8 +497,15 @@ class _ConnectionCard extends StatelessWidget {
 class _StepsCard extends StatelessWidget {
   final String plataforma;
   final bool carregando;
+  final bool isMercadoPago;
+  final bool oauthAberto;
 
-  const _StepsCard({required this.plataforma, required this.carregando});
+  const _StepsCard({
+    required this.plataforma,
+    required this.carregando,
+    required this.isMercadoPago,
+    required this.oauthAberto,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -319,8 +521,12 @@ class _StepsCard extends StatelessWidget {
         children: [
           _StepItem(
             icon: Icons.verified_user_rounded,
-            title: '1. Autorização segura',
-            text: 'Você confirma a plataforma que deseja conectar.',
+            title: isMercadoPago
+                ? '1. Autorização oficial'
+                : '1. Ativação de teste',
+            text: isMercadoPago
+                ? 'Você autoriza o TORICO diretamente no Mercado Pago.'
+                : 'Você confirma a plataforma que deseja testar.',
             active: true,
           ),
 
@@ -328,11 +534,15 @@ class _StepsCard extends StatelessWidget {
 
           _StepItem(
             icon: Icons.hub_rounded,
-            title: '2. Adicionar $plataforma',
-            text: carregando
-                ? 'Estamos preparando esta fonte de vendas.'
-                : 'O TORICO adicionará esta plataforma ao seu negócio.',
-            active: carregando,
+            title: isMercadoPago
+                ? '2. Confirmar conexão'
+                : '2. Adicionar $plataforma',
+            text: isMercadoPago
+                ? 'Após autorizar, o TORICO consulta o Firestore e confirma se a integração foi registrada.'
+                : carregando
+                    ? 'Estamos preparando esta fonte de vendas.'
+                    : 'O TORICO adicionará esta plataforma ao seu negócio em modo de teste.',
+            active: carregando || oauthAberto,
           ),
 
           const SizedBox(height: 16),
@@ -340,7 +550,9 @@ class _StepsCard extends StatelessWidget {
           _StepItem(
             icon: Icons.insights_rounded,
             title: '3. Painel consolidado',
-            text: 'O painel mostrará o total vendido do negócio no dia.',
+            text: isMercadoPago
+                ? 'As vendas aprovadas recebidas por webhook aparecerão no painel do dia.'
+                : 'O painel mostrará o total vendido do negócio no dia.',
             active: false,
           ),
         ],
@@ -421,13 +633,17 @@ class _StepItem extends StatelessWidget {
   }
 }
 
-class _SimulationNotice extends StatelessWidget {
-  const _SimulationNotice();
+class _IntegrationNotice extends StatelessWidget {
+  final bool isMercadoPago;
+
+  const _IntegrationNotice({required this.isMercadoPago});
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      'Nesta versão de teste, a autorização é simulada. Na integração real, cada plataforma exigirá login/autorização própria.',
+      isMercadoPago
+          ? 'A autorização é feita no ambiente oficial do Mercado Pago. O TORICO não solicita senha e não expõe tokens no app.'
+          : 'Nesta versão, Stone e PagBank permanecem em modo de teste. A integração real será feita futuramente por autorização oficial.',
       textAlign: TextAlign.center,
       style: TextStyle(
         color: Colors.white.withValues(alpha: 0.46),

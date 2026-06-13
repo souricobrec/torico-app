@@ -100,10 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     _PlatformCard(
                       plataforma: 'Mercado Pago',
                       subtitle:
-                          'Ative uma conexão simulada do Mercado Pago para testar o painel',
+                          'Conecte sua conta Mercado Pago por autorização oficial para receber vendas reais.',
                       icon: Icons.account_balance_wallet_rounded,
                       color: Colors.lightBlueAccent,
                       conectado: _isConnected('Mercado Pago'),
+                      realIntegration: true,
                       onTap: () => _openPlatform('Mercado Pago'),
                     ),
 
@@ -112,10 +113,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     _PlatformCard(
                       plataforma: 'Stone',
                       subtitle:
-                          'Ative uma conexão simulada da Stone para testar o painel',
+                          'Ative uma conexão simulada da Stone para testar o painel.',
                       icon: Icons.payments_rounded,
                       color: Colors.greenAccent,
                       conectado: _isConnected('Stone'),
+                      realIntegration: false,
                       onTap: () => _openPlatform('Stone'),
                     ),
 
@@ -124,17 +126,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     _PlatformCard(
                       plataforma: 'PagBank',
                       subtitle:
-                          'Ative uma conexão simulada do PagBank para testar o painel',
+                          'Ative uma conexão simulada do PagBank para testar o painel.',
                       icon: Icons.credit_card_rounded,
                       color: Colors.orangeAccent,
                       conectado: _isConnected('PagBank'),
+                      realIntegration: false,
                       onTap: () => _openPlatform('PagBank'),
                     ),
                   ],
 
                   SizedBox(height: isMobile ? 20 : 30),
 
-                  const _SimulationNotice(),
+                  const _IntegrationNotice(),
                 ],
               ),
             ),
@@ -209,8 +212,8 @@ class _IntroCard extends StatelessWidget {
         ? 'Plataformas do negócio'
         : 'Comece conectando sua primeira plataforma';
     final subtitle = hasConnected
-        ? 'O TORICO já está com conexão simulada ativa para ${connectedPlatforms.join(', ')}. As vendas de teste já podem aparecer no painel.'
-        : 'Escolha onde suas vendas acontecem. Nesta versão, a conexão é simulada para você testar o painel do TORICO.';
+        ? 'O TORICO já está monitorando: ${connectedPlatforms.join(', ')}. Você pode abrir o painel ou adicionar novas fontes.'
+        : 'Escolha onde suas vendas acontecem. Mercado Pago já usa autorização oficial; Stone e PagBank seguem em modo de teste por enquanto.';
 
     return Container(
       width: double.infinity,
@@ -293,6 +296,7 @@ class _PlatformCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool conectado;
+  final bool realIntegration;
   final VoidCallback onTap;
 
   const _PlatformCard({
@@ -301,6 +305,7 @@ class _PlatformCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.conectado,
+    required this.realIntegration,
     required this.onTap,
   });
 
@@ -386,7 +391,9 @@ class _PlatformCard extends StatelessWidget {
 
                     Text(
                       conectado
-                          ? 'Esta fonte está vinculada em modo simulado. A integração real será liberada em uma próxima etapa.'
+                          ? realIntegration
+                              ? 'Integração oficial conectada. As vendas aprovadas recebidas pelo webhook aparecerão no painel.'
+                              : 'Esta fonte está vinculada em modo de teste.'
                           : subtitle,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.56),
@@ -466,8 +473,8 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _SimulationNotice extends StatelessWidget {
-  const _SimulationNotice();
+class _IntegrationNotice extends StatelessWidget {
+  const _IntegrationNotice();
 
   @override
   Widget build(BuildContext context) {
@@ -498,7 +505,7 @@ class _SimulationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Nesta versão de teste, a conexão é simulada. Vendas reais ainda não são recebidas automaticamente. Na integração real, cada plataforma exigirá autorização própria antes de enviar vendas ao TORICO.',
+              'Mercado Pago usa autorização oficial via backend do TORICO. Stone e PagBank ainda ficam em modo de teste até as próximas integrações reais.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.70),
                 fontSize: isMobile ? 13 : 14,

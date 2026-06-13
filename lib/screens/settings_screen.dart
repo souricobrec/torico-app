@@ -53,10 +53,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     if (connectedPlatforms.length == 1) {
-      return 'Monitorando ${connectedPlatforms.first} em modo simulado';
+      if (connectedPlatforms.first == 'Mercado Pago') {
+        return 'Monitorando Mercado Pago com integração oficial';
+      }
+
+      return 'Monitorando ${connectedPlatforms.first} em modo de teste';
     }
 
-    return 'Monitorando ${connectedPlatforms.length} plataformas em modo simulado';
+    return 'Monitorando ${connectedPlatforms.length} fontes de venda';
   }
 
   @override
@@ -106,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const _SectionTitle(
                 title: 'Integrações',
                 subtitle:
-                    'Conexões simuladas agora. Integrações reais por autorização oficial em breve.',
+                    'Mercado Pago por autorização oficial. Stone e PagBank em modo de teste por enquanto.',
               ),
 
               const SizedBox(height: 12),
@@ -115,9 +119,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 platform: 'Mercado Pago',
                 platformId: 'mercado_pago',
                 connected: connectedPlatforms.contains('Mercado Pago'),
-                realStatus: 'Integração real planejada',
+                realStatus: 'OAuth real ativo',
                 description:
-                    'Será a primeira integração real do TORICO, usando OAuth, API oficial e webhook.',
+                    'Integração real do TORICO usando OAuth, API oficial e webhook do Mercado Pago.',
               ),
 
               const SizedBox(height: 12),
@@ -151,16 +155,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const _SectionTitle(
                 title: 'Conta e aplicativo',
                 subtitle:
-                    'Gerencie sua conta, simulações e informações do app.',
+                    'Gerencie sua conta, conexões e informações do app.',
               ),
 
               const SizedBox(height: 12),
 
               _SettingsActionTile(
                 icon: Icons.hub_rounded,
-                title: 'Gerenciar conexões simuladas',
+                title: 'Gerenciar conexões',
                 subtitle:
-                    'Ativar ou revisar plataformas em modo de demonstração',
+                    'Conectar Mercado Pago ou revisar fontes de venda',
                 iconColor: AppColors.goldLight,
                 onTap: () async {
                   await Navigator.push(
@@ -191,8 +195,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _SettingsActionTile(
                 icon: Icons.link_off_rounded,
-                title: 'Desconectar plataformas simuladas',
-                subtitle: 'Remove as conexões simuladas deste dispositivo',
+                title: 'Limpar conexões deste dispositivo',
+                subtitle: 'Remove as conexões locais salvas neste navegador',
                 iconColor: Colors.redAccent,
                 danger: true,
                 onTap: () {
@@ -237,10 +241,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return _ToricoDialog(
-          title: 'Desconectar plataformas simuladas?',
+          title: 'Limpar conexões deste dispositivo?',
           message:
-              'Isso removerá as conexões simuladas deste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
-          primaryText: 'Desconectar',
+              'Isso removerá as conexões salvas neste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
+          primaryText: 'Limpar',
           primaryColor: Colors.redAccent,
           onPrimary: () async {
             await _storage.clearConnectedPlatform();
@@ -435,7 +439,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Aqui você vê quais plataformas estão ativadas em modo simulado para testes.',
+                            'Aqui você vê quais plataformas estão conectadas ou disponíveis para teste.',
                             style: TextStyle(
                               color: Colors.white60,
                               fontSize: 13.5,
@@ -451,7 +455,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 const SizedBox(height: 22),
 
                 const _PlatformSectionTitle(
-                  title: 'Ativadas em modo simulado',
+                  title: 'Conectadas neste dispositivo',
                   icon: Icons.check_circle_rounded,
                   color: Colors.greenAccent,
                 ),
@@ -461,7 +465,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 if (connectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
                     text:
-                        'Ative pelo menos uma conexão simulada para iniciar o teste do painel.',
+                        'Conecte o Mercado Pago ou ative uma fonte de teste para iniciar o painel.',
                   )
                 else
                   Wrap(
@@ -475,7 +479,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 const _PlatformSectionTitle(
-                  title: 'Disponíveis para simulação',
+                  title: 'Disponíveis',
                   icon: Icons.radio_button_unchecked_rounded,
                   color: Colors.white54,
                 ),
@@ -485,7 +489,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 if (disconnectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
                     text:
-                        'Todas as fontes disponíveis já estão ativadas em modo simulado.',
+                        'Todas as fontes disponíveis já estão ativadas neste dispositivo.',
                   )
                 else
                   Wrap(
@@ -696,7 +700,7 @@ class _SimulationInfoCard extends StatelessWidget {
           const SizedBox(width: 13),
           Expanded(
             child: Text(
-              'Nesta fase do TORICO, as plataformas aparecem como conexões simuladas. As vendas reais ainda não são recebidas automaticamente pelas plataformas.',
+              'Mercado Pago já usa integração oficial por OAuth e webhook. Stone e PagBank continuam em modo de teste até as próximas integrações reais.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.68),
                 fontSize: 13.5,
@@ -790,9 +794,13 @@ class _IntegrationStatusCard extends StatelessWidget {
                       icon: connected
                           ? Icons.check_circle_rounded
                           : Icons.radio_button_unchecked_rounded,
-                      text: connected
-                          ? 'Simulação ativada'
-                          : 'Simulação desativada',
+                      text: platformId == 'mercado_pago'
+                          ? connected
+                              ? 'Conectado'
+                              : 'Desconectado'
+                          : connected
+                              ? 'Teste ativado'
+                              : 'Teste desativado',
                       color: simulationColor,
                     ),
                     _SmallStatusPill(
