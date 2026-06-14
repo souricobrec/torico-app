@@ -1210,6 +1210,17 @@ async function processMercadoPagoMerchantOrderWebhook({
   };
 }
 
+function buildPublicMercadoPagoIntegrationStatus(integrationData) {
+  return {
+    platform: 'Mercado Pago',
+    platformId: 'mercado_pago',
+    status: integrationData.status || 'connected',
+    liveMode: Boolean(integrationData.liveMode),
+    connectedAt: integrationData.connectedAt || admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+}
+
 async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
   const expiresInSeconds = Number(tokenResponse.expires_in || 0);
   const now = new Date();
@@ -1217,10 +1228,11 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
   const expiresAt =
     expiresInSeconds > 0 ? new Date(now.getTime() + expiresInSeconds * 1000) : null;
 
-  const integrationRef = db
-    .collection('users')
-    .doc(userId)
-    .collection('integrations')
+  const userRef = db.collection('users').doc(userId);
+
+  const integrationRef = userRef.collection('integrations').doc('mercado_pago');
+  const publicStatusRef = userRef
+    .collection('integration_status')
     .doc('mercado_pago');
 
   const integrationData = {
@@ -1239,7 +1251,22 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  await integrationRef.set(integrationData, { merge: true });
+  const publicStatusData = buildPublicMercadoPagoIntegrationStatus(integrationData);
+
+  await db.runTransaction(async (transaction) => {
+    transaction.set(integrationRef, integrationData, { merge: true });
+    transaction.set(publicStatusRef, publicStatusData, { merge: true });
+    transaction.set(
+      userRef,
+      {
+        connectedPlatform: 'Mercado Pago',
+        hasConnectedPlatform: true,
+        selectedPlatform: 'Mercado Pago',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
 
   return {
     userId,

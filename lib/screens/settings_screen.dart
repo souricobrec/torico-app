@@ -6,6 +6,8 @@ import '../services/local_storage_service.dart';
 import 'about_screen.dart';
 import 'login_screen.dart';
 import 'owner_login_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_use_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String plataforma;
@@ -187,6 +189,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AboutScreen()),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              _SettingsActionTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Política de Privacidade',
+                subtitle: 'Como o TORICO trata e protege seus dados',
+                iconColor: AppColors.goldLight,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PrivacyPolicyScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              _SettingsActionTile(
+                icon: Icons.description_outlined,
+                title: 'Termos de Uso',
+                subtitle: 'Regras de uso do aplicativo TORICO',
+                iconColor: AppColors.goldLight,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsOfUseScreen()),
                   );
                 },
               ),

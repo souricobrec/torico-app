@@ -72,7 +72,7 @@ class IntegrationService {
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .collection('integrations')
+        .collection('integration_status')
         .doc(platformId)
         .get();
 
@@ -85,7 +85,9 @@ class IntegrationService {
     return data['status'] == 'connected';
   }
 
-  Future<Map<String, dynamic>?> getPlatformIntegration(String plataforma) async {
+  Future<Map<String, dynamic>?> getPlatformIntegration(
+    String plataforma,
+  ) async {
     if (!_isMercadoPago(plataforma)) {
       return null;
     }
@@ -101,7 +103,7 @@ class IntegrationService {
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .collection('integrations')
+        .collection('integration_status')
         .doc(platformId)
         .get();
 

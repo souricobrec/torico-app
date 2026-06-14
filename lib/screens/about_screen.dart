@@ -309,7 +309,7 @@ class _InfoCard extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Nesta versão de teste, as vendas exibidas no painel são simuladas. A estrutura já prepara o caminho para futuras integrações reais com plataformas de pagamento.',
+              'O TORICO já recebe vendas aprovadas do Mercado Pago por integração oficial via OAuth, API e webhook. Stone e PagBank serão adicionados futuramente por integrações oficiais.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.72),
                 fontSize: 14,

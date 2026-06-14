@@ -413,3 +413,5 @@ Receber → exibir diretamente
 ```
 
 Essa arquitetura protege o comerciante, protege o TORICO e prepara o produto para múltiplas plataformas no futuro.
+
+
