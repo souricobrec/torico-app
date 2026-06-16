@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../services/user_plan_service.dart';
@@ -45,71 +45,62 @@ class PlanScreen extends StatelessWidget {
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+              padding: const EdgeInsets.fromLTRB(22, 10, 22, 104),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _CurrentPlanCard(plan: plan),
-
-                  const SizedBox(height: 22),
-
-                  _SectionTitle(
-                    plan.isPlus
-                        ? 'Recursos disponíveis no seu plano'
-                        : 'Incluído no Plano Básico',
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  const _FeatureTile(
-                    icon: Icons.today_rounded,
-                    title: 'Vendido hoje em tempo real',
-                    text: 'Acompanhe o total vendido no dia atual.',
-                  ),
+                  const _SectionTitle('PLANO ATUAL', small: true),
 
                   const SizedBox(height: 10),
 
-                  const _FeatureTile(
-                    icon: Icons.receipt_long_rounded,
-                    title: 'Histórico das vendas de hoje',
-                    text:
-                        'Veja as vendas registradas no dia, com valor e horário.',
-                  ),
+                  _CurrentPlanCompact(plan: plan),
+
+                  const SizedBox(height: 18),
+
+                  const _SectionTitle('RECURSOS INCLUÍDOS NO BÁSICO'),
 
                   const SizedBox(height: 10),
 
-                  const _FeatureTile(
-                    icon: Icons.filter_alt_rounded,
-                    title: 'Filtro por plataforma',
-                    text: 'Filtre vendas por Mercado Pago, Stone ou PagBank.',
+                  const Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _FeatureChip(
+                        icon: Icons.schedule_rounded,
+                        text: 'Tempo real',
+                      ),
+                      _FeatureChip(
+                        icon: Icons.receipt_long_rounded,
+                        text: 'Histórico de hoje',
+                      ),
+                      _FeatureChip(
+                        icon: Icons.filter_alt_rounded,
+                        text: 'Filtro por plataforma',
+                      ),
+                      _FeatureChip(
+                        icon: Icons.layers_rounded,
+                        text: 'Múltiplas plataformas',
+                      ),
+                      _FeatureChip(
+                        icon: Icons.notifications_active_rounded,
+                        text: 'Alertas de venda',
+                      ),
+                    ],
                   ),
+
+                  const SizedBox(height: 18),
+
+                  const _SectionTitle('TORICO PLUS'),
 
                   const SizedBox(height: 10),
 
-                  const _FeatureTile(
-                    icon: Icons.hub_rounded,
-                    title: 'Múltiplas plataformas',
-                    text:
-                        'Conecte mais de uma fonte de vendas ao mesmo negócio.',
-                  ),
+                  _PlusCompactCard(plan: plan),
 
-                  const SizedBox(height: 10),
-
-                  const _FeatureTile(
-                    icon: Icons.notifications_active_rounded,
-                    title: 'Alertas visuais e sonoros',
-                    text: 'Receba sinais quando uma nova venda entrar.',
-                  ),
-
-                  const SizedBox(height: 26),
-
-                  _PlusCard(plan: plan),
-
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 14),
 
                   SizedBox(
                     width: double.infinity,
-                    height: 58,
+                    height: 56,
                     child: ElevatedButton(
                       onPressed: () {
                         AppSnackBar.show(
@@ -120,36 +111,38 @@ class PlanScreen extends StatelessWidget {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
+                        backgroundColor: AppColors.goldLight,
                         foregroundColor: Colors.black,
-                        elevation: 8,
+                        elevation: 10,
                         shadowColor: AppColors.gold.withValues(alpha: 0.30),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
                       ),
-                      child: Text(
-                        plan.isPlus
-                            ? 'Plano Plus ativo'
-                            : 'Conhecer o TORICO Plus',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Center(
-                    child: Text(
-                      'Plano Básico: acompanhe o dia atual • TORICO Plus: relatórios, comparativos e análise histórica',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.42),
-                        fontSize: 12.5,
-                        height: 1.35,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            plan.isPlus
+                                ? Icons.check_circle_rounded
+                                : Icons.workspace_premium_rounded,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            plan.isPlus
+                                ? 'Plano Plus ativo'
+                                : 'Conhecer TORICO Plus',
+                            style: const TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (!plan.isPlus) ...[
+                            const SizedBox(width: 10),
+                            const Icon(Icons.arrow_forward_rounded, size: 22),
+                          ],
+                        ],
                       ),
                     ),
                   ),
@@ -163,10 +156,10 @@ class PlanScreen extends StatelessWidget {
   }
 }
 
-class _CurrentPlanCard extends StatelessWidget {
+class _CurrentPlanCompact extends StatelessWidget {
   final UserPlan plan;
 
-  const _CurrentPlanCard({required this.plan});
+  const _CurrentPlanCompact({required this.plan});
 
   @override
   Widget build(BuildContext context) {
@@ -174,10 +167,10 @@ class _CurrentPlanCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppColors.gold.withValues(alpha: 0.46),
           width: 1.4,
@@ -185,30 +178,17 @@ class _CurrentPlanCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 26,
+            blurRadius: 24,
             offset: const Offset(0, 14),
           ),
           BoxShadow(
             color: AppColors.gold.withValues(alpha: 0.055),
-            blurRadius: 34,
+            blurRadius: 28,
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'PLANO ATUAL',
-            style: TextStyle(
-              color: AppColors.gold,
-              letterSpacing: 3,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
           Row(
             children: [
               Container(
@@ -216,9 +196,9 @@ class _CurrentPlanCard extends StatelessWidget {
                 height: 58,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.gold.withValues(alpha: 0.13),
+                  color: AppColors.gold.withValues(alpha: 0.12),
                   border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.28),
+                    color: AppColors.gold.withValues(alpha: 0.25),
                   ),
                 ),
                 child: Icon(
@@ -226,34 +206,46 @@ class _CurrentPlanCard extends StatelessWidget {
                       ? Icons.diamond_rounded
                       : Icons.workspace_premium_rounded,
                   color: AppColors.goldLight,
-                  size: 32,
+                  size: 31,
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
 
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      plan.name,
-                      style: const TextStyle(
-                        color: AppColors.goldLight,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        height: 1.1,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            plan.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.goldLight,
+                              fontSize: 23,
+                              fontWeight: FontWeight.bold,
+                              height: 1.08,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const _StatusPill(text: 'Ativo'),
+                      ],
                     ),
-                    const SizedBox(height: 5),
+
+                    const SizedBox(height: 6),
+
                     Text(
                       isPlus
                           ? 'Relatórios, comparativos e análise histórica.'
-                          : 'Você está no plano Básico: acompanhamento em tempo real do dia atual.',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14.5,
-                        height: 1.3,
+                          : 'Acompanhamento em tempo real do dia atual.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 13.5,
+                        height: 1.28,
                       ),
                     ),
                   ],
@@ -262,28 +254,92 @@ class _CurrentPlanCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
 
-          const _PlanBadge(text: 'Tempo real'),
-          const SizedBox(height: 8),
-          const _PlanBadge(text: 'Histórico de hoje'),
-          const SizedBox(height: 8),
-          const _PlanBadge(text: 'Múltiplas plataformas'),
+          Divider(color: Colors.white.withValues(alpha: 0.10), height: 1),
 
-          if (isPlus) ...[
-            const SizedBox(height: 8),
-            const _PlanBadge(text: 'Relatórios avançados'),
-          ],
+          const SizedBox(height: 14),
+
+          Row(
+            children: [
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: isPlus ? 'Plus' : 'R\$ 39,90',
+                      style: const TextStyle(
+                        color: AppColors.goldLight,
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (!isPlus)
+                      TextSpan(
+                        text: ' / mês',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.70),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Plano atual',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.64),
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _PlusCard extends StatelessWidget {
+class _FeatureChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _FeatureChip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.045),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.goldLight, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlusCompactCard extends StatelessWidget {
   final UserPlan plan;
 
-  const _PlusCard({required this.plan});
+  const _PlusCompactCard({required this.plan});
 
   @override
   Widget build(BuildContext context) {
@@ -291,176 +347,188 @@ class _PlusCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.gold.withValues(alpha: 0.18),
+            AppColors.gold.withValues(alpha: 0.20),
             Colors.white.withValues(alpha: 0.045),
           ],
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.32)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.24),
+                  ),
+                ),
+                child: Icon(
+                  isPlus
+                      ? Icons.check_circle_rounded
+                      : Icons.workspace_premium_rounded,
+                  color: AppColors.goldLight,
+                  size: 31,
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            isPlus ? 'TORICO Plus ativo' : 'TORICO Plus',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.goldLight,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              height: 1.08,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _StatusPill(text: isPlus ? 'Ativo' : 'Em breve'),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Text(
+                      isPlus
+                          ? 'Recursos avançados habilitados no app.'
+                          : 'Relatórios avançados, comparativos e gráficos de desempenho.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 13.5,
+                        height: 1.28,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Divider(color: Colors.white.withValues(alpha: 0.10), height: 1),
+
+          const SizedBox(height: 12),
+
+          const Row(
+            children: [
+              Expanded(
+                child: _PlusMiniFeature(
+                  icon: Icons.bar_chart_rounded,
+                  text: 'Relatórios Plus',
+                ),
+              ),
+              Expanded(
+                child: _PlusMiniFeature(
+                  icon: Icons.compare_arrows_rounded,
+                  text: 'Comparativos',
+                ),
+              ),
+              Expanded(
+                child: _PlusMiniFeature(
+                  icon: Icons.pie_chart_rounded,
+                  text: 'Gráficos',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlusMiniFeature extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _PlusMiniFeature({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: AppColors.goldLight, size: 16),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.72),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String text;
+
+  const _StatusPill({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool active = text == 'Ativo';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: active
+            ? Colors.greenAccent.withValues(alpha: 0.12)
+            : AppColors.gold.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: active
+              ? Colors.greenAccent.withValues(alpha: 0.28)
+              : AppColors.gold.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (active) ...[
+            const Icon(Icons.circle, color: Colors.greenAccent, size: 8),
+            const SizedBox(width: 6),
+          ],
           Text(
-            isPlus ? 'TORICO Plus ativo' : 'TORICO Plus',
-            style: const TextStyle(
-              color: AppColors.goldLight,
-              fontSize: 25,
+            text,
+            style: TextStyle(
+              color: active ? Colors.greenAccent : AppColors.goldLight,
+              fontSize: 11.5,
               fontWeight: FontWeight.bold,
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            isPlus
-                ? 'Você já tem acesso aos recursos avançados quando eles forem liberados no app.'
-                : 'Para quem quer ir além do dia atual, com relatórios, comparativos e visão histórica.',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              height: 1.35,
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          const _PlusFeature(text: 'Relatórios dos últimos 7 dias'),
-          const _PlusFeature(text: 'Relatórios mensais'),
-          const _PlusFeature(text: 'Comparativos por período'),
-          const _PlusFeature(text: 'Gráficos de desempenho'),
-          const _PlusFeature(text: 'Exportação de dados'),
         ],
-      ),
-    );
-  }
-}
-
-class _FeatureTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String text;
-
-  const _FeatureTile({
-    required this.icon,
-    required this.title,
-    required this.text,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.045),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.gold.withValues(alpha: 0.12),
-            ),
-            child: Icon(icon, color: AppColors.goldLight, size: 24),
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.58),
-                    fontSize: 13.5,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlusFeature extends StatelessWidget {
-  final String text;
-
-  const _PlusFeature({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Row(
-        children: [
-          const Icon(Icons.lock_rounded, color: AppColors.goldLight, size: 18),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                height: 1.25,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlanBadge extends StatelessWidget {
-  final String text;
-
-  const _PlanBadge({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.20)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.76),
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -468,17 +536,19 @@ class _PlanBadge extends StatelessWidget {
 
 class _SectionTitle extends StatelessWidget {
   final String text;
+  final bool small;
 
-  const _SectionTitle(this.text);
+  const _SectionTitle(this.text, {this.small = false});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.goldLight,
-        fontSize: 18,
+        fontSize: small ? 13 : 16,
         fontWeight: FontWeight.bold,
+        letterSpacing: small ? 3 : 1.8,
       ),
     );
   }

@@ -186,7 +186,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
                   _Header(isMobile: isMobile),
 
-                  SizedBox(height: isMobile ? 28 : 44),
+                  SizedBox(height: isMobile ? 18 : 28),
 
                   _ConnectionCard(
                     plataforma: widget.plataforma,
@@ -195,7 +195,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     oauthAberto: oauthAberto,
                   ),
 
-                  SizedBox(height: isMobile ? 24 : 34),
+                  SizedBox(height: isMobile ? 18 : 26),
 
                   _StepsCard(
                     plataforma: widget.plataforma,
@@ -204,7 +204,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     oauthAberto: oauthAberto,
                   ),
 
-                  SizedBox(height: isMobile ? 24 : 34),
+                  SizedBox(height: isMobile ? 16 : 24),
 
                   SizedBox(
                     width: double.infinity,
@@ -247,14 +247,17 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                const Icon(Icons.arrow_forward_rounded, size: 26),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 26,
+                                ),
                               ],
                             ),
                     ),
                   ),
 
                   if (isMercadoPago) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       height: isMobile ? 56 : 66,
@@ -398,10 +401,10 @@ class _ConnectionCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(isMobile ? 22 : 30),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: AppColors.gold.withValues(alpha: 0.46),
           width: 1.4,
@@ -422,8 +425,8 @@ class _ConnectionCard extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 350),
-            width: isMobile ? 76 : 92,
-            height: isMobile ? 76 : 92,
+            width: isMobile ? 48 : 62,
+            height: isMobile ? 48 : 62,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: carregando
@@ -443,40 +446,40 @@ class _ConnectionCard extends StatelessWidget {
               carregando
                   ? Icons.sync_rounded
                   : isMercadoPago
-                      ? Icons.verified_user_rounded
-                      : Icons.add_link_rounded,
+                  ? Icons.verified_user_rounded
+                  : Icons.add_link_rounded,
               color: AppColors.goldLight,
-              size: isMobile ? 38 : 46,
+              size: isMobile ? 24 : 32,
             ),
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
 
           Text(
             plataforma,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.goldLight,
-              fontSize: isMobile ? 34 : 42,
+              fontSize: isMobile ? 27 : 34,
               fontWeight: FontWeight.bold,
               height: 1,
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           Text(
             description,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.75),
-              fontSize: isMobile ? 16 : 18,
-              height: 1.4,
+              fontSize: isMobile ? 13.5 : 15.5,
+              height: 1.28,
             ),
           ),
 
           if (carregando) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(100),
               child: LinearProgressIndicator(
@@ -511,7 +514,7 @@ class _StepsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(24),
@@ -530,7 +533,7 @@ class _StepsCard extends StatelessWidget {
             active: true,
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
 
           _StepItem(
             icon: Icons.hub_rounded,
@@ -538,10 +541,10 @@ class _StepsCard extends StatelessWidget {
                 ? '2. Confirmar conexão'
                 : '2. Adicionar $plataforma',
             text: isMercadoPago
-                ? 'Após autorizar, o TORICO consulta o Firestore e confirma se a integração foi registrada.'
+                ? 'O TORICO confirma a conexão sem pedir sua senha.'
                 : carregando
-                    ? 'Estamos preparando esta fonte de vendas.'
-                    : 'O TORICO adicionará esta plataforma ao seu negócio em modo de teste.',
+                ? 'Estamos preparando esta fonte de vendas.'
+                : 'O TORICO adicionará esta plataforma ao seu negócio em modo de teste.',
             active: carregando || oauthAberto,
           ),
 
@@ -551,7 +554,7 @@ class _StepsCard extends StatelessWidget {
             icon: Icons.insights_rounded,
             title: '3. Painel consolidado',
             text: isMercadoPago
-                ? 'As vendas aprovadas recebidas por webhook aparecerão no painel do dia.'
+                ? 'Suas vendas aprovadas aparecem automaticamente no painel do dia.'
                 : 'O painel mostrará o total vendido do negócio no dia.',
             active: false,
           ),
@@ -580,8 +583,8 @@ class _StepItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: active
@@ -596,11 +599,11 @@ class _StepItem extends StatelessWidget {
           child: Icon(
             icon,
             color: active ? AppColors.goldLight : Colors.white54,
-            size: 23,
+            size: 20,
           ),
         ),
 
-        const SizedBox(width: 14),
+        const SizedBox(width: 10),
 
         Expanded(
           child: Column(
@@ -610,19 +613,19 @@ class _StepItem extends StatelessWidget {
                 title,
                 style: TextStyle(
                   color: active ? AppColors.goldLight : Colors.white,
-                  fontSize: 15.5,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
 
               Text(
                 text,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.58),
-                  fontSize: 13.5,
-                  height: 1.3,
+                  fontSize: 12.5,
+                  height: 1.25,
                 ),
               ),
             ],

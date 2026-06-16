@@ -229,25 +229,31 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
 
                   SizedBox(height: isMobile ? 14 : 42),
 
-                  _LoginCard(
-                    emailController: emailController,
-                    senhaController: senhaController,
-                    carregando: carregando,
-                    ocultarSenha: ocultarSenha,
-                    onToggleSenha: () {
-                      setState(() {
-                        ocultarSenha = !ocultarSenha;
-                      });
-                    },
-                    onEntrar: entrar,
-                    onRecuperarSenha: recuperarSenha,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: isMobile ? 400 : 460),
+                    child: _LoginCard(
+                      emailController: emailController,
+                      senhaController: senhaController,
+                      carregando: carregando,
+                      ocultarSenha: ocultarSenha,
+                      onToggleSenha: () {
+                        setState(() {
+                          ocultarSenha = !ocultarSenha;
+                        });
+                      },
+                      onEntrar: entrar,
+                      onRecuperarSenha: recuperarSenha,
+                    ),
                   ),
 
                   SizedBox(height: isMobile ? 12 : 18),
 
-                  _CreateAccountCard(
-                    carregando: carregando,
-                    onCriarConta: criarConta,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: isMobile ? 400 : 460),
+                    child: _CreateAccountCard(
+                      carregando: carregando,
+                      onCriarConta: criarConta,
+                    ),
                   ),
 
                   if (!isMobile) ...[

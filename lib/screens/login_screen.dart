@@ -16,8 +16,27 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final LocalStorageService _storage = LocalStorageService();
 
+  static const Color _inProgressOrange = Color(0xFFFFA726);
+  static const Color _availableGreen = Color(0xFF00FF66);
+
+  static const List<_PaymentPlatformOption> _platformOptions = [
+    _PaymentPlatformOption(
+      id: 'mercado_pago',
+      name: 'Mercado Pago',
+      available: true,
+    ),
+    _PaymentPlatformOption(id: 'pagbank', name: 'PagBank', available: false),
+    _PaymentPlatformOption(id: 'stone', name: 'Stone', available: false),
+    _PaymentPlatformOption(id: 'cielo', name: 'Cielo', available: false),
+    _PaymentPlatformOption(id: 'rede', name: 'Rede', available: false),
+    _PaymentPlatformOption(id: 'getnet', name: 'Getnet', available: false),
+    _PaymentPlatformOption(id: 'pagar_me', name: 'Pagar.me', available: false),
+    _PaymentPlatformOption(id: 'asaas', name: 'Asaas', available: false),
+  ];
+
   List<String> connectedPlatforms = [];
   bool carregando = true;
+  String selectedPlatformId = 'mercado_pago';
 
   @override
   void initState() {
@@ -30,8 +49,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
+    String nextSelectedPlatformId = selectedPlatformId;
+
+    for (final platform in _platformOptions) {
+      if (platforms.contains(platform.name)) {
+        nextSelectedPlatformId = platform.id;
+        break;
+      }
+    }
+
     setState(() {
       connectedPlatforms = platforms;
+      selectedPlatformId = nextSelectedPlatformId;
       carregando = false;
     });
   }
@@ -40,30 +69,64 @@ class _LoginScreenState extends State<LoginScreen> {
     return connectedPlatforms.contains(plataforma);
   }
 
-  void _openPlatform(String plataforma) {
-    if (_isConnected(plataforma)) {
+  _PaymentPlatformOption get _selectedPlatform {
+    return _platformOptions.firstWhere(
+      (platform) => platform.id == selectedPlatformId,
+      orElse: () => _platformOptions.first,
+    );
+  }
+
+  void _handlePrimaryAction() {
+    final platform = _selectedPlatform;
+
+    if (_isConnected(platform.name)) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ConnectedScreen(plataforma: plataforma),
+          builder: (_) => ConnectedScreen(plataforma: platform.name),
         ),
       );
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => AuthScreen(plataforma: plataforma)),
-    ).then((_) {
-      _loadConnectedPlatforms();
-    });
+    if (platform.available) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AuthScreen(plataforma: platform.name),
+        ),
+      ).then((_) {
+        _loadConnectedPlatforms();
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF06182C),
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          '${platform.name} está com integração em andamento e será liberado em uma próxima versão do TORICO.',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final tamanhoTela = MediaQuery.of(context).size;
-    final largura = tamanhoTela.width;
+    final largura = MediaQuery.of(context).size.width;
     final bool isMobile = largura < 600;
+
+    final selected = _selectedPlatform;
+    final selectedConnected = _isConnected(selected.name);
+    final selectedInProgress = !selected.available && !selectedConnected;
+
+    final Color actionColor = selectedConnected
+        ? Colors.greenAccent
+        : selected.available
+        ? AppColors.gold
+        : _inProgressOrange;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -78,16 +141,16 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: const BoxConstraints(maxWidth: 520),
               child: Column(
                 children: [
                   _Header(isMobile: isMobile),
 
-                  SizedBox(height: isMobile ? 28 : 44),
+                  SizedBox(height: isMobile ? 24 : 38),
 
                   _IntroCard(connectedPlatforms: connectedPlatforms),
 
-                  SizedBox(height: isMobile ? 22 : 30),
+                  SizedBox(height: isMobile ? 16 : 24),
 
                   if (carregando)
                     const Padding(
@@ -97,45 +160,79 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     )
                   else ...[
-                    _PlatformCard(
-                      plataforma: 'Mercado Pago',
-                      subtitle:
-                          'Conecte sua conta Mercado Pago por autorização oficial para receber vendas reais.',
-                      icon: Icons.account_balance_wallet_rounded,
-                      color: Colors.lightBlueAccent,
-                      conectado: _isConnected('Mercado Pago'),
-                      realIntegration: true,
-                      onTap: () => _openPlatform('Mercado Pago'),
+                    _PlatformMenu(
+                      options: _platformOptions,
+                      selectedPlatformId: selectedPlatformId,
+                      connectedPlatforms: connectedPlatforms,
+                      inProgressColor: _inProgressOrange,
+                      availableColor: _availableGreen,
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          selectedPlatformId = value;
+                        });
+                      },
                     ),
 
-                    const SizedBox(height: 14),
+                    SizedBox(height: isMobile ? 56 : 70),
 
-                    _PlatformCard(
-                      plataforma: 'Stone',
-                      subtitle:
-                          'Ative uma conexão simulada da Stone para testar o painel.',
-                      icon: Icons.payments_rounded,
-                      color: Colors.greenAccent,
-                      conectado: _isConnected('Stone'),
-                      realIntegration: false,
-                      onTap: () => _openPlatform('Stone'),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    _PlatformCard(
-                      plataforma: 'PagBank',
-                      subtitle:
-                          'Ative uma conexão simulada do PagBank para testar o painel.',
-                      icon: Icons.credit_card_rounded,
-                      color: Colors.orangeAccent,
-                      conectado: _isConnected('PagBank'),
-                      realIntegration: false,
-                      onTap: () => _openPlatform('PagBank'),
+                    SizedBox(
+                      width: double.infinity,
+                      height: isMobile ? 54 : 62,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedConnected
+                              ? Colors.greenAccent.withValues(alpha: 0.16)
+                              : selected.available
+                              ? AppColors.gold
+                              : _inProgressOrange.withValues(alpha: 0.16),
+                          foregroundColor: selectedConnected
+                              ? Colors.greenAccent
+                              : selected.available
+                              ? Colors.black
+                              : _inProgressOrange,
+                          elevation: selected.available || selectedConnected
+                              ? 10
+                              : 0,
+                          shadowColor: selectedInProgress
+                              ? _inProgressOrange.withValues(alpha: 0.18)
+                              : actionColor.withValues(alpha: 0.22),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: selectedConnected
+                                  ? Colors.greenAccent.withValues(alpha: 0.42)
+                                  : selected.available
+                                  ? AppColors.goldLight.withValues(alpha: 0.42)
+                                  : _inProgressOrange.withValues(alpha: 0.45),
+                              width: 1.2,
+                            ),
+                          ),
+                        ),
+                        onPressed: _handlePrimaryAction,
+                        icon: Icon(
+                          selectedConnected
+                              ? Icons.dashboard_customize_rounded
+                              : selected.available
+                              ? Icons.link_rounded
+                              : Icons.schedule_rounded,
+                        ),
+                        label: Text(
+                          selectedConnected
+                              ? 'Abrir painel'
+                              : selected.available
+                              ? 'Conectar ${selected.name}'
+                              : 'Integração em andamento',
+                          style: const TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
 
-                  SizedBox(height: isMobile ? 20 : 30),
+                  SizedBox(height: isMobile ? 16 : 24),
 
                   const _IntegrationNotice(),
                 ],
@@ -148,6 +245,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+class _PaymentPlatformOption {
+  final String id;
+  final String name;
+  final bool available;
+
+  const _PaymentPlatformOption({
+    required this.id,
+    required this.name,
+    required this.available,
+  });
+}
+
 class _Header extends StatelessWidget {
   final bool isMobile;
 
@@ -157,16 +266,16 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Image.asset('assets/images/app_icon.png', width: isMobile ? 76 : 120),
+        Image.asset('assets/images/app_icon.png', width: isMobile ? 72 : 112),
 
-        SizedBox(height: isMobile ? 10 : 16),
+        SizedBox(height: isMobile ? 8 : 14),
 
         Text(
           'TORICO',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.goldLight,
-            fontSize: isMobile ? 38 : 56,
+            fontSize: isMobile ? 38 : 54,
             fontWeight: FontWeight.bold,
             letterSpacing: 3,
             height: 1,
@@ -187,7 +296,7 @@ class _Header extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.76),
-            fontSize: isMobile ? 16 : 22,
+            fontSize: isMobile ? 15.5 : 21,
             height: 1.3,
             fontWeight: FontWeight.w500,
           ),
@@ -208,32 +317,22 @@ class _IntroCard extends StatelessWidget {
     final bool isMobile = largura < 600;
 
     final hasConnected = connectedPlatforms.isNotEmpty;
-    final title = hasConnected
-        ? 'Plataformas do negócio'
-        : 'Comece conectando sua primeira plataforma';
-    final subtitle = hasConnected
-        ? 'O TORICO já está monitorando: ${connectedPlatforms.join(', ')}. Você pode abrir o painel ou adicionar novas fontes.'
-        : 'Escolha onde suas vendas acontecem. Mercado Pago já usa autorização oficial; Stone e PagBank seguem em modo de teste por enquanto.';
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(isMobile ? 20 : 26),
+      padding: EdgeInsets.all(isMobile ? 18 : 24),
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.40),
+          color: AppColors.gold.withValues(alpha: 0.38),
           width: 1.3,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-          BoxShadow(
-            color: AppColors.gold.withValues(alpha: 0.055),
-            blurRadius: 36,
+            blurRadius: 24,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
@@ -241,31 +340,33 @@ class _IntroCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: isMobile ? 48 : 58,
-            height: isMobile ? 48 : 58,
+            width: isMobile ? 46 : 56,
+            height: isMobile ? 46 : 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.gold.withValues(alpha: 0.12),
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
             ),
             child: Icon(
-              hasConnected ? Icons.hub_rounded : Icons.link_rounded,
+              hasConnected ? Icons.hub_rounded : Icons.add_link_rounded,
               color: AppColors.goldLight,
-              size: 28,
+              size: 27,
             ),
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(width: 15),
 
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  hasConnected
+                      ? 'Escolha uma plataforma'
+                      : 'Conecte sua primeira plataforma',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: isMobile ? 21 : 26,
+                    fontSize: isMobile ? 21 : 25,
                     fontWeight: FontWeight.bold,
                     height: 1.15,
                   ),
@@ -274,7 +375,9 @@ class _IntroCard extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 Text(
-                  subtitle,
+                  hasConnected
+                      ? 'O TORICO já monitora ${connectedPlatforms.join(', ')}. Você pode abrir o painel ou preparar novas integrações.'
+                      : 'Selecione onde suas vendas acontecem e conecte pelo fluxo oficial disponível.',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.68),
                     fontSize: isMobile ? 14 : 16,
@@ -290,184 +393,110 @@ class _IntroCard extends StatelessWidget {
   }
 }
 
-class _PlatformCard extends StatelessWidget {
-  final String plataforma;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final bool conectado;
-  final bool realIntegration;
-  final VoidCallback onTap;
+class _PlatformMenu extends StatelessWidget {
+  final List<_PaymentPlatformOption> options;
+  final String selectedPlatformId;
+  final List<String> connectedPlatforms;
+  final Color inProgressColor;
+  final Color availableColor;
+  final ValueChanged<String?> onChanged;
 
-  const _PlatformCard({
-    required this.plataforma,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.conectado,
-    required this.realIntegration,
-    required this.onTap,
+  const _PlatformMenu({
+    required this.options,
+    required this.selectedPlatformId,
+    required this.connectedPlatforms,
+    required this.inProgressColor,
+    required this.availableColor,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final largura = MediaQuery.of(context).size.width;
-    final bool isMobile = largura < 600;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF06182C),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.goldLight.withValues(alpha: 0.32),
+          width: 1.4,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedPlatformId,
+          isExpanded: true,
+          dropdownColor: const Color(0xFF06182C),
+          iconEnabledColor: AppColors.goldLight,
+          style: const TextStyle(color: Colors.white),
+          onChanged: onChanged,
+          items: options.map((platform) {
+            final connected = connectedPlatforms.contains(platform.name);
 
-    final Color statusColor = conectado ? Colors.greenAccent : Colors.white54;
-    final String statusText = conectado ? 'Conectado' : 'Desconectado';
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 16 : 22,
-            vertical: isMobile ? 16 : 22,
-          ),
-          decoration: BoxDecoration(
-            color: conectado
-                ? color.withValues(alpha: 0.075)
-                : Colors.white.withValues(alpha: 0.045),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: conectado
-                  ? color.withValues(alpha: 0.70)
-                  : Colors.white.withValues(alpha: 0.12),
-              width: conectado ? 1.6 : 1.2,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: isMobile ? 52 : 62,
-                height: isMobile ? 52 : 62,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: conectado
-                      ? color.withValues(alpha: 0.13)
-                      : Colors.white.withValues(alpha: 0.055),
-                  border: Border.all(
-                    color: conectado
-                        ? color.withValues(alpha: 0.32)
-                        : Colors.white.withValues(alpha: 0.10),
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  color: conectado ? color : Colors.white54,
-                  size: isMobile ? 28 : 34,
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plataforma,
-                      style: TextStyle(
+            return DropdownMenuItem<String>(
+              value: platform.id,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      platform.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 21 : 25,
                         fontWeight: FontWeight.bold,
+                        fontSize: 17,
                       ),
                     ),
-
-                    const SizedBox(height: 7),
-
-                    _StatusBadge(
-                      text: statusText,
-                      color: statusColor,
-                      connected: conectado,
-                    ),
-
-                    const SizedBox(height: 7),
-
-                    Text(
-                      conectado
-                          ? realIntegration
-                              ? 'Integração oficial conectada. As vendas aprovadas recebidas pelo webhook aparecerão no painel.'
-                              : 'Esta fonte está vinculada em modo de teste.'
-                          : subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.56),
-                        fontSize: isMobile ? 13 : 15,
-                        height: 1.25,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  _MiniStatusBadge(
+                    text: connected
+                        ? 'Conectado'
+                        : platform.available
+                        ? 'Disponível'
+                        : 'Em andamento',
+                    color: connected
+                        ? Colors.greenAccent
+                        : platform.available
+                        ? availableColor
+                        : inProgressColor,
+                  ),
+                ],
               ),
-
-              const SizedBox(width: 10),
-
-              Icon(
-                conectado
-                    ? Icons.dashboard_customize_rounded
-                    : Icons.chevron_right_rounded,
-                color: conectado ? color : Colors.white54,
-                size: isMobile ? 30 : 34,
-              ),
-            ],
-          ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 }
 
-class _StatusBadge extends StatelessWidget {
+class _MiniStatusBadge extends StatelessWidget {
   final String text;
   final Color color;
-  final bool connected;
 
-  const _StatusBadge({
-    required this.text,
-    required this.color,
-    required this.connected,
-  });
+  const _MiniStatusBadge({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: connected
-            ? Colors.greenAccent.withValues(alpha: 0.12)
-            : Colors.white.withValues(alpha: 0.06),
+        color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(
-          color: connected
-              ? Colors.greenAccent.withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.12),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.36)),
+        boxShadow: color == const Color(0xFF00FF66)
+            ? [BoxShadow(color: color.withValues(alpha: 0.20), blurRadius: 10)]
+            : null,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            connected
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked_rounded,
-            color: color,
-            size: 14,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 12.5,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -505,7 +534,7 @@ class _IntegrationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Mercado Pago usa autorização oficial via backend do TORICO. Stone e PagBank ainda ficam em modo de teste até as próximas integrações reais.',
+              'O TORICO só libera integrações reais quando houver conexão oficial, segura e validada no backend. Mercado Pago já está disponível; as demais plataformas estão com integração em andamento.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.70),
                 fontSize: isMobile ? 13 : 14,

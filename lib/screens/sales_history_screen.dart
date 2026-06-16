@@ -25,6 +25,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   ];
 
   String selectedFilter = allFilter;
+  bool _showAllSales = false;
 
   List<ToricoSaleRecord> _filteredSales(List<ToricoSaleRecord> sales) {
     if (selectedFilter == allFilter) {
@@ -78,6 +79,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
             final allSales = snapshot.data ?? [];
             final sales = _filteredSales(allSales);
+            final visibleSales = _showAllSales ? sales : sales.take(5).toList();
+            final hasMoreSales = sales.length > 5;
 
             final total = sales.fold<double>(
               0,
@@ -98,6 +101,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                     onSelected: (filter) {
                       setState(() {
                         selectedFilter = filter;
+                        _showAllSales = false;
                       });
                     },
                   ),
@@ -154,13 +158,24 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ? 'As vendas do dia aparecerão aqui com valor, plataforma e horário.'
                           : 'As vendas dessa plataforma aparecerão aqui com valor e horário.',
                     )
-                  else
-                    ...sales.map(
+                  else ...[
+                    ...visibleSales.map(
                       (sale) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _SaleTile(sale: sale),
                       ),
                     ),
+                    if (hasMoreSales)
+                      _ExpandSalesButton(
+                        expanded: _showAllSales,
+                        hiddenCount: sales.length - 5,
+                        onPressed: () {
+                          setState(() {
+                            _showAllSales = !_showAllSales;
+                          });
+                        },
+                      ),
+                  ],
 
                   const SizedBox(height: 18),
 
@@ -377,7 +392,7 @@ class _PlatformTotalTile extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(width: 11),
 
           Expanded(
             child: Text(
@@ -480,6 +495,52 @@ class _SaleTile extends StatelessWidget {
   }
 }
 
+class _ExpandSalesButton extends StatelessWidget {
+  final bool expanded;
+  final int hiddenCount;
+  final VoidCallback onPressed;
+
+  const _ExpandSalesButton({
+    required this.expanded,
+    required this.hiddenCount,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = expanded
+        ? 'Mostrar menos'
+        : hiddenCount == 1
+        ? 'Ver mais 1 venda'
+        : 'Ver mais $hiddenCount vendas';
+
+    return SizedBox(
+      width: double.infinity,
+      height: 46,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.goldLight,
+          side: BorderSide(color: AppColors.goldLight.withValues(alpha: 0.38)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        icon: Icon(
+          expanded
+              ? Icons.keyboard_arrow_up_rounded
+              : Icons.keyboard_arrow_down_rounded,
+          size: 22,
+        ),
+        label: Text(
+          text,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
 class _PlusReportsSection extends StatelessWidget {
   const _PlusReportsSection();
 
@@ -501,7 +562,7 @@ class _PlusReportsSection extends StatelessWidget {
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         _LockedPlusTile(
           icon: Icons.calendar_month_rounded,
@@ -510,7 +571,7 @@ class _PlusReportsSection extends StatelessWidget {
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         _LockedPlusTile(
           icon: Icons.compare_arrows_rounded,
@@ -519,7 +580,7 @@ class _PlusReportsSection extends StatelessWidget {
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         _LockedPlusTile(
           icon: Icons.bar_chart_rounded,
@@ -549,24 +610,24 @@ class _LockedPlusTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.gold.withValues(alpha: 0.055),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.18)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.gold.withValues(alpha: 0.12),
@@ -574,7 +635,7 @@ class _LockedPlusTile extends StatelessWidget {
                     color: AppColors.gold.withValues(alpha: 0.24),
                   ),
                 ),
-                child: Icon(icon, color: AppColors.goldLight, size: 24),
+                child: Icon(icon, color: AppColors.goldLight, size: 20),
               ),
 
               const SizedBox(width: 14),
@@ -590,7 +651,7 @@ class _LockedPlusTile extends StatelessWidget {
                             title,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -598,8 +659,8 @@ class _LockedPlusTile extends StatelessWidget {
 
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 5,
+                            horizontal: 7,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.gold.withValues(alpha: 0.12),
@@ -614,14 +675,14 @@ class _LockedPlusTile extends StatelessWidget {
                               Icon(
                                 Icons.lock_rounded,
                                 color: AppColors.goldLight,
-                                size: 13,
+                                size: 11,
                               ),
-                              SizedBox(width: 5),
+                              SizedBox(width: 4),
                               Text(
                                 'Plus',
                                 style: TextStyle(
                                   color: AppColors.goldLight,
-                                  fontSize: 11.5,
+                                  fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -631,14 +692,14 @@ class _LockedPlusTile extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
 
                     Text(
                       text,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.58),
-                        fontSize: 13.5,
-                        height: 1.3,
+                        fontSize: 12.5,
+                        height: 1.22,
                       ),
                     ),
                   ],

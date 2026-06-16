@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 
@@ -66,7 +66,7 @@ class TermsOfUseScreen extends StatelessWidget {
                   _LegalSection(
                     title: '5. Plano Básico',
                     body:
-                        'O plano básico previsto do TORICO é de R\$ 24,90 por mês.\n\nEnquanto a cobrança oficial do plano não estiver habilitada, o acesso poderá ser disponibilizado em fase de teste, validação ou demonstração.\n\nAs condições comerciais poderão ser atualizadas futuramente, e qualquer alteração relevante será informada aos usuários.',
+                        'O plano básico previsto do TORICO é de R\$ 39,90 por mês.\n\nEnquanto a cobrança oficial do plano não estiver habilitada, o acesso poderá ser disponibilizado em fase de teste, validação ou demonstração.\n\nAs condições comerciais poderão ser atualizadas futuramente, e qualquer alteração relevante será informada aos usuários.',
                   ),
                   _LegalSection(
                     title: '6. Uso permitido',
