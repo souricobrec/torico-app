@@ -16,6 +16,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   final FirestoreSalesService _salesService = FirestoreSalesService();
 
   static const String allFilter = 'Todas';
+  static const int basicSalesLimit = 10;
 
   final List<String> filters = const [
     allFilter,
@@ -25,17 +26,20 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   ];
 
   String selectedFilter = allFilter;
-  bool _showAllSales = false;
 
-  List<ToricoSaleRecord> _filteredSales(List<ToricoSaleRecord> sales) {
+  String? get _selectedPlatform {
     if (selectedFilter == allFilter) {
-      return sales;
+      return null;
     }
 
-    return sales.where((sale) => sale.platform == selectedFilter).toList();
+    return selectedFilter;
   }
 
-  Map<String, double> _totalsByPlatform(List<ToricoSaleRecord> sales) {
+  double _fallbackTotal(List<ToricoSaleRecord> sales) {
+    return sales.fold<double>(0, (sum, sale) => sum + sale.amount);
+  }
+
+  Map<String, double> _fallbackTotalsByPlatform(List<ToricoSaleRecord> sales) {
     final totals = <String, double>{};
 
     for (final sale in sales) {
@@ -43,6 +47,31 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     }
 
     return totals;
+  }
+
+  double _selectedTotalFromSummary(DailySalesSummary summary) {
+    if (selectedFilter == allFilter) {
+      return summary.totalSold;
+    }
+
+    final platformId = _salesService.platformIdFromName(selectedFilter);
+    return summary.platforms[platformId]?.totalSold ?? 0.0;
+  }
+
+  int _selectedSalesCountFromSummary(DailySalesSummary summary) {
+    if (selectedFilter == allFilter) {
+      return summary.salesCount;
+    }
+
+    final platformId = _salesService.platformIdFromName(selectedFilter);
+    return summary.platforms[platformId]?.salesCount ?? 0;
+  }
+
+  Map<String, double> _totalsByPlatformFromSummary(DailySalesSummary summary) {
+    return {
+      for (final platform in summary.platforms.values)
+        platform.platform: platform.totalSold,
+    };
   }
 
   @override
@@ -63,129 +92,145 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         ),
       ),
       body: SafeArea(
-        child: StreamBuilder<List<ToricoSaleRecord>>(
-          stream: _salesService.watchTodaySales(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.gold),
-              );
-            }
+        child: StreamBuilder<DailySalesSummary>(
+          stream: _salesService.watchTodaySummary(),
+          builder: (context, summarySnapshot) {
+            final summary = summarySnapshot.data ??
+                DailySalesSummary.empty(DateTime.now().toIso8601String());
 
-            if (snapshot.hasError) {
-              return const _ErrorState();
-            }
+            return StreamBuilder<List<ToricoSaleRecord>>(
+              stream: _salesService.watchTodaySales(
+                platform: _selectedPlatform,
+                limit: basicSalesLimit,
+              ),
+              builder: (context, salesSnapshot) {
+                if ((summarySnapshot.connectionState == ConnectionState.waiting ||
+                        salesSnapshot.connectionState == ConnectionState.waiting) &&
+                    !summarySnapshot.hasData &&
+                    !salesSnapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.gold),
+                  );
+                }
 
-            final allSales = snapshot.data ?? [];
-            final sales = _filteredSales(allSales);
-            final visibleSales = _showAllSales ? sales : sales.take(5).toList();
-            final hasMoreSales = sales.length > 5;
+                if (summarySnapshot.hasError || salesSnapshot.hasError) {
+                  return const _ErrorState();
+                }
 
-            final total = sales.fold<double>(
-              0,
-              (sum, sale) => sum + sale.amount,
-            );
+                final sales = salesSnapshot.data ?? [];
+                final hasSummary = summary.salesCount > 0 || summary.totalSold > 0;
 
-            final totalsByPlatform = _totalsByPlatform(sales);
+                final total = hasSummary
+                    ? _selectedTotalFromSummary(summary)
+                    : _fallbackTotal(sales);
+                final salesCount = hasSummary
+                    ? _selectedSalesCountFromSummary(summary)
+                    : sales.length;
+                final totalsByPlatform = hasSummary
+                    ? _totalsByPlatformFromSummary(summary)
+                    : _fallbackTotalsByPlatform(sales);
+                final hiddenSalesCount = salesCount > sales.length
+                    ? salesCount - sales.length
+                    : 0;
 
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _FilterChips(
-                    filters: filters,
-                    selectedFilter: selectedFilter,
-                    onSelected: (filter) {
-                      setState(() {
-                        selectedFilter = filter;
-                        _showAllSales = false;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _SummaryCard(
-                    total: total,
-                    salesCount: sales.length,
-                    platformsCount: totalsByPlatform.length,
-                    selectedFilter: selectedFilter,
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  const _SectionTitle('Resumo por plataforma'),
-
-                  const SizedBox(height: 12),
-
-                  if (totalsByPlatform.isEmpty)
-                    _EmptyCard(
-                      icon: Icons.hub_rounded,
-                      title: selectedFilter == allFilter
-                          ? 'Nenhuma plataforma vendeu hoje ainda'
-                          : 'Nenhuma venda em $selectedFilter hoje',
-                      text: selectedFilter == allFilter
-                          ? 'Assim que uma venda entrar, o resumo por plataforma será atualizado automaticamente.'
-                          : 'Quando houver uma venda em $selectedFilter, ela aparecerá neste resumo.',
-                    )
-                  else
-                    ...totalsByPlatform.entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _PlatformTotalTile(
-                          platform: entry.key,
-                          total: entry.value,
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 16),
-
-                  const _SectionTitle('Últimas vendas'),
-
-                  const SizedBox(height: 12),
-
-                  if (sales.isEmpty)
-                    _EmptyCard(
-                      icon: Icons.receipt_long_rounded,
-                      title: selectedFilter == allFilter
-                          ? 'Nenhuma venda registrada hoje'
-                          : 'Nenhuma venda de $selectedFilter hoje',
-                      text: selectedFilter == allFilter
-                          ? 'As vendas do dia aparecerão aqui com valor, plataforma e horário.'
-                          : 'As vendas dessa plataforma aparecerão aqui com valor e horário.',
-                    )
-                  else ...[
-                    ...visibleSales.map(
-                      (sale) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _SaleTile(sale: sale),
-                      ),
-                    ),
-                    if (hasMoreSales)
-                      _ExpandSalesButton(
-                        expanded: _showAllSales,
-                        hiddenCount: sales.length - 5,
-                        onPressed: () {
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FilterChips(
+                        filters: filters,
+                        selectedFilter: selectedFilter,
+                        onSelected: (filter) {
                           setState(() {
-                            _showAllSales = !_showAllSales;
+                            selectedFilter = filter;
                           });
                         },
                       ),
-                  ],
 
-                  const SizedBox(height: 18),
+                      const SizedBox(height: 18),
 
-                  const _SectionTitle('Relatórios Plus'),
+                      _SummaryCard(
+                        total: total,
+                        salesCount: salesCount,
+                        platformsCount: totalsByPlatform.length,
+                        selectedFilter: selectedFilter,
+                      ),
 
-                  const SizedBox(height: 12),
+                      const SizedBox(height: 22),
 
-                  const _PlusReportsSection(),
-                ],
-              ),
+                      const _SectionTitle('Resumo por plataforma'),
+
+                      const SizedBox(height: 12),
+
+                      if (totalsByPlatform.isEmpty)
+                        _EmptyCard(
+                          icon: Icons.hub_rounded,
+                          title: selectedFilter == allFilter
+                              ? 'Nenhuma plataforma vendeu hoje ainda'
+                              : 'Nenhuma venda em $selectedFilter hoje',
+                          text: selectedFilter == allFilter
+                              ? 'Assim que uma venda entrar, o resumo por plataforma será atualizado automaticamente.'
+                              : 'Quando houver uma venda em $selectedFilter, ela aparecerá neste resumo.',
+                        )
+                      else
+                        ...totalsByPlatform.entries.map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _PlatformTotalTile(
+                              platform: entry.key,
+                              total: entry.value,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      const _SectionTitle('Últimas vendas'),
+
+                      const SizedBox(height: 12),
+
+                      if (sales.isEmpty)
+                        _EmptyCard(
+                          icon: Icons.receipt_long_rounded,
+                          title: selectedFilter == allFilter
+                              ? 'Nenhuma venda registrada hoje'
+                              : 'Nenhuma venda de $selectedFilter hoje',
+                          text: selectedFilter == allFilter
+                              ? 'As vendas do dia aparecerão aqui com valor, plataforma e horário.'
+                              : 'As vendas dessa plataforma aparecerão aqui com valor e horário.',
+                        )
+                      else ...[
+                        ...sales.map(
+                          (sale) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _SaleTile(sale: sale),
+                          ),
+                        ),
+                        if (hiddenSalesCount > 0)
+                          _PlusHistoryButton(
+                            hiddenCount: hiddenSalesCount,
+                            onPressed: () {
+                              AppSnackBar.show(
+                                context,
+                                'Histórico completo disponível no TORICO Plus.',
+                              );
+                            },
+                          ),
+                      ],
+
+                      const SizedBox(height: 18),
+
+                      const _SectionTitle('Relatórios Plus'),
+
+                      const SizedBox(height: 12),
+
+                      const _PlusReportsSection(),
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),
@@ -392,7 +437,7 @@ class _PlatformTotalTile extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 11),
+          const SizedBox(width: 14),
 
           Expanded(
             child: Text(
@@ -495,46 +540,44 @@ class _SaleTile extends StatelessWidget {
   }
 }
 
-class _ExpandSalesButton extends StatelessWidget {
-  final bool expanded;
+
+class _PlusHistoryButton extends StatelessWidget {
   final int hiddenCount;
   final VoidCallback onPressed;
 
-  const _ExpandSalesButton({
-    required this.expanded,
+  const _PlusHistoryButton({
     required this.hiddenCount,
     required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    final text = expanded
-        ? 'Mostrar menos'
-        : hiddenCount == 1
-        ? 'Ver mais 1 venda'
-        : 'Ver mais $hiddenCount vendas';
+    final text = hiddenCount == 1
+        ? 'Ver mais 1 venda no Plus'
+        : 'Ver mais $hiddenCount vendas no Plus';
 
     return SizedBox(
       width: double.infinity,
-      height: 46,
+      height: 44,
       child: OutlinedButton.icon(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.goldLight,
-          side: BorderSide(color: AppColors.goldLight.withValues(alpha: 0.38)),
+          backgroundColor: AppColors.gold.withValues(alpha: 0.06),
+          side: BorderSide(
+            color: AppColors.goldLight.withValues(alpha: 0.42),
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        icon: Icon(
-          expanded
-              ? Icons.keyboard_arrow_up_rounded
-              : Icons.keyboard_arrow_down_rounded,
-          size: 22,
-        ),
+        icon: const Icon(Icons.workspace_premium_rounded, size: 20),
         label: Text(
           text,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
@@ -562,7 +605,7 @@ class _PlusReportsSection extends StatelessWidget {
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
         _LockedPlusTile(
           icon: Icons.calendar_month_rounded,
@@ -571,7 +614,7 @@ class _PlusReportsSection extends StatelessWidget {
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
         _LockedPlusTile(
           icon: Icons.compare_arrows_rounded,
@@ -580,7 +623,7 @@ class _PlusReportsSection extends StatelessWidget {
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
         _LockedPlusTile(
           icon: Icons.bar_chart_rounded,
@@ -610,24 +653,24 @@ class _LockedPlusTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(22),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: AppColors.gold.withValues(alpha: 0.055),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.18)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.gold.withValues(alpha: 0.12),
@@ -635,7 +678,7 @@ class _LockedPlusTile extends StatelessWidget {
                     color: AppColors.gold.withValues(alpha: 0.24),
                   ),
                 ),
-                child: Icon(icon, color: AppColors.goldLight, size: 20),
+                child: Icon(icon, color: AppColors.goldLight, size: 24),
               ),
 
               const SizedBox(width: 14),
@@ -651,7 +694,7 @@ class _LockedPlusTile extends StatelessWidget {
                             title,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 14.5,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -659,8 +702,8 @@ class _LockedPlusTile extends StatelessWidget {
 
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
+                            horizontal: 9,
+                            vertical: 5,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.gold.withValues(alpha: 0.12),
@@ -675,14 +718,14 @@ class _LockedPlusTile extends StatelessWidget {
                               Icon(
                                 Icons.lock_rounded,
                                 color: AppColors.goldLight,
-                                size: 11,
+                                size: 13,
                               ),
-                              SizedBox(width: 4),
+                              SizedBox(width: 5),
                               Text(
                                 'Plus',
                                 style: TextStyle(
                                   color: AppColors.goldLight,
-                                  fontSize: 10.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -692,14 +735,14 @@ class _LockedPlusTile extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
                     Text(
                       text,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.58),
-                        fontSize: 12.5,
-                        height: 1.22,
+                        fontSize: 13.5,
+                        height: 1.3,
                       ),
                     ),
                   ],

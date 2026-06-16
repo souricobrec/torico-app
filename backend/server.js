@@ -973,6 +973,36 @@ function getMercadoPagoPaymentDate(payment) {
   return parsedDate;
 }
 
+function roundMoney(value) {
+  const parsed = Number(value || 0);
+
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+
+  return Math.round(parsed * 100) / 100;
+}
+
+function buildRecentSaleSummary({ saleId, saleData }) {
+  const createdAtClient = saleData.createdAtClient;
+  const createdAtIso =
+    createdAtClient && typeof createdAtClient.toDate === 'function'
+      ? createdAtClient.toDate().toISOString()
+      : new Date().toISOString();
+
+  return {
+    id: saleId,
+    amount: saleData.amount,
+    platform: saleData.platform,
+    platformId: saleData.platformId,
+    status: saleData.status,
+    source: saleData.source,
+    externalId: saleData.externalId,
+    dateKey: saleData.dateKey,
+    createdAtIso,
+  };
+}
+
 async function saveSale({
   userId,
   amount,
@@ -986,29 +1016,18 @@ async function saveSale({
   const platformId = normalizePlatformId(platform);
   const saleDate = createdAt instanceof Date ? createdAt : new Date(createdAt);
   const dateKey = getBrazilDateKey(saleDate);
+  const normalizedAmount = roundMoney(amount);
 
   const safeExternalId =
     externalId ||
     `${source}_${platformId}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
-  const saleRef = db
-    .collection('users')
-    .doc(userId)
-    .collection('sales')
-    .doc(safeExternalId);
-
-  const existingSale = await saleRef.get();
-
-  if (existingSale.exists) {
-    return {
-      id: saleRef.id,
-      duplicated: true,
-      ...existingSale.data(),
-    };
-  }
+  const userRef = db.collection('users').doc(userId);
+  const saleRef = userRef.collection('sales').doc(safeExternalId);
+  const dailyTotalRef = userRef.collection('daily_totals').doc(dateKey);
 
   const saleData = {
-    amount,
+    amount: normalizedAmount,
     platform,
     platformId,
     status,
@@ -1020,13 +1039,93 @@ async function saveSale({
     createdAtServer: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  await saleRef.set(saleData, { merge: false });
+  let result;
 
-  return {
-    id: saleRef.id,
-    duplicated: false,
-    ...saleData,
-  };
+  await db.runTransaction(async (transaction) => {
+    const existingSale = await transaction.get(saleRef);
+    const dailyTotalSnapshot = await transaction.get(dailyTotalRef);
+
+    if (existingSale.exists) {
+      result = {
+        id: saleRef.id,
+        duplicated: true,
+        ...existingSale.data(),
+      };
+      return;
+    }
+
+    const currentDailyTotal = dailyTotalSnapshot.exists
+      ? dailyTotalSnapshot.data() || {}
+      : {};
+
+    const currentPlatforms =
+      currentDailyTotal.platforms && typeof currentDailyTotal.platforms === 'object'
+        ? currentDailyTotal.platforms
+        : {};
+
+    const currentPlatform =
+      currentPlatforms[platformId] && typeof currentPlatforms[platformId] === 'object'
+        ? currentPlatforms[platformId]
+        : {};
+
+    const nextPlatformTotal = roundMoney(
+      Number(currentPlatform.totalSold || 0) + normalizedAmount
+    );
+    const nextPlatformCount = Number(currentPlatform.salesCount || 0) + 1;
+
+    const nextPlatforms = {
+      ...currentPlatforms,
+      [platformId]: {
+        platform,
+        platformId,
+        totalSold: nextPlatformTotal,
+        salesCount: nextPlatformCount,
+        lastSaleAt: admin.firestore.Timestamp.fromDate(saleDate),
+      },
+    };
+
+    const previousLast10Sales = Array.isArray(currentDailyTotal.last10Sales)
+      ? currentDailyTotal.last10Sales
+      : [];
+
+    const recentSaleSummary = buildRecentSaleSummary({
+      saleId: saleRef.id,
+      saleData,
+    });
+
+    const nextLast10Sales = [
+      recentSaleSummary,
+      ...previousLast10Sales.filter((sale) => sale?.id !== saleRef.id),
+    ].slice(0, 10);
+
+    const nextDailyTotal = roundMoney(
+      Number(currentDailyTotal.totalSold || 0) + normalizedAmount
+    );
+    const nextSalesCount = Number(currentDailyTotal.salesCount || 0) + 1;
+
+    transaction.set(saleRef, saleData, { merge: false });
+    transaction.set(
+      dailyTotalRef,
+      {
+        dateKey,
+        totalSold: nextDailyTotal,
+        salesCount: nextSalesCount,
+        platforms: nextPlatforms,
+        last10Sales: nextLast10Sales,
+        lastSaleAt: admin.firestore.Timestamp.fromDate(saleDate),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    result = {
+      id: saleRef.id,
+      duplicated: false,
+      ...saleData,
+    };
+  });
+
+  return result;
 }
 
 async function processMercadoPagoPaymentWebhook({
@@ -1210,17 +1309,6 @@ async function processMercadoPagoMerchantOrderWebhook({
   };
 }
 
-function buildPublicMercadoPagoIntegrationStatus(integrationData) {
-  return {
-    platform: 'Mercado Pago',
-    platformId: 'mercado_pago',
-    status: integrationData.status || 'connected',
-    liveMode: Boolean(integrationData.liveMode),
-    connectedAt: integrationData.connectedAt || admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  };
-}
-
 async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
   const expiresInSeconds = Number(tokenResponse.expires_in || 0);
   const now = new Date();
@@ -1228,11 +1316,10 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
   const expiresAt =
     expiresInSeconds > 0 ? new Date(now.getTime() + expiresInSeconds * 1000) : null;
 
-  const userRef = db.collection('users').doc(userId);
-
-  const integrationRef = userRef.collection('integrations').doc('mercado_pago');
-  const publicStatusRef = userRef
-    .collection('integration_status')
+  const integrationRef = db
+    .collection('users')
+    .doc(userId)
+    .collection('integrations')
     .doc('mercado_pago');
 
   const integrationData = {
@@ -1251,22 +1338,7 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  const publicStatusData = buildPublicMercadoPagoIntegrationStatus(integrationData);
-
-  await db.runTransaction(async (transaction) => {
-    transaction.set(integrationRef, integrationData, { merge: true });
-    transaction.set(publicStatusRef, publicStatusData, { merge: true });
-    transaction.set(
-      userRef,
-      {
-        connectedPlatform: 'Mercado Pago',
-        hasConnectedPlatform: true,
-        selectedPlatform: 'Mercado Pago',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  });
+  await integrationRef.set(integrationData, { merge: true });
 
   return {
     userId,

@@ -62,6 +62,98 @@ class ToricoSaleRecord {
   }
 }
 
+class PlatformSalesSummary {
+  final String platform;
+  final String platformId;
+  final double totalSold;
+  final int salesCount;
+
+  const PlatformSalesSummary({
+    required this.platform,
+    required this.platformId,
+    required this.totalSold,
+    required this.salesCount,
+  });
+
+  factory PlatformSalesSummary.fromMap(
+    String platformId,
+    Map<String, dynamic> data,
+  ) {
+    final totalSold = data['totalSold'];
+    final salesCount = data['salesCount'];
+
+    return PlatformSalesSummary(
+      platform: (data['platform'] ?? platformId).toString(),
+      platformId: (data['platformId'] ?? platformId).toString(),
+      totalSold: totalSold is num ? totalSold.toDouble() : 0.0,
+      salesCount: salesCount is num ? salesCount.toInt() : 0,
+    );
+  }
+}
+
+class DailySalesSummary {
+  final String dateKey;
+  final double totalSold;
+  final int salesCount;
+  final Map<String, PlatformSalesSummary> platforms;
+  final DateTime? lastSaleAt;
+
+  const DailySalesSummary({
+    required this.dateKey,
+    required this.totalSold,
+    required this.salesCount,
+    required this.platforms,
+    required this.lastSaleAt,
+  });
+
+  factory DailySalesSummary.empty(String dateKey) {
+    return DailySalesSummary(
+      dateKey: dateKey,
+      totalSold: 0,
+      salesCount: 0,
+      platforms: const {},
+      lastSaleAt: null,
+    );
+  }
+
+  factory DailySalesSummary.fromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+    String dateKey,
+  ) {
+    if (!doc.exists) {
+      return DailySalesSummary.empty(dateKey);
+    }
+
+    final data = doc.data() ?? <String, dynamic>{};
+    final totalSold = data['totalSold'];
+    final salesCount = data['salesCount'];
+    final lastSaleAtValue = data['lastSaleAt'];
+    final platformsData = data['platforms'];
+
+    final platforms = <String, PlatformSalesSummary>{};
+
+    if (platformsData is Map<String, dynamic>) {
+      for (final entry in platformsData.entries) {
+        final value = entry.value;
+
+        if (value is Map<String, dynamic>) {
+          platforms[entry.key] = PlatformSalesSummary.fromMap(entry.key, value);
+        }
+      }
+    }
+
+    return DailySalesSummary(
+      dateKey: (data['dateKey'] ?? dateKey).toString(),
+      totalSold: totalSold is num ? totalSold.toDouble() : 0.0,
+      salesCount: salesCount is num ? salesCount.toInt() : 0,
+      platforms: platforms,
+      lastSaleAt: lastSaleAtValue is Timestamp
+          ? lastSaleAtValue.toDate()
+          : null,
+    );
+  }
+}
+
 class FirestoreSalesService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -76,8 +168,16 @@ class FirestoreSalesService {
     return user.uid;
   }
 
+  DocumentReference<Map<String, dynamic>> get _userDocument {
+    return _firestore.collection('users').doc(_userId);
+  }
+
   CollectionReference<Map<String, dynamic>> get _salesCollection {
-    return _firestore.collection('users').doc(_userId).collection('sales');
+    return _userDocument.collection('sales');
+  }
+
+  DocumentReference<Map<String, dynamic>> _dailyTotalDocument(String dateKey) {
+    return _userDocument.collection('daily_totals').doc(dateKey);
   }
 
   String _todayKey() {
@@ -130,6 +230,8 @@ class FirestoreSalesService {
 
   Future<void> addSale({required Sale sale, required String plataforma}) async {
     final platformId = platformIdFromName(plataforma);
+    final saleDate = sale.createdAt;
+    final dateKey = _dateKeyFromDate(saleDate);
 
     await _salesCollection.add({
       'amount': sale.amount,
@@ -139,16 +241,16 @@ class FirestoreSalesService {
       'source': sale.source,
       'externalId': sale.externalId,
       'rawPayload': sale.rawPayload ?? <String, dynamic>{},
-      'dateKey': _dateKeyFromDate(sale.createdAt),
-      'createdAtClient': Timestamp.fromDate(sale.createdAt),
+      'dateKey': dateKey,
+      'createdAtClient': Timestamp.fromDate(saleDate),
       'createdAtServer': FieldValue.serverTimestamp(),
     });
   }
 
   /// Estrutura preparada para uso futuro por venda real recebida via webhook.
   ///
-  /// Hoje ainda não temos endpoint/backend chamando este método.
-  /// Ele deixa o padrão de dados pronto para Mercado Pago, Stone, PagBank etc.
+  /// Em produção, as vendas reais são gravadas pelo backend/Cloud Run.
+  /// O app não deve gravar vendas diretamente no Firestore.
   Future<void> addWebhookSale({
     required double amount,
     required String platform,
@@ -160,7 +262,7 @@ class FirestoreSalesService {
     final saleDate = createdAt ?? DateTime.now();
     final platformId = platformIdFromName(platform);
 
-    await _salesCollection.add({
+    await _salesCollection.doc(externalId).set({
       'amount': amount,
       'platform': platform,
       'platformId': platformId,
@@ -175,39 +277,71 @@ class FirestoreSalesService {
   }
 
   Future<double> getTodayTotal() async {
+    final todayKey = _todayKey();
+    final summarySnapshot = await _dailyTotalDocument(todayKey).get();
+
+    if (summarySnapshot.exists) {
+      final data = summarySnapshot.data() ?? <String, dynamic>{};
+      final totalSold = data['totalSold'];
+      return totalSold is num ? totalSold.toDouble() : 0.0;
+    }
+
+    // Fallback temporário para vendas antigas criadas antes de daily_totals.
+    // Depois que o backend estiver atualizado, o painel usará só daily_totals.
     final snapshot = await _salesCollection
-        .where('dateKey', isEqualTo: _todayKey())
+        .where('dateKey', isEqualTo: todayKey)
         .where('status', isEqualTo: 'approved')
         .get();
 
     return _sumSnapshot(snapshot);
   }
 
-  Stream<double> watchTodayTotal() {
-    return _salesCollection
-        .where('dateKey', isEqualTo: _todayKey())
-        .where('status', isEqualTo: 'approved')
-        .snapshots()
-        .map(_sumSnapshot);
+  Stream<DailySalesSummary> watchTodaySummary() {
+    final todayKey = _todayKey();
+
+    return _dailyTotalDocument(todayKey).snapshots().map(
+          (snapshot) => DailySalesSummary.fromDoc(snapshot, todayKey),
+        );
   }
 
-  Stream<List<ToricoSaleRecord>> watchTodaySales() {
-    return _salesCollection
+  Stream<double> watchTodayTotal() {
+    final todayKey = _todayKey();
+
+    return _dailyTotalDocument(todayKey).snapshots().asyncExpand((snapshot) {
+      if (snapshot.exists) {
+        final summary = DailySalesSummary.fromDoc(snapshot, todayKey);
+        return Stream<double>.value(summary.totalSold);
+      }
+
+      // Fallback temporário para manter compatibilidade com vendas antigas.
+      return _salesCollection
+          .where('dateKey', isEqualTo: todayKey)
+          .where('status', isEqualTo: 'approved')
+          .snapshots()
+          .map(_sumSnapshot);
+    });
+  }
+
+  Stream<List<ToricoSaleRecord>> watchTodaySales({
+    String? platform,
+    int limit = 10,
+  }) {
+    Query<Map<String, dynamic>> query = _salesCollection
         .where('dateKey', isEqualTo: _todayKey())
-        .where('status', isEqualTo: 'approved')
+        .where('status', isEqualTo: 'approved');
+
+    if (platform != null && platform.trim().isNotEmpty) {
+      query = query.where(
+        'platformId',
+        isEqualTo: platformIdFromName(platform),
+      );
+    }
+
+    return query
+        .orderBy('createdAtClient', descending: true)
+        .limit(limit)
         .snapshots()
-        .map((snapshot) {
-          final sales = snapshot.docs.map(ToricoSaleRecord.fromDoc).toList();
-
-          sales.sort((a, b) {
-            final dateA = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final dateB = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-
-            return dateB.compareTo(dateA);
-          });
-
-          return sales;
-        });
+        .map((snapshot) => snapshot.docs.map(ToricoSaleRecord.fromDoc).toList());
   }
 
   double _sumSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
