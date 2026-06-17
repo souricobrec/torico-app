@@ -89,10 +89,6 @@ class AboutScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              const _InfoCard(),
-
-              const SizedBox(height: 26),
-
               Center(
                 child: Text(
                   'TORICO • ${AppTexts.slogan}',
@@ -275,46 +271,6 @@ class _BenefitTile extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: AppColors.goldLight,
-            size: 28,
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Text(
-              'O TORICO já recebe vendas aprovadas do Mercado Pago por integração oficial via OAuth, API e webhook. Stone e PagBank serão adicionados futuramente por integrações oficiais.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
-                fontSize: 14,
-                height: 1.45,
-              ),
             ),
           ),
         ],

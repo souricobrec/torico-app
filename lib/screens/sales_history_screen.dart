@@ -18,11 +18,25 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   static const String allFilter = 'Todas';
   static const int basicSalesLimit = 10;
 
-  final List<String> filters = const [
-    allFilter,
-    'Mercado Pago',
-    'Stone',
-    'PagBank',
+  static const List<_PlatformFilterOption> platformOptions = [
+    _PlatformFilterOption(
+      name: allFilter,
+      status: 'Todos os canais',
+      enabled: true,
+    ),
+    _PlatformFilterOption(
+      name: 'Mercado Pago',
+      status: 'Conectado',
+      enabled: true,
+    ),
+    _PlatformFilterOption(name: 'Stone', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'PagBank', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'Cielo', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'Rede', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'Getnet', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'Pagar.me', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'Asaas', status: 'Em andamento'),
+    _PlatformFilterOption(name: 'InfinitePay', status: 'Em análise'),
   ];
 
   String selectedFilter = allFilter;
@@ -74,6 +88,31 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     };
   }
 
+  Future<void> _showPlatformFilterSheet() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.background,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return _PlatformFilterSheet(
+          selectedFilter: selectedFilter,
+          options: platformOptions,
+        );
+      },
+    );
+
+    if (!mounted || selected == null) {
+      return;
+    }
+
+    setState(() {
+      selectedFilter = selected;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,7 +134,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         child: StreamBuilder<DailySalesSummary>(
           stream: _salesService.watchTodaySummary(),
           builder: (context, summarySnapshot) {
-            final summary = summarySnapshot.data ??
+            final summary =
+                summarySnapshot.data ??
                 DailySalesSummary.empty(DateTime.now().toIso8601String());
 
             return StreamBuilder<List<ToricoSaleRecord>>(
@@ -104,8 +144,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 limit: basicSalesLimit,
               ),
               builder: (context, salesSnapshot) {
-                if ((summarySnapshot.connectionState == ConnectionState.waiting ||
-                        salesSnapshot.connectionState == ConnectionState.waiting) &&
+                if ((summarySnapshot.connectionState ==
+                            ConnectionState.waiting ||
+                        salesSnapshot.connectionState ==
+                            ConnectionState.waiting) &&
                     !summarySnapshot.hasData &&
                     !salesSnapshot.hasData) {
                   return const Center(
@@ -118,7 +160,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 }
 
                 final sales = salesSnapshot.data ?? [];
-                final hasSummary = summary.salesCount > 0 || summary.totalSold > 0;
+                final hasSummary =
+                    summary.salesCount > 0 || summary.totalSold > 0;
 
                 final total = hasSummary
                     ? _selectedTotalFromSummary(summary)
@@ -135,21 +178,21 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _FilterChips(
-                        filters: filters,
+                      _HistoryPlatformFilters(
                         selectedFilter: selectedFilter,
                         onSelected: (filter) {
                           setState(() {
                             selectedFilter = filter;
                           });
                         },
+                        onOpenPlatforms: _showPlatformFilterSheet,
                       ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 8),
 
                       _SummaryCard(
                         total: total,
@@ -158,11 +201,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         selectedFilter: selectedFilter,
                       ),
 
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 8),
 
                       const _SectionTitle('Resumo por plataforma'),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
 
                       if (totalsByPlatform.isEmpty)
                         _EmptyCard(
@@ -185,11 +228,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ),
                         ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
 
                       const _SectionTitle('Últimas vendas'),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
 
                       if (sales.isEmpty)
                         _EmptyCard(
@@ -220,11 +263,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ),
                       ],
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 8),
 
                       const _SectionTitle('Relatórios Plus'),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
 
                       const _PlusReportsSection(),
                     ],
@@ -239,70 +282,304 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 }
 
-class _FilterChips extends StatelessWidget {
-  final List<String> filters;
+class _PlatformFilterOption {
+  final String name;
+  final String status;
+  final bool enabled;
+
+  const _PlatformFilterOption({
+    required this.name,
+    required this.status,
+    this.enabled = false,
+  });
+}
+
+class _HistoryPlatformFilters extends StatelessWidget {
   final String selectedFilter;
   final ValueChanged<String> onSelected;
+  final VoidCallback onOpenPlatforms;
 
-  const _FilterChips({
-    required this.filters,
+  const _HistoryPlatformFilters({
     required this.selectedFilter,
     required this.onSelected,
+    required this.onOpenPlatforms,
   });
 
   @override
   Widget build(BuildContext context) {
+    final moreSelected =
+        selectedFilter != _SalesHistoryScreenState.allFilter &&
+        selectedFilter != 'Mercado Pago';
+
     return SizedBox(
-      height: 42,
-      child: ListView.separated(
+      height: 36,
+      child: ListView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: filters.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final selected = filter == selectedFilter;
+        children: [
+          _CompactFilterChip(
+            text: 'Todas',
+            selected: selectedFilter == _SalesHistoryScreenState.allFilter,
+            onTap: () => onSelected(_SalesHistoryScreenState.allFilter),
+          ),
+          const SizedBox(width: 8),
+          _CompactFilterChip(
+            text: 'Mercado Pago',
+            selected: selectedFilter == 'Mercado Pago',
+            onTap: () => onSelected('Mercado Pago'),
+          ),
+          const SizedBox(width: 8),
+          _CompactFilterChip(
+            text: moreSelected ? selectedFilter : 'Plataformas',
+            selected: moreSelected,
+            icon: Icons.keyboard_arrow_down_rounded,
+            onTap: onOpenPlatforms,
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-          return GestureDetector(
-            onTap: () => onSelected(filter),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.gold.withValues(alpha: 0.22)
-                    : Colors.white.withValues(alpha: 0.045),
-                borderRadius: BorderRadius.circular(100),
-                border: Border.all(
-                  color: selected
-                      ? AppColors.goldLight.withValues(alpha: 0.65)
-                      : Colors.white.withValues(alpha: 0.12),
-                  width: selected ? 1.4 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    selected
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: selected ? AppColors.goldLight : Colors.white54,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    filter,
-                    style: TextStyle(
-                      color: selected ? AppColors.goldLight : Colors.white70,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+class _CompactFilterChip extends StatelessWidget {
+  final String text;
+  final bool selected;
+  final IconData? icon;
+  final VoidCallback onTap;
+
+  const _CompactFilterChip({
+    required this.text,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.gold.withValues(alpha: 0.22)
+              : Colors.white.withValues(alpha: 0.045),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: selected
+                ? AppColors.goldLight.withValues(alpha: 0.65)
+                : Colors.white.withValues(alpha: 0.12),
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon ??
+                  (selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded),
+              color: selected ? AppColors.goldLight : Colors.white54,
+              size: 14,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              text,
+              style: TextStyle(
+                color: selected ? AppColors.goldLight : Colors.white70,
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          );
-        },
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlatformFilterSheet extends StatelessWidget {
+  final String selectedFilter;
+  final List<_PlatformFilterOption> options;
+
+  const _PlatformFilterSheet({
+    required this.selectedFilter,
+    required this.options,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Selecionar plataforma',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'O histórico filtra plataformas conectadas. As demais estão em preparação.',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.58),
+                fontSize: 12.5,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: options.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final option = options[index];
+                  final selected = selectedFilter == option.name;
+
+                  return _PlatformFilterTile(
+                    option: option,
+                    selected: selected,
+                    onTap: option.enabled
+                        ? () => Navigator.of(context).pop(option.name)
+                        : null,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlatformFilterTile extends StatelessWidget {
+  final _PlatformFilterOption option;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  const _PlatformFilterTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = option.enabled;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.gold.withValues(alpha: 0.12)
+                : Colors.white.withValues(alpha: 0.045),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? AppColors.goldLight.withValues(alpha: 0.50)
+                  : Colors.white.withValues(alpha: 0.09),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : enabled
+                    ? Icons.radio_button_unchecked_rounded
+                    : Icons.schedule_rounded,
+                color: selected
+                    ? AppColors.goldLight
+                    : enabled
+                    ? Colors.white54
+                    : Colors.orangeAccent.withValues(alpha: 0.78),
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  option.name,
+                  style: TextStyle(
+                    color: enabled ? Colors.white : Colors.white70,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _PlatformStatusPill(
+                text: option.status,
+                enabled: enabled,
+                selected: selected,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlatformStatusPill extends StatelessWidget {
+  final String text;
+  final bool enabled;
+  final bool selected;
+
+  const _PlatformStatusPill({
+    required this.text,
+    required this.enabled,
+    required this.selected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected
+        ? AppColors.goldLight
+        : enabled
+        ? Colors.greenAccent
+        : Colors.orangeAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -333,10 +610,10 @@ class _SummaryCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF06182C),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppColors.gold.withValues(alpha: 0.38),
           width: 1.4,
@@ -361,12 +638,12 @@ class _SummaryCard extends StatelessWidget {
             style: TextStyle(
               color: AppColors.gold,
               letterSpacing: 3,
-              fontSize: 13,
+              fontSize: 10.5,
               fontWeight: FontWeight.w700,
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 8),
 
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -374,7 +651,7 @@ class _SummaryCard extends StatelessWidget {
               CurrencyFormatter.format(total),
               style: const TextStyle(
                 color: AppColors.goldLight,
-                fontSize: 52,
+                fontSize: 44,
                 fontWeight: FontWeight.bold,
                 height: 1,
                 letterSpacing: -1.2,
@@ -382,11 +659,11 @@ class _SummaryCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _Badge(text: sourceText),
               _Badge(text: subtitle),
@@ -414,17 +691,17 @@ class _PlatformTotalTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.045),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.16)),
       ),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.gold.withValues(alpha: 0.11),
@@ -433,18 +710,18 @@ class _PlatformTotalTile extends StatelessWidget {
             child: const Icon(
               Icons.payments_rounded,
               color: AppColors.goldLight,
-              size: 25,
+              size: 18,
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
 
           Expanded(
             child: Text(
               platform,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 17,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -454,7 +731,7 @@ class _PlatformTotalTile extends StatelessWidget {
             CurrencyFormatter.format(total),
             style: const TextStyle(
               color: AppColors.goldLight,
-              fontSize: 17,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -478,17 +755,17 @@ class _SaleTile extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.045),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.greenAccent.withValues(alpha: 0.10),
@@ -496,11 +773,11 @@ class _SaleTile extends StatelessWidget {
             child: const Icon(
               Icons.trending_up_rounded,
               color: Colors.greenAccent,
-              size: 25,
+              size: 18,
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
 
           Expanded(
             child: Column(
@@ -510,18 +787,18 @@ class _SaleTile extends StatelessWidget {
                   CurrencyFormatter.format(sale.amount),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
 
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
 
                 Text(
                   '${sale.platform} • $time',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.55),
-                    fontSize: 13.5,
+                    fontSize: 10.5,
                     height: 1.25,
                   ),
                 ),
@@ -540,7 +817,6 @@ class _SaleTile extends StatelessWidget {
   }
 }
 
-
 class _PlusHistoryButton extends StatelessWidget {
   final int hiddenCount;
   final VoidCallback onPressed;
@@ -558,26 +834,21 @@ class _PlusHistoryButton extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      height: 44,
+      height: 40,
       child: OutlinedButton.icon(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.goldLight,
           backgroundColor: AppColors.gold.withValues(alpha: 0.06),
-          side: BorderSide(
-            color: AppColors.goldLight.withValues(alpha: 0.42),
-          ),
+          side: BorderSide(color: AppColors.goldLight.withValues(alpha: 0.42)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        icon: const Icon(Icons.workspace_premium_rounded, size: 20),
+        icon: const Icon(Icons.workspace_premium_rounded, size: 18),
         label: Text(
           text,
-          style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-          ),
+          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -601,34 +872,34 @@ class _PlusReportsSection extends StatelessWidget {
         _LockedPlusTile(
           icon: Icons.calendar_view_week_rounded,
           title: 'Últimos 7 dias',
-          text: 'Acompanhe a evolução das vendas da semana.',
+          text: 'Evolução das vendas da semana.',
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         _LockedPlusTile(
           icon: Icons.calendar_month_rounded,
           title: 'Relatório mensal',
-          text: 'Veja o desempenho acumulado do mês.',
+          text: 'Desempenho acumulado do mês.',
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         _LockedPlusTile(
           icon: Icons.compare_arrows_rounded,
           title: 'Comparativos por período',
-          text: 'Compare dias, semanas e plataformas.',
+          text: 'Compare períodos e plataformas.',
           onTap: () => _showPlusMessage(context),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         _LockedPlusTile(
           icon: Icons.bar_chart_rounded,
           title: 'Gráficos de desempenho',
-          text: 'Visualize suas vendas com gráficos e tendências.',
+          text: 'Gráficos e tendências das vendas.',
           onTap: () => _showPlusMessage(context),
         ),
       ],
@@ -653,24 +924,24 @@ class _LockedPlusTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.gold.withValues(alpha: 0.055),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.18)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.gold.withValues(alpha: 0.12),
@@ -678,10 +949,10 @@ class _LockedPlusTile extends StatelessWidget {
                     color: AppColors.gold.withValues(alpha: 0.24),
                   ),
                 ),
-                child: Icon(icon, color: AppColors.goldLight, size: 24),
+                child: Icon(icon, color: AppColors.goldLight, size: 19),
               ),
 
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
 
               Expanded(
                 child: Column(
@@ -694,7 +965,7 @@ class _LockedPlusTile extends StatelessWidget {
                             title,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -702,8 +973,8 @@ class _LockedPlusTile extends StatelessWidget {
 
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 5,
+                            horizontal: 8,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.gold.withValues(alpha: 0.12),
@@ -725,7 +996,7 @@ class _LockedPlusTile extends StatelessWidget {
                                 'Plus',
                                 style: TextStyle(
                                   color: AppColors.goldLight,
-                                  fontSize: 11.5,
+                                  fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -741,7 +1012,7 @@ class _LockedPlusTile extends StatelessWidget {
                       text,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.58),
-                        fontSize: 13.5,
+                        fontSize: 10.5,
                         height: 1.3,
                       ),
                     ),
@@ -767,7 +1038,7 @@ class _SectionTitle extends StatelessWidget {
       text,
       style: const TextStyle(
         color: AppColors.goldLight,
-        fontSize: 18,
+        fontSize: 14.5,
         fontWeight: FontWeight.bold,
       ),
     );
@@ -782,7 +1053,7 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.gold.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(100),
@@ -792,7 +1063,7 @@ class _Badge extends StatelessWidget {
         text,
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.72),
-          fontSize: 12.5,
+          fontSize: 10.5,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -815,24 +1086,24 @@ class _EmptyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.045),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.gold.withValues(alpha: 0.68), size: 42),
+          Icon(icon, color: AppColors.gold.withValues(alpha: 0.68), size: 32),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 17,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -844,7 +1115,7 @@ class _EmptyCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.58),
-              fontSize: 14,
+              fontSize: 12.5,
               height: 1.35,
             ),
           ),
@@ -867,7 +1138,7 @@ class _ErrorState extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.70),
-            fontSize: 16,
+            fontSize: 14.5,
           ),
         ),
       ),
