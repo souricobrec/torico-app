@@ -1216,6 +1216,22 @@ async function processMercadoPagoPaymentWebhook({
     },
   });
 
+  console.log('Venda Mercado Pago salva:', {
+    toricoUserId: mercadoPagoContext.userId,
+    mercadoPagoUserId: paymentMercadoPagoUserId || mercadoPagoContext.mercadoPagoUserId,
+    contextSource: mercadoPagoContext.source,
+    paymentId,
+    saleId: sale.id,
+    externalId: sale.externalId,
+    amount: sale.amount,
+    platform: sale.platform,
+    platformId: sale.platformId,
+    status: sale.status,
+    dateKey: sale.dateKey,
+    duplicated: sale.duplicated,
+    dailyTotalsUpdated: !sale.duplicated,
+  });
+
   return {
     processed: true,
     paymentId,
