@@ -72,6 +72,34 @@ const PUBLIC_BACKEND_URL =
 const PUBLIC_APP_URL =
   process.env.PUBLIC_APP_URL || 'https://torico-ca479.web.app';
 
+
+const PAGBANK_ENVIRONMENT = String(process.env.PAGBANK_ENVIRONMENT || 'sandbox')
+  .toLowerCase()
+  .trim();
+
+const PAGBANK_CLIENT_ID = process.env.PAGBANK_CLIENT_ID;
+const PAGBANK_CLIENT_SECRET = process.env.PAGBANK_CLIENT_SECRET;
+const PAGBANK_AUTHORIZATION_TOKEN = process.env.PAGBANK_AUTHORIZATION_TOKEN;
+const PAGBANK_REDIRECT_URI =
+  process.env.PAGBANK_REDIRECT_URI ||
+  `${PUBLIC_BACKEND_URL}/integrations/pagbank/callback`;
+const PAGBANK_OAUTH_SCOPE =
+  process.env.PAGBANK_OAUTH_SCOPE || 'payments.read+accounts.read';
+
+const PAGBANK_CONNECT_AUTHORIZE_URL =
+  PAGBANK_ENVIRONMENT === 'production'
+    ? 'https://connect.pagbank.com.br/oauth2/authorize'
+    : 'https://connect.sandbox.pagbank.com.br/oauth2/authorize';
+
+const PAGBANK_API_BASE_URL =
+  PAGBANK_ENVIRONMENT === 'production'
+    ? 'https://api.pagseguro.com'
+    : 'https://sandbox.api.pagseguro.com';
+
+const PAGBANK_OAUTH_TOKEN_URL = `${PAGBANK_API_BASE_URL}/oauth2/token`;
+const PAGBANK_OAUTH_REFRESH_URL = `${PAGBANK_API_BASE_URL}/oauth2/refresh`;
+const PAGBANK_WEBHOOK_SECRET = process.env.PAGBANK_WEBHOOK_SECRET;
+
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
     return;
@@ -212,21 +240,30 @@ function base64UrlDecode(value) {
   return Buffer.from(value, 'base64url').toString('utf8');
 }
 
-function getOAuthStateSecret() {
+
+function getOAuthStateSecret(platform = 'mercado_pago') {
+  const platformId = normalizePlatformId(platform);
+
+  if (platformId === 'pagbank') {
+    return PAGBANK_CLIENT_SECRET || TORICO_DEV_KEY;
+  }
+
   return MERCADO_PAGO_CLIENT_SECRET || TORICO_DEV_KEY;
 }
 
-function createOAuthState({ userId }) {
-  const secret = getOAuthStateSecret();
+function createOAuthState({ userId, platform = 'mercado_pago' }) {
+  const platformId = normalizePlatformId(platform);
+  const secret = getOAuthStateSecret(platformId);
 
   if (!secret) {
     throw new Error(
-      'Nao foi possivel gerar state OAuth. Configure MERCADO_PAGO_CLIENT_SECRET ou TORICO_DEV_KEY.'
+      `Nao foi possivel gerar state OAuth para ${platformId}. Configure o client secret da plataforma ou TORICO_DEV_KEY.`
     );
   }
 
   const payload = {
     userId,
+    platformId,
     nonce: crypto.randomUUID(),
     iat: Date.now(),
   };
@@ -241,12 +278,13 @@ function createOAuthState({ userId }) {
   return `${encodedPayload}.${signature}`;
 }
 
-function verifyOAuthState(state) {
-  const secret = getOAuthStateSecret();
+function verifyOAuthState(state, { platform = 'mercado_pago' } = {}) {
+  const expectedPlatformId = normalizePlatformId(platform);
+  const secret = getOAuthStateSecret(expectedPlatformId);
 
   if (!secret) {
     throw new Error(
-      'Nao foi possivel validar state OAuth. Configure MERCADO_PAGO_CLIENT_SECRET ou TORICO_DEV_KEY.'
+      `Nao foi possivel validar state OAuth para ${expectedPlatformId}. Configure o client secret da plataforma ou TORICO_DEV_KEY.`
     );
   }
 
@@ -276,6 +314,10 @@ function verifyOAuthState(state) {
 
   if (!payload.userId || typeof payload.userId !== 'string') {
     throw new Error('State OAuth sem userId valido.');
+  }
+
+  if (normalizePlatformId(payload.platformId) !== expectedPlatformId) {
+    throw new Error('State OAuth pertence a outra plataforma.');
   }
 
   return payload;
@@ -397,6 +439,146 @@ function getMissingMercadoPagoOAuthConfig() {
   }
 
   return missing;
+}
+
+
+function isPagBankOAuthConfigured() {
+  return Boolean(
+    PAGBANK_CLIENT_ID &&
+      PAGBANK_CLIENT_SECRET &&
+      PAGBANK_AUTHORIZATION_TOKEN &&
+      PAGBANK_REDIRECT_URI &&
+      TOKEN_ENCRYPTION_KEY
+  );
+}
+
+function getMissingPagBankOAuthConfig() {
+  const missing = [];
+
+  if (!PAGBANK_CLIENT_ID) {
+    missing.push('PAGBANK_CLIENT_ID');
+  }
+
+  if (!PAGBANK_CLIENT_SECRET) {
+    missing.push('PAGBANK_CLIENT_SECRET');
+  }
+
+  if (!PAGBANK_AUTHORIZATION_TOKEN) {
+    missing.push('PAGBANK_AUTHORIZATION_TOKEN');
+  }
+
+  if (!PAGBANK_REDIRECT_URI) {
+    missing.push('PAGBANK_REDIRECT_URI');
+  }
+
+  if (!TOKEN_ENCRYPTION_KEY) {
+    missing.push('TOKEN_ENCRYPTION_KEY');
+  }
+
+  return missing;
+}
+
+function getPagBankAuthorizationHeader() {
+  const token = String(PAGBANK_AUTHORIZATION_TOKEN || '').trim();
+
+  if (!token) {
+    return '';
+  }
+
+  if (token.toLowerCase().startsWith('bearer ')) {
+    return token;
+  }
+
+  return `Bearer ${token}`;
+}
+
+function buildPagBankHeaders({ includeJsonContentType = true } = {}) {
+  const headers = {
+    accept: 'application/json',
+    authorization: getPagBankAuthorizationHeader(),
+    X_CLIENT_ID: PAGBANK_CLIENT_ID,
+    X_CLIENT_SECRET: PAGBANK_CLIENT_SECRET,
+  };
+
+  if (includeJsonContentType) {
+    headers['content-type'] = 'application/json';
+  }
+
+  return headers;
+}
+
+function getPagBankSellerIdFromTokenResponse(tokenResponse) {
+  return getFirstStringValue([
+    tokenResponse?.account_id,
+    tokenResponse?.seller_id,
+    tokenResponse?.merchant_id,
+    tokenResponse?.user_id,
+    tokenResponse?.id,
+  ]);
+}
+
+async function savePagBankIntegration({ userId, tokenResponse }) {
+  const expiresInSeconds = Number(tokenResponse.expires_in || 0);
+  const now = new Date();
+
+  const expiresAt =
+    expiresInSeconds > 0 ? new Date(now.getTime() + expiresInSeconds * 1000) : null;
+
+  const sellerId = getPagBankSellerIdFromTokenResponse(tokenResponse) || null;
+
+  const integrationRef = db
+    .collection('users')
+    .doc(userId)
+    .collection('integrations')
+    .doc('pagbank');
+
+  const publicStatusRef = db
+    .collection('users')
+    .doc(userId)
+    .collection('integration_status')
+    .doc('pagbank');
+
+  const integrationData = {
+    platform: 'PagBank',
+    platformId: 'pagbank',
+    status: 'connected',
+    environment: PAGBANK_ENVIRONMENT,
+    tokenType: tokenResponse.token_type || null,
+    scope: tokenResponse.scope || PAGBANK_OAUTH_SCOPE,
+    sellerId,
+    liveMode: PAGBANK_ENVIRONMENT === 'production',
+    accessTokenEncrypted: encryptSecret(tokenResponse.access_token),
+    refreshTokenEncrypted: encryptSecret(tokenResponse.refresh_token),
+    expiresAt: expiresAt ? admin.firestore.Timestamp.fromDate(expiresAt) : null,
+    connectedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  const publicStatusData = {
+    platform: 'PagBank',
+    platformId: 'pagbank',
+    status: 'connected',
+    environment: PAGBANK_ENVIRONMENT,
+    liveMode: PAGBANK_ENVIRONMENT === 'production',
+    sellerId,
+    connectedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  await db.runTransaction(async (transaction) => {
+    transaction.set(integrationRef, integrationData, { merge: true });
+    transaction.set(publicStatusRef, publicStatusData, { merge: true });
+  });
+
+  return {
+    userId,
+    platformId: integrationData.platformId,
+    status: integrationData.status,
+    environment: integrationData.environment,
+    sellerId,
+    liveMode: integrationData.liveMode,
+    expiresAt,
+  };
 }
 
 function parseMercadoPagoSignatureHeader(signatureHeader) {
@@ -1395,8 +1577,202 @@ app.get('/health', (req, res) => {
       multiMerchantWebhookReady: Boolean(TOKEN_ENCRYPTION_KEY),
       redirectUri: MERCADO_PAGO_REDIRECT_URI,
     },
+    pagBank: {
+      environment: PAGBANK_ENVIRONMENT,
+      oauthConfigured: isPagBankOAuthConfigured(),
+      webhookSecretConfigured: Boolean(PAGBANK_WEBHOOK_SECRET),
+      tokenEncryptionConfigured: Boolean(TOKEN_ENCRYPTION_KEY),
+      connectAuthorizeUrl: PAGBANK_CONNECT_AUTHORIZE_URL,
+      tokenUrl: PAGBANK_OAUTH_TOKEN_URL,
+      refreshUrl: PAGBANK_OAUTH_REFRESH_URL,
+      redirectUri: PAGBANK_REDIRECT_URI,
+      scope: PAGBANK_OAUTH_SCOPE,
+    },
     timestamp: new Date().toISOString(),
   });
+});
+
+
+app.get('/integrations/pagbank/connect', (req, res) => {
+  try {
+    const userId = String(req.query.userId || '').trim();
+
+    if (!userId) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Informe o userId do usuario TORICO para iniciar a conexao PagBank.',
+      });
+    }
+
+    const missingConfig = getMissingPagBankOAuthConfig();
+
+    if (missingConfig.length > 0) {
+      return res.status(503).json({
+        ok: false,
+        message: 'Integracao PagBank ainda nao configurada completamente no backend.',
+        missingConfig,
+      });
+    }
+
+    const state = createOAuthState({ userId, platform: 'pagbank' });
+    const authorizationUrl = new URL(PAGBANK_CONNECT_AUTHORIZE_URL);
+
+    authorizationUrl.searchParams.set('response_type', 'code');
+    authorizationUrl.searchParams.set('client_id', PAGBANK_CLIENT_ID);
+    authorizationUrl.searchParams.set('redirect_uri', PAGBANK_REDIRECT_URI);
+    authorizationUrl.searchParams.set('scope', PAGBANK_OAUTH_SCOPE);
+    authorizationUrl.searchParams.set('state', state);
+
+    return res.redirect(authorizationUrl.toString());
+  } catch (error) {
+    console.error('Erro ao iniciar OAuth PagBank:', error.message);
+
+    return res.status(500).json({
+      ok: false,
+      message: 'Erro interno ao iniciar conexao PagBank.',
+    });
+  }
+});
+
+app.get('/integrations/pagbank/callback', async (req, res) => {
+  try {
+    const { code, state, error, error_description: errorDescription } = req.query;
+
+    if (error) {
+      console.warn('OAuth PagBank recusado:', {
+        error,
+        errorDescription,
+      });
+
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
+            <h2>Conexao PagBank nao concluida</h2>
+            <p>O PagBank retornou uma recusa ou erro de autorizacao.</p>
+            <p>Voce pode fechar esta janela e tentar novamente pelo TORICO.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    if (!code || !state) {
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
+            <h2>Callback PagBank invalido</h2>
+            <p>Parametros obrigatorios ausentes.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    const missingConfig = getMissingPagBankOAuthConfig();
+
+    if (missingConfig.length > 0) {
+      console.warn('Configuracao OAuth PagBank incompleta:', missingConfig);
+
+      return res.status(503).send(`
+        <html>
+          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
+            <h2>Integracao PagBank nao configurada</h2>
+            <p>O backend ainda nao esta com todas as variaveis do PagBank configuradas.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    const statePayload = verifyOAuthState(String(state), { platform: 'pagbank' });
+
+    const tokenResponse = await fetch(PAGBANK_OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: buildPagBankHeaders(),
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code: String(code),
+        redirect_uri: PAGBANK_REDIRECT_URI,
+      }),
+    });
+
+    const tokenResponseBody = await tokenResponse.json().catch(() => null);
+
+    if (!tokenResponse.ok) {
+      console.error('Erro ao trocar code por token PagBank:', {
+        status: tokenResponse.status,
+        body: tokenResponseBody,
+      });
+
+      return res.status(502).send(`
+        <html>
+          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
+            <h2>Falha ao conectar PagBank</h2>
+            <p>Nao foi possivel concluir a troca do codigo de autorizacao.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    const integration = await savePagBankIntegration({
+      userId: statePayload.userId,
+      tokenResponse: tokenResponseBody,
+    });
+
+    console.log('Integracao PagBank conectada:', {
+      userId: integration.userId,
+      sellerId: integration.sellerId,
+      environment: integration.environment,
+      liveMode: integration.liveMode,
+      status: integration.status,
+    });
+
+    return res.status(200).send(`
+      <html>
+        <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
+          <h2>PagBank conectado com sucesso</h2>
+          <p>A integracao foi autorizada e registrada no backend do TORICO.</p>
+          <p>Voce ja pode fechar esta janela e voltar para o app.</p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Erro no callback PagBank:', error.message);
+
+    return res.status(500).send(`
+      <html>
+        <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
+          <h2>Erro interno</h2>
+          <p>Nao foi possivel concluir a conexao PagBank neste momento.</p>
+        </body>
+      </html>
+    `);
+  }
+});
+
+app.post('/webhooks/pagbank', async (req, res) => {
+  try {
+    console.log('Webhook PagBank recebido:', {
+      query: req.query,
+      headers: {
+        'user-agent': req.get('user-agent'),
+        'x-forwarded-for': req.get('x-forwarded-for'),
+      },
+      body: req.body,
+    });
+
+    return res.status(200).json({
+      ok: true,
+      platform: 'pagbank',
+      processed: false,
+      message:
+        'Webhook PagBank recebido. Processamento de vendas sera ativado apos validacao do payload real/sandbox.',
+    });
+  } catch (error) {
+    console.error('Erro no webhook PagBank:', error.message);
+
+    return res.status(500).json({
+      ok: false,
+      message: 'Erro interno no webhook PagBank.',
+    });
+  }
 });
 
 app.get('/integrations/mercado-pago/connect', (req, res) => {
