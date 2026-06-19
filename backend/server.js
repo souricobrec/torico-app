@@ -100,6 +100,24 @@ const PAGBANK_OAUTH_TOKEN_URL = `${PAGBANK_API_BASE_URL}/oauth2/token`;
 const PAGBANK_OAUTH_REFRESH_URL = `${PAGBANK_API_BASE_URL}/oauth2/refresh`;
 const PAGBANK_WEBHOOK_SECRET = process.env.PAGBANK_WEBHOOK_SECRET;
 
+const REDE_API_BASE_URL =
+  process.env.REDE_API_BASE_URL || 'https://rl7-sandbox-api.useredecloud.com.br';
+const REDE_CLIENT_ID = process.env.REDE_CLIENT_ID;
+const REDE_CLIENT_SECRET = process.env.REDE_CLIENT_SECRET;
+const REDE_DEFAULT_PARENT_COMPANY_NUMBER =
+  process.env.REDE_DEFAULT_PARENT_COMPANY_NUMBER || '13381369';
+const REDE_DEFAULT_SUBSIDIARIES =
+  process.env.REDE_DEFAULT_SUBSIDIARIES || REDE_DEFAULT_PARENT_COMPANY_NUMBER;
+const REDE_DEFAULT_SALES_LOOKBACK_DAYS = Number(
+  process.env.REDE_DEFAULT_SALES_LOOKBACK_DAYS || 20
+);
+const REDE_ALLOWED_CAPTURE_TYPES = String(
+  process.env.REDE_ALLOWED_CAPTURE_TYPES || 'POS,PDV'
+)
+  .split(',')
+  .map((value) => value.trim().toUpperCase())
+  .filter(Boolean);
+
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
     return;
@@ -135,6 +153,10 @@ function normalizePlatformId(platform) {
 
   if (normalized.includes('stone')) {
     return 'stone';
+  }
+
+  if (normalized === 'rede' || normalized.includes('userede')) {
+    return 'rede';
   }
 
   if (normalized.includes('pagbank') || normalized.includes('pag bank')) {
@@ -476,6 +498,253 @@ function getMissingPagBankOAuthConfig() {
   }
 
   return missing;
+}
+
+
+function isRedeConfigured() {
+  return Boolean(REDE_API_BASE_URL && REDE_CLIENT_ID && REDE_CLIENT_SECRET);
+}
+
+function getMissingRedeConfig() {
+  const missing = [];
+
+  if (!REDE_API_BASE_URL) {
+    missing.push('REDE_API_BASE_URL');
+  }
+
+  if (!REDE_CLIENT_ID) {
+    missing.push('REDE_CLIENT_ID');
+  }
+
+  if (!REDE_CLIENT_SECRET) {
+    missing.push('REDE_CLIENT_SECRET');
+  }
+
+  return missing;
+}
+
+function getBrazilDateStringDaysAgo(daysAgo = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() - Number(daysAgo || 0));
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function getRedeBasicAuthorizationHeader() {
+  const credentials = `${REDE_CLIENT_ID || ''}:${REDE_CLIENT_SECRET || ''}`;
+
+  return `Basic ${Buffer.from(credentials).toString('base64')}`;
+}
+
+async function fetchRedeAccessToken() {
+  const missingConfig = getMissingRedeConfig();
+
+  if (missingConfig.length > 0) {
+    const error = new Error('Integracao REDE ainda nao configurada completamente no backend.');
+    error.status = 503;
+    error.missingConfig = missingConfig;
+    throw error;
+  }
+
+  const tokenParams = new URLSearchParams();
+  tokenParams.set('grant_type', 'client_credentials');
+
+  const response = await fetch(`${REDE_API_BASE_URL}/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      authorization: getRedeBasicAuthorizationHeader(),
+      'content-type': 'application/x-www-form-urlencoded',
+    },
+    body: tokenParams,
+  });
+
+  const responseBody = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = new Error('Erro ao gerar token REDE.');
+    error.status = response.status;
+    error.responseBody = responseBody;
+    throw error;
+  }
+
+  if (!responseBody?.access_token) {
+    const error = new Error('Resposta REDE sem access_token.');
+    error.status = 502;
+    error.responseBody = responseBody;
+    throw error;
+  }
+
+  return responseBody;
+}
+
+function getRedeQueryValue(value, fallback = '') {
+  const stringValue = String(value || '').trim();
+
+  return stringValue || fallback;
+}
+
+async function fetchRedeSales({
+  accessToken,
+  parentCompanyNumber,
+  subsidiaries,
+  startDate,
+  endDate,
+  size,
+  status,
+  brands,
+  modalities,
+}) {
+  const url = new URL(`${REDE_API_BASE_URL}/merchant-statement/v1/sales`);
+
+  url.searchParams.set('parentCompanyNumber', parentCompanyNumber);
+  url.searchParams.set('subsidiaries', subsidiaries);
+  url.searchParams.set('startDate', startDate);
+  url.searchParams.set('endDate', endDate);
+
+  if (size) {
+    url.searchParams.set('size', String(size));
+  }
+
+  if (status) {
+    url.searchParams.set('status', String(status));
+  }
+
+  if (brands) {
+    url.searchParams.set('brands', String(brands));
+  }
+
+  if (modalities) {
+    url.searchParams.set('modalities', String(modalities));
+  }
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      accept: 'application/json',
+      authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const responseBody = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = new Error('Erro ao consultar vendas REDE.');
+    error.status = response.status;
+    error.responseBody = responseBody;
+    throw error;
+  }
+
+  return responseBody;
+}
+
+function getRedeSalesList(responseBody) {
+  const possibleLists = [
+    responseBody?.content,
+    responseBody?.sales,
+    responseBody?.items,
+    responseBody?.data,
+    responseBody?.transactions,
+  ];
+
+  for (const list of possibleLists) {
+    if (Array.isArray(list)) {
+      return list;
+    }
+  }
+
+  if (Array.isArray(responseBody)) {
+    return responseBody;
+  }
+
+  return [];
+}
+
+function getRedeSaleDateTime(sale) {
+  const dateValue = getFirstStringValue([sale?.saleDate, sale?.movementDate]);
+  const hourValue = getFirstStringValue([sale?.saleHour, '00:00:00']);
+
+  if (!dateValue) {
+    return new Date();
+  }
+
+  const parsedDate = new Date(`${dateValue}T${hourValue}-03:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return new Date(`${dateValue}T00:00:00-03:00`);
+  }
+
+  return parsedDate;
+}
+
+function getRedeSaleExternalId(sale) {
+  const saleDate = getFirstStringValue([sale?.saleDate, sale?.movementDate, 'unknown_date']);
+  const mainId = getFirstStringValue([
+    sale?.nsu,
+    sale?.ard,
+    sale?.saleSummaryNumber,
+    sale?.authorizationCode,
+    'unknown_id',
+  ]);
+  const secondaryId = getFirstStringValue([
+    sale?.authorizationCode,
+    sale?.device,
+    sale?.saleHour,
+    String(roundMoney(sale?.amount)).replace('.', ''),
+    'unknown_ref',
+  ]);
+
+  return `rede_${saleDate}_${mainId}_${secondaryId}`
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
+function normalizeRedeSaleForTorico(sale) {
+  const createdAt = getRedeSaleDateTime(sale);
+  const amount = roundMoney(sale?.amount);
+  const netAmount = roundMoney(sale?.netAmount);
+  const status = String(sale?.status || '').toUpperCase().trim();
+  const captureType = String(sale?.captureType || '').toUpperCase().trim();
+  const modalityType = String(sale?.modality?.type || '').toUpperCase().trim();
+
+  return {
+    externalId: getRedeSaleExternalId(sale),
+    amount,
+    netAmount,
+    status,
+    captureType,
+    saleDate: getFirstStringValue([sale?.saleDate, sale?.movementDate]) || null,
+    saleHour: getFirstStringValue([sale?.saleHour]) || null,
+    movementDate: getFirstStringValue([sale?.movementDate]) || null,
+    createdAtIso: createdAt.toISOString(),
+    nsu: sale?.nsu !== undefined && sale?.nsu !== null ? String(sale.nsu) : null,
+    authorizationCode:
+      sale?.authorizationCode !== undefined && sale?.authorizationCode !== null
+        ? String(sale.authorizationCode)
+        : null,
+    ard: sale?.ard !== undefined && sale?.ard !== null ? String(sale.ard) : null,
+    device: getFirstStringValue([sale?.device]) || null,
+    installmentQuantity: Number(sale?.installmentQuantity || 1),
+    brandCode: sale?.brandCode !== undefined && sale?.brandCode !== null ? sale.brandCode : null,
+    modalityType: modalityType || null,
+    modalityProduct: getFirstStringValue([sale?.modality?.product]) || null,
+    merchantCompanyNumber: getFirstStringValue([sale?.merchant?.companyNumber]) || null,
+  };
+}
+
+function isRedeSaleEligibleForTorico(sale, allowedCaptureTypes = REDE_ALLOWED_CAPTURE_TYPES) {
+  return (
+    sale.status === 'APPROVED' &&
+    sale.amount > 0 &&
+    allowedCaptureTypes.includes(String(sale.captureType || '').toUpperCase())
+  );
 }
 
 function getPagBankAuthorizationHeader() {
@@ -1682,6 +1951,17 @@ app.get('/health', (req, res) => {
       note:
         'Webhook inicial apenas para receber/logar payload. Nao grava venda no Firestore.',
     },
+    rede: {
+      configured: isRedeConfigured(),
+      apiBaseUrl: REDE_API_BASE_URL,
+      defaultParentCompanyNumberConfigured: Boolean(REDE_DEFAULT_PARENT_COMPANY_NUMBER),
+      defaultSubsidiariesConfigured: Boolean(REDE_DEFAULT_SUBSIDIARIES),
+      allowedCaptureTypes: REDE_ALLOWED_CAPTURE_TYPES,
+      salesTestRoute: '/integrations/rede/sales-test',
+      processingEnabled: false,
+      note:
+        'Consulta inicial apenas para ler/normalizar vendas REDE. Nao grava venda no Firestore.',
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -1947,6 +2227,130 @@ app.post('/webhooks/stone', async (req, res) => {
       ok: false,
       platform: 'stone',
       message: 'Erro interno no webhook Stone/Pagar.me.',
+    });
+  }
+});
+
+
+app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
+  try {
+    const missingConfig = getMissingRedeConfig();
+
+    if (missingConfig.length > 0) {
+      return res.status(503).json({
+        ok: false,
+        platform: 'rede',
+        message: 'Integracao REDE ainda nao configurada completamente no backend.',
+        missingConfig,
+      });
+    }
+
+    const parentCompanyNumber = getRedeQueryValue(
+      req.query.parentCompanyNumber,
+      REDE_DEFAULT_PARENT_COMPANY_NUMBER
+    );
+    const subsidiaries = getRedeQueryValue(
+      req.query.subsidiaries,
+      REDE_DEFAULT_SUBSIDIARIES
+    );
+    const startDate = getRedeQueryValue(
+      req.query.startDate,
+      getBrazilDateStringDaysAgo(REDE_DEFAULT_SALES_LOOKBACK_DAYS)
+    );
+    const endDate = getRedeQueryValue(req.query.endDate, getBrazilDateStringDaysAgo(0));
+    const size = getRedeQueryValue(req.query.size, '20');
+    const status = getRedeQueryValue(req.query.status, '');
+    const brands = getRedeQueryValue(req.query.brands, '');
+    const modalities = getRedeQueryValue(req.query.modalities, '');
+    const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+    const allowedCaptureTypes = String(
+      req.query.captureTypes || REDE_ALLOWED_CAPTURE_TYPES.join(',')
+    )
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter(Boolean);
+
+    const tokenResponse = await fetchRedeAccessToken();
+
+    const redeResponse = await fetchRedeSales({
+      accessToken: tokenResponse.access_token,
+      parentCompanyNumber,
+      subsidiaries,
+      startDate,
+      endDate,
+      size,
+      status,
+      brands,
+      modalities,
+    });
+
+    const rawSales = getRedeSalesList(redeResponse);
+    const normalizedSales = rawSales.map((sale) => normalizeRedeSaleForTorico(sale));
+    const eligibleSales = normalizedSales.filter((sale) =>
+      isRedeSaleEligibleForTorico(sale, allowedCaptureTypes)
+    );
+
+    const totalAmount = roundMoney(
+      eligibleSales.reduce((total, sale) => total + Number(sale.amount || 0), 0)
+    );
+
+    console.log('Consulta REDE sales-test executada:', {
+      parentCompanyNumber,
+      subsidiaries,
+      startDate,
+      endDate,
+      size,
+      status: status || null,
+      brands: brands || null,
+      modalities: modalities || null,
+      rawCount: rawSales.length,
+      eligibleCount: eligibleSales.length,
+      totalAmount,
+      allowedCaptureTypes,
+    });
+
+    return res.status(200).json({
+      ok: true,
+      platform: 'rede',
+      processed: false,
+      saved: false,
+      message:
+        'Consulta REDE executada com sucesso. Vendas foram apenas normalizadas; nada foi salvo no Firestore.',
+      query: {
+        parentCompanyNumber,
+        subsidiaries,
+        startDate,
+        endDate,
+        size,
+        status: status || null,
+        brands: brands || null,
+        modalities: modalities || null,
+        allowedCaptureTypes,
+      },
+      counts: {
+        rawSales: rawSales.length,
+        normalizedSales: normalizedSales.length,
+        eligibleSales: eligibleSales.length,
+        returnedSales: Math.min(eligibleSales.length, limit),
+      },
+      totalAmount,
+      cursor: redeResponse?.cursor || null,
+      sales: eligibleSales.slice(0, limit),
+    });
+  } catch (error) {
+    console.error('Erro na consulta REDE sales-test:', {
+      message: error.message,
+      status: error.status,
+      responseBody: error.responseBody,
+      missingConfig: error.missingConfig,
+    });
+
+    return res.status(error.status || 500).json({
+      ok: false,
+      platform: 'rede',
+      message: error.message || 'Erro interno na consulta REDE.',
+      missingConfig: error.missingConfig || undefined,
+      details: error.responseBody || undefined,
     });
   }
 });
