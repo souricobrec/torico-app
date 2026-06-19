@@ -1675,6 +1675,13 @@ app.get('/health', (req, res) => {
       redirectUri: PAGBANK_REDIRECT_URI,
       scope: getPagBankOAuthScopeForAuthorizationUrl(),
     },
+    stone: {
+      webhookReady: true,
+      processingEnabled: false,
+      route: '/webhooks/stone',
+      note:
+        'Webhook inicial apenas para receber/logar payload. Nao grava venda no Firestore.',
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -1858,6 +1865,88 @@ app.post('/webhooks/pagbank', async (req, res) => {
     return res.status(500).json({
       ok: false,
       message: 'Erro interno no webhook PagBank.',
+    });
+  }
+});
+
+
+app.post('/webhooks/stone', async (req, res) => {
+  try {
+    const eventId = getFirstStringValue([
+      req.body?.id,
+      req.body?.event_id,
+      req.body?.eventId,
+      req.body?.data?.id,
+      req.body?.data?.event_id,
+      req.body?.data?.eventId,
+      req.query?.id,
+      req.query?.event_id,
+      req.query?.eventId,
+    ]);
+
+    const eventType = getFirstStringValue([
+      req.body?.type,
+      req.body?.event,
+      req.body?.event_type,
+      req.body?.eventType,
+      req.body?.name,
+      req.body?.data?.type,
+      req.body?.data?.event,
+      req.body?.data?.event_type,
+      req.body?.data?.eventType,
+      req.query?.type,
+      req.query?.event,
+      req.query?.event_type,
+      req.query?.eventType,
+    ]);
+
+    const chargeId = getFirstStringValue([
+      req.body?.charge?.id,
+      req.body?.data?.charge?.id,
+      req.body?.data?.id,
+      req.body?.payload?.charge?.id,
+      req.body?.payload?.id,
+      req.body?.id,
+    ]);
+
+    const signaturePresent = Boolean(
+      req.get('x-hub-signature') ||
+        req.get('x-hub-signature-256') ||
+        req.get('x-pagarme-signature') ||
+        req.get('x-stone-signature') ||
+        req.get('signature')
+    );
+
+    console.log('Webhook Stone/Pagar.me recebido:', {
+      eventId,
+      eventType,
+      chargeId,
+      query: req.query,
+      headers: {
+        'user-agent': req.get('user-agent'),
+        'x-forwarded-for': req.get('x-forwarded-for'),
+        signaturePresent,
+      },
+      body: req.body,
+    });
+
+    return res.status(200).json({
+      ok: true,
+      platform: 'stone',
+      processed: false,
+      eventId: eventId || null,
+      eventType: eventType || null,
+      chargeId: chargeId || null,
+      message:
+        'Webhook Stone/Pagar.me recebido. Processamento de vendas sera ativado apos validacao do payload real.',
+    });
+  } catch (error) {
+    console.error('Erro no webhook Stone/Pagar.me:', error.message);
+
+    return res.status(500).json({
+      ok: false,
+      platform: 'stone',
+      message: 'Erro interno no webhook Stone/Pagar.me.',
     });
   }
 });
