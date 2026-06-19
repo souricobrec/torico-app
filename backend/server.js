@@ -84,7 +84,7 @@ const PAGBANK_REDIRECT_URI =
   process.env.PAGBANK_REDIRECT_URI ||
   `${PUBLIC_BACKEND_URL}/integrations/pagbank/callback`;
 const PAGBANK_OAUTH_SCOPE =
-  process.env.PAGBANK_OAUTH_SCOPE || 'payments.read+accounts.read';
+  process.env.PAGBANK_OAUTH_SCOPE || 'payments.read accounts.read';
 
 const PAGBANK_CONNECT_AUTHORIZE_URL =
   PAGBANK_ENVIRONMENT === 'production'
@@ -1548,6 +1548,93 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
   };
 }
 
+
+
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
+function getPagBankOAuthScopeForAuthorizationUrl() {
+  return String(PAGBANK_OAUTH_SCOPE || '')
+    .replace(/\+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function createStoredOAuthState({ userId, platform = 'pagbank' }) {
+  const platformId = normalizePlatformId(platform);
+  const state = `pb${crypto.randomBytes(24).toString('hex')}`;
+  const expiresAt = new Date(Date.now() + OAUTH_STATE_TTL_MS);
+
+  await db.collection('oauth_states').doc(state).set({
+    userId,
+    platformId,
+    state,
+    used: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+  });
+
+  return state;
+}
+
+async function verifyStoredOAuthState(state, { platform = 'pagbank' } = {}) {
+  const expectedPlatformId = normalizePlatformId(platform);
+  const stateValue = String(state || '').trim();
+
+  if (!/^[A-Za-z0-9]{8,128}$/.test(stateValue)) {
+    throw new Error('State OAuth PagBank ausente ou invalido.');
+  }
+
+  const stateRef = db.collection('oauth_states').doc(stateValue);
+  const stateSnapshot = await stateRef.get();
+
+  if (!stateSnapshot.exists) {
+    throw new Error('State OAuth PagBank nao encontrado ou ja expirado.');
+  }
+
+  const stateData = stateSnapshot.data() || {};
+
+  if (normalizePlatformId(stateData.platformId) !== expectedPlatformId) {
+    throw new Error('State OAuth PagBank pertence a outra plataforma.');
+  }
+
+  if (!stateData.userId || typeof stateData.userId !== 'string') {
+    throw new Error('State OAuth PagBank sem userId valido.');
+  }
+
+  if (stateData.used) {
+    throw new Error('State OAuth PagBank ja utilizado.');
+  }
+
+  const expiresAt =
+    stateData.expiresAt && typeof stateData.expiresAt.toDate === 'function'
+      ? stateData.expiresAt.toDate()
+      : null;
+
+  if (!expiresAt || expiresAt.getTime() < Date.now()) {
+    await stateRef.set(
+      {
+        used: true,
+        expiredAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    throw new Error('State OAuth PagBank expirado.');
+  }
+
+  await stateRef.set(
+    {
+      used: true,
+      usedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return {
+    userId: stateData.userId,
+    platformId: stateData.platformId,
+  };
+}
 app.get('/', (req, res) => {
   return res.status(200).json({
     ok: true,
@@ -1586,14 +1673,14 @@ app.get('/health', (req, res) => {
       tokenUrl: PAGBANK_OAUTH_TOKEN_URL,
       refreshUrl: PAGBANK_OAUTH_REFRESH_URL,
       redirectUri: PAGBANK_REDIRECT_URI,
-      scope: PAGBANK_OAUTH_SCOPE,
+      scope: getPagBankOAuthScopeForAuthorizationUrl(),
     },
     timestamp: new Date().toISOString(),
   });
 });
 
 
-app.get('/integrations/pagbank/connect', (req, res) => {
+app.get('/integrations/pagbank/connect', async (req, res) => {
   try {
     const userId = String(req.query.userId || '').trim();
 
@@ -1614,13 +1701,13 @@ app.get('/integrations/pagbank/connect', (req, res) => {
       });
     }
 
-    const state = createOAuthState({ userId, platform: 'pagbank' });
+    const state = await createStoredOAuthState({ userId, platform: 'pagbank' });
     const authorizationUrl = new URL(PAGBANK_CONNECT_AUTHORIZE_URL);
 
     authorizationUrl.searchParams.set('response_type', 'code');
     authorizationUrl.searchParams.set('client_id', PAGBANK_CLIENT_ID);
     authorizationUrl.searchParams.set('redirect_uri', PAGBANK_REDIRECT_URI);
-    authorizationUrl.searchParams.set('scope', PAGBANK_OAUTH_SCOPE);
+    authorizationUrl.searchParams.set('scope', getPagBankOAuthScopeForAuthorizationUrl());
     authorizationUrl.searchParams.set('state', state);
 
     return res.redirect(authorizationUrl.toString());
@@ -1681,7 +1768,7 @@ app.get('/integrations/pagbank/callback', async (req, res) => {
       `);
     }
 
-    const statePayload = verifyOAuthState(String(state), { platform: 'pagbank' });
+    const statePayload = await verifyStoredOAuthState(String(state), { platform: 'pagbank' });
 
     const tokenResponse = await fetch(PAGBANK_OAUTH_TOKEN_URL, {
       method: 'POST',
