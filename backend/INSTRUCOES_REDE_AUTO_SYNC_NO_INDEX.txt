@@ -1,0 +1,42 @@
+TORICO - Correção sync automático REDE sem índice composto
+
+Arquivo:
+- server.js atualizado
+
+Correção aplicada:
+- A rota POST /integrations/rede/sync-connected-users usava collectionGroup com dois filtros:
+  platformId == rede e status == connected.
+- O Firestore exigiu índice composto.
+- Para evitar essa dependência agora, a busca passou a filtrar no Firestore apenas:
+  platformId == rede
+- O status == connected é filtrado em memória no backend.
+
+Teste local:
+node --check server.js
+
+Commit sugerido:
+git add server.js INSTRUCOES_REDE_AUTO_SYNC_NO_INDEX.txt
+git commit -m "Evita indice composto no sync automatico REDE"
+git push origin visual-pre-lojas
+
+gcloud run deploy torico-backend --source . --region us-central1 --allow-unauthenticated
+
+Depois testar novamente:
+$today = (Get-Date).ToString("yyyy-MM-dd")
+
+$body = @{
+  dryRun = $true
+  startDate = $today
+  endDate = $today
+  size = "5"
+  modalities = "CREDIT,DEBIT"
+  creditBrands = "1"
+  maxUsers = 10
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/sync-connected-users" `
+  -Headers @{ "x-torico-dev-key" = "$($newKey.Trim())" } `
+  -ContentType "application/json" `
+  -Body $body | ConvertTo-Json -Depth 20
