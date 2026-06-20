@@ -49,8 +49,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _IntegrationInfo(
       platform: 'Rede',
       platformId: 'rede',
-      status: 'Conectado por API',
-      description: 'Integração via API Gestão de Vendas e sincronização segura pelo backend.',
+      status: 'Ativação assistida',
+      description: 'Integração via API Gestão de Vendas, com ativação segura pelo backend.',
     ),
     _IntegrationInfo(
       platform: 'Getnet',

@@ -6,6 +6,7 @@ import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import 'auth_screen.dart';
 import 'connected_screen.dart';
+import 'rede_connect_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,7 +31,12 @@ class _LoginScreenState extends State<LoginScreen> {
     _PaymentPlatformOption(id: 'pagbank', name: 'PagBank', available: false),
     _PaymentPlatformOption(id: 'stone', name: 'Stone', available: false),
     _PaymentPlatformOption(id: 'cielo', name: 'Cielo', available: false),
-    _PaymentPlatformOption(id: 'rede', name: 'Rede', available: false),
+    _PaymentPlatformOption(
+      id: 'rede',
+      name: 'Rede',
+      available: false,
+      assistedActivation: true,
+    ),
     _PaymentPlatformOption(id: 'getnet', name: 'Getnet', available: false),
     _PaymentPlatformOption(id: 'pagar_me', name: 'Pagar.me', available: false),
     _PaymentPlatformOption(id: 'asaas', name: 'Asaas', available: false),
@@ -99,6 +105,16 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    if (platform.assistedActivation) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const RedeConnectScreen()),
+      ).then((_) {
+        _loadConnectedPlatforms();
+      });
+      return;
+    }
+
     if (platform.available) {
       Navigator.push(
         context,
@@ -130,11 +146,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final selected = _selectedPlatform;
     final selectedConnected = _isConnected(selected.name);
-    final selectedInProgress = !selected.available && !selectedConnected;
+    final selectedAssisted = selected.assistedActivation && !selectedConnected;
+    final selectedInProgress =
+        !selected.available && !selectedAssisted && !selectedConnected;
 
     final Color actionColor = selectedConnected
         ? Colors.greenAccent
-        : selected.available
+        : selected.available || selectedAssisted
         ? AppColors.gold
         : _inProgressOrange;
 
@@ -195,15 +213,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? Colors.greenAccent.withValues(alpha: 0.16)
                               : selected.available
                               ? AppColors.gold
+                              : selectedAssisted
+                              ? AppColors.gold.withValues(alpha: 0.16)
                               : _inProgressOrange.withValues(alpha: 0.16),
                           foregroundColor: selectedConnected
                               ? Colors.greenAccent
                               : selected.available
                               ? Colors.black
+                              : selectedAssisted
+                              ? AppColors.goldLight
                               : _inProgressOrange,
-                          elevation: selected.available || selectedConnected
-                              ? 10
-                              : 0,
+                          elevation:
+                              selected.available || selectedConnected ? 10 : 0,
                           shadowColor: selectedInProgress
                               ? _inProgressOrange.withValues(alpha: 0.18)
                               : actionColor.withValues(alpha: 0.22),
@@ -212,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             side: BorderSide(
                               color: selectedConnected
                                   ? Colors.greenAccent.withValues(alpha: 0.42)
-                                  : selected.available
+                                  : selected.available || selectedAssisted
                                   ? AppColors.goldLight.withValues(alpha: 0.42)
                                   : _inProgressOrange.withValues(alpha: 0.45),
                               width: 1.2,
@@ -225,6 +246,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? Icons.dashboard_customize_rounded
                               : selected.available
                               ? Icons.link_rounded
+                              : selectedAssisted
+                              ? Icons.assignment_turned_in_rounded
                               : Icons.schedule_rounded,
                         ),
                         label: Text(
@@ -232,6 +255,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? 'Abrir painel'
                               : selected.available
                               ? 'Conectar ${selected.name}'
+                              : selectedAssisted
+                              ? 'Solicitar ativação da Rede'
                               : 'Integração em andamento',
                           style: const TextStyle(
                             fontSize: 16.5,
@@ -259,11 +284,13 @@ class _PaymentPlatformOption {
   final String id;
   final String name;
   final bool available;
+  final bool assistedActivation;
 
   const _PaymentPlatformOption({
     required this.id,
     required this.name,
     required this.available,
+    this.assistedActivation = false,
   });
 }
 
@@ -465,11 +492,15 @@ class _PlatformMenu extends StatelessWidget {
                         ? 'Conectado'
                         : platform.available
                         ? 'Disponível'
+                        : platform.assistedActivation
+                        ? 'Ativação assistida'
                         : 'Em andamento',
                     color: connected
                         ? Colors.greenAccent
                         : platform.available
                         ? availableColor
+                        : platform.assistedActivation
+                        ? AppColors.goldLight
                         : inProgressColor,
                   ),
                 ],
@@ -544,7 +575,7 @@ class _IntegrationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'O TORICO só libera integrações reais quando houver conexão oficial, segura e validada no backend. Mercado Pago já está disponível; as demais plataformas estão com integração em andamento.',
+              'Mercado Pago usa autorização oficial OAuth. A Rede está em ativação assistida via backend seguro. O TORICO não solicita senhas de plataformas externas.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.70),
                 fontSize: isMobile ? 13 : 14,

@@ -144,7 +144,7 @@ class IntegrationService {
     }
 
     if (_isRede(plataforma)) {
-      return 'Conexão real por API';
+      return 'Ativação assistida';
     }
 
     return 'Integração em andamento';
@@ -156,7 +156,7 @@ class IntegrationService {
     }
 
     if (_isRede(plataforma)) {
-      return 'A Rede é sincronizada pelo backend via API Gestão de Vendas. O app consulta apenas o status público da integração.';
+      return 'A Rede é ativada de forma assistida e sincronizada pelo backend via API Gestão de Vendas. O app consulta apenas o status público da integração.';
     }
 
     return '$plataforma será liberada quando houver integração oficial e segura no backend.';
