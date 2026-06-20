@@ -1,0 +1,44 @@
+TORICO - Registro de status da integração REDE
+
+Arquivo:
+- server.js atualizado
+
+O que foi adicionado:
+- Rota POST /integrations/rede/connect-test
+- Protegida por x-torico-dev-key
+- Registra a integração REDE para um usuário no Firestore:
+  users/{uid}/integrations/rede
+  users/{uid}/integration_status/rede
+- Não salva ClientId nem ClientSecret do backend no documento do usuário.
+- Salva apenas dados não sensíveis:
+  platform, platformId, status, environment, syncMode, parentCompanyNumber,
+  subsidiaries e allowedCaptureTypes.
+- A rota POST /integrations/rede/sync-sales agora pode usar a configuração
+  salva em integrations/rede quando parentCompanyNumber/subsidiaries não forem enviados no body.
+
+Teste local:
+node --check server.js
+
+Commit sugerido:
+git add server.js INSTRUCOES_REDE_CONNECT_STATUS.txt
+git commit -m "Registra status da integracao REDE"
+git push origin visual-pre-lojas
+
+Deploy:
+gcloud run deploy torico-backend --source . --region us-central1 --allow-unauthenticated
+
+Registrar REDE para o usuário:
+$body = @{
+  userId = $uid
+  parentCompanyNumber = "13381369"
+  subsidiaries = "13381369"
+  captureTypes = "POS,PDV"
+  environment = "sandbox"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/connect-test" `
+  -Headers @{ "x-torico-dev-key" = $newKey } `
+  -ContentType "application/json" `
+  -Body $body | ConvertTo-Json -Depth 20

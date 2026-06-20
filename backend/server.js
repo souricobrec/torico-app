@@ -852,6 +852,32 @@ function isRedeSaleEligibleForTorico(sale, allowedCaptureTypes = REDE_ALLOWED_CA
   );
 }
 
+async function getRedeIntegrationDataForUser(userId) {
+  if (!userId) {
+    return null;
+  }
+
+  const integrationSnapshot = await db
+    .collection('users')
+    .doc(userId)
+    .collection('integrations')
+    .doc('rede')
+    .get();
+
+  if (!integrationSnapshot.exists) {
+    return null;
+  }
+
+  return integrationSnapshot.data() || null;
+}
+
+function getRedeCaptureTypes(value, fallback = REDE_ALLOWED_CAPTURE_TYPES.join(',')) {
+  return String(value || fallback)
+    .split(',')
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean);
+}
+
 function getPagBankAuthorizationHeader() {
   const token = String(PAGBANK_AUTHORIZATION_TOKEN || '').trim();
 
@@ -2063,6 +2089,7 @@ app.get('/health', (req, res) => {
       defaultSubsidiariesConfigured: Boolean(REDE_DEFAULT_SUBSIDIARIES),
       allowedCaptureTypes: REDE_ALLOWED_CAPTURE_TYPES,
       salesTestRoute: '/integrations/rede/sales-test',
+      connectTestRoute: '/integrations/rede/connect-test',
       syncSalesRoute: '/integrations/rede/sync-sales',
       processingEnabled: false,
       note:
@@ -2472,6 +2499,112 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
 });
 
 
+
+app.post('/integrations/rede/connect-test', requireDevKey, async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const userId = getFirstStringValue([body.userId, req.query.userId]);
+
+    if (!userId) {
+      return res.status(400).json({
+        ok: false,
+        platform: 'rede',
+        message: 'Informe userId para registrar a integracao REDE.',
+      });
+    }
+
+    const parentCompanyNumber = getRedeQueryValue(
+      body.parentCompanyNumber ?? req.query.parentCompanyNumber,
+      REDE_DEFAULT_PARENT_COMPANY_NUMBER
+    );
+    const subsidiaries = getRedeQueryValue(
+      body.subsidiaries ?? req.query.subsidiaries,
+      REDE_DEFAULT_SUBSIDIARIES
+    );
+    const allowedCaptureTypes = getRedeCaptureTypes(
+      body.captureTypes || req.query.captureTypes || REDE_ALLOWED_CAPTURE_TYPES.join(',')
+    );
+    const environment = getRedeQueryValue(body.environment ?? req.query.environment, 'sandbox');
+
+    const integrationRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('integrations')
+      .doc('rede');
+    const publicStatusRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('integration_status')
+      .doc('rede');
+
+    const integrationData = {
+      platform: 'Rede',
+      platformId: 'rede',
+      status: 'connected',
+      environment,
+      syncMode: 'api_polling',
+      credentialsSource: 'backend_env',
+      apiBaseUrl: REDE_API_BASE_URL,
+      parentCompanyNumber,
+      subsidiaries,
+      allowedCaptureTypes,
+      connectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    const publicStatusData = {
+      platform: 'Rede',
+      platformId: 'rede',
+      status: 'connected',
+      environment,
+      syncMode: 'api_polling',
+      parentCompanyNumber,
+      subsidiaries,
+      allowedCaptureTypes,
+      connectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.runTransaction(async (transaction) => {
+      transaction.set(integrationRef, integrationData, { merge: true });
+      transaction.set(publicStatusRef, publicStatusData, { merge: true });
+    });
+
+    console.log('Integracao REDE registrada:', {
+      userId,
+      parentCompanyNumber,
+      subsidiaries,
+      environment,
+      allowedCaptureTypes,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      platform: 'rede',
+      message: 'Integracao REDE registrada para o usuario.',
+      integration: {
+        userId,
+        platform: 'Rede',
+        platformId: 'rede',
+        status: 'connected',
+        environment,
+        syncMode: 'api_polling',
+        parentCompanyNumber,
+        subsidiaries,
+        allowedCaptureTypes,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao registrar integracao REDE:', error.message);
+
+    return res.status(500).json({
+      ok: false,
+      platform: 'rede',
+      message: 'Erro interno ao registrar integracao REDE.',
+    });
+  }
+});
+
 app.post('/integrations/rede/sync-sales', requireDevKey, async (req, res) => {
   try {
     const missingConfig = getMissingRedeConfig();
@@ -2498,14 +2631,15 @@ app.post('/integrations/rede/sync-sales', requireDevKey, async (req, res) => {
 
     const dryRunValue = getFirstStringValue([body.dryRun, req.query.dryRun, 'true']);
     const dryRun = String(dryRunValue).toLowerCase().trim() !== 'false';
+    const redeIntegrationData = await getRedeIntegrationDataForUser(userId);
 
     const parentCompanyNumber = getRedeQueryValue(
       body.parentCompanyNumber ?? req.query.parentCompanyNumber,
-      REDE_DEFAULT_PARENT_COMPANY_NUMBER
+      redeIntegrationData?.parentCompanyNumber || REDE_DEFAULT_PARENT_COMPANY_NUMBER
     );
     const subsidiaries = getRedeQueryValue(
       body.subsidiaries ?? req.query.subsidiaries,
-      REDE_DEFAULT_SUBSIDIARIES
+      redeIntegrationData?.subsidiaries || REDE_DEFAULT_SUBSIDIARIES
     );
     const startDate = getRedeQueryValue(
       body.startDate ?? req.query.startDate,
@@ -2522,12 +2656,9 @@ app.post('/integrations/rede/sync-sales', requireDevKey, async (req, res) => {
     const nextKey = getRedeQueryValue(body.nextKey ?? req.query.nextKey, '');
     const limit = Math.min(Math.max(Number(body.limit || req.query.limit || 50), 1), 100);
 
-    const allowedCaptureTypes = String(
-      body.captureTypes || req.query.captureTypes || REDE_ALLOWED_CAPTURE_TYPES.join(',')
-    )
-      .split(',')
-      .map((value) => value.trim().toUpperCase())
-      .filter(Boolean);
+    const allowedCaptureTypes = getRedeCaptureTypes(
+      body.captureTypes || req.query.captureTypes || redeIntegrationData?.allowedCaptureTypes
+    );
 
     const tokenResponse = await fetchRedeAccessToken();
 
