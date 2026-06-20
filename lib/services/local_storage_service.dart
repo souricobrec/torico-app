@@ -35,16 +35,34 @@ class LocalStorageService {
     await prefs.setString(_platformsKey, jsonEncode(platforms));
   }
 
-  Future<String?> getConnectedPlatform() async {
+  Future<void> saveConnectedPlatforms(List<String> plataformas) async {
     final prefs = await SharedPreferences.getInstance();
 
-    final lastPlatform = prefs.getString(_platformKey);
-    if (lastPlatform != null && lastPlatform.isNotEmpty) {
-      return lastPlatform;
+    final platforms = plataformas
+        .map((platform) => platform.trim())
+        .where((platform) => platform.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (platforms.isEmpty) {
+      await clearConnectedPlatform();
+      return;
     }
 
+    await prefs.setString(_platformKey, platforms.first);
+    await prefs.setString(_platformsKey, jsonEncode(platforms));
+  }
+
+  Future<String?> getConnectedPlatform() async {
     final platforms = await getConnectedPlatforms();
     if (platforms.isEmpty) return null;
+
+    final prefs = await SharedPreferences.getInstance();
+    final lastPlatform = prefs.getString(_platformKey);
+
+    if (lastPlatform != null && platforms.contains(lastPlatform)) {
+      return lastPlatform;
+    }
 
     return platforms.first;
   }

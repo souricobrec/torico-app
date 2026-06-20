@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
+import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import 'auth_screen.dart';
 import 'connected_screen.dart';
@@ -15,6 +16,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final LocalStorageService _storage = LocalStorageService();
+  final IntegrationService _integrationService = IntegrationService();
 
   static const Color _inProgressOrange = Color(0xFFFFA726);
   static const Color _availableGreen = Color(0xFF00FF66);
@@ -45,7 +47,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loadConnectedPlatforms() async {
-    final platforms = await _storage.getConnectedPlatforms();
+    List<String> platforms;
+
+    try {
+      platforms = await _integrationService.syncConnectedPlatformsToLocalStorage(
+        _storage,
+      );
+    } catch (_) {
+      platforms = await _storage.getConnectedPlatforms();
+    }
 
     if (!mounted) return;
 

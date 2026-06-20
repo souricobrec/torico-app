@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import 'about_screen.dart';
 import 'login_screen.dart';
@@ -18,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final LocalStorageService _storage = LocalStorageService();
+  final IntegrationService _integrationService = IntegrationService();
 
   static const List<_IntegrationInfo> integrationCatalog = [
     _IntegrationInfo(
@@ -47,8 +49,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _IntegrationInfo(
       platform: 'Rede',
       platformId: 'rede',
-      status: 'Em andamento',
-      description: 'Integração futura por canais oficiais.',
+      status: 'Conectado por API',
+      description: 'Integração via API Gestão de Vendas e sincronização segura pelo backend.',
     ),
     _IntegrationInfo(
       platform: 'Getnet',
@@ -92,7 +94,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPlatforms() async {
-    final platforms = await _storage.getConnectedPlatforms();
+    List<String> platforms;
+
+    try {
+      platforms = await _integrationService.syncConnectedPlatformsToLocalStorage(
+        _storage,
+      );
+    } catch (_) {
+      platforms = await _storage.getConnectedPlatforms();
+    }
 
     if (!mounted) return;
 
@@ -136,7 +146,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Monitorando Mercado Pago com integração oficial';
       }
 
-      return 'Monitorando ${connectedPlatforms.first} em modo de teste';
+      if (connectedPlatforms.first == 'Rede') {
+        return 'Monitorando Rede com integração por API';
+      }
+
+      return 'Monitorando ${connectedPlatforms.first} em preparação';
     }
 
     return 'Monitorando ${connectedPlatforms.length} fontes de venda';
@@ -208,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _CompactInfoCard(
                           icon: Icons.info_outline_rounded,
                           text:
-                              'Nenhuma integração ativa no momento. Conecte o Mercado Pago em Gerenciar conexões.',
+                              'Nenhuma integração ativa no momento. Conecte uma plataforma em Gerenciar conexões.',
                         ),
                       ]
                     : activeIntegrations
@@ -585,7 +599,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 if (connectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
                     text:
-                        'Conecte o Mercado Pago ou ative uma fonte de teste para iniciar o painel.',
+                        'Conecte Mercado Pago ou Rede para iniciar o painel.',
                   )
                 else
                   Wrap(

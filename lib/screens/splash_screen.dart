@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/app_texts.dart';
+import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import 'main_navigation_screen.dart';
 import 'login_screen.dart';
@@ -17,6 +18,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final LocalStorageService _storage = LocalStorageService();
+  final IntegrationService _integrationService = IntegrationService();
 
   @override
   void initState() {
@@ -28,7 +30,6 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 3));
 
     final usuario = FirebaseAuth.instance.currentUser;
-    final plataforma = await _storage.getConnectedPlatform();
 
     if (!mounted) return;
 
@@ -39,6 +40,23 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       return;
     }
+
+    List<String> connectedPlatforms;
+
+    try {
+      connectedPlatforms = await _integrationService
+          .syncConnectedPlatformsToLocalStorage(_storage);
+    } catch (_) {
+      connectedPlatforms = await _storage.getConnectedPlatforms();
+    }
+
+    if (!mounted) return;
+
+    final plataforma = connectedPlatforms.isNotEmpty
+        ? connectedPlatforms.first
+        : await _storage.getConnectedPlatform();
+
+    if (!mounted) return;
 
     if (plataforma != null) {
       Navigator.pushReplacement(

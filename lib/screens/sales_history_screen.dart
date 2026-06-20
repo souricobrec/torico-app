@@ -32,7 +32,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     _PlatformFilterOption(name: 'Stone', status: 'Em andamento'),
     _PlatformFilterOption(name: 'PagBank', status: 'Em andamento'),
     _PlatformFilterOption(name: 'Cielo', status: 'Em andamento'),
-    _PlatformFilterOption(name: 'Rede', status: 'Em andamento'),
+    _PlatformFilterOption(
+      name: 'Rede',
+      status: 'Conectado',
+      enabled: true,
+    ),
     _PlatformFilterOption(name: 'Getnet', status: 'Em andamento'),
     _PlatformFilterOption(name: 'Pagar.me', status: 'Em andamento'),
     _PlatformFilterOption(name: 'Asaas', status: 'Em andamento'),
@@ -309,7 +313,8 @@ class _HistoryPlatformFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final moreSelected =
         selectedFilter != _SalesHistoryScreenState.allFilter &&
-        selectedFilter != 'Mercado Pago';
+        selectedFilter != 'Mercado Pago' &&
+        selectedFilter != 'Rede';
 
     return SizedBox(
       height: 36,
@@ -327,6 +332,12 @@ class _HistoryPlatformFilters extends StatelessWidget {
             text: 'Mercado Pago',
             selected: selectedFilter == 'Mercado Pago',
             onTap: () => onSelected('Mercado Pago'),
+          ),
+          const SizedBox(width: 8),
+          _CompactFilterChip(
+            text: 'Rede',
+            selected: selectedFilter == 'Rede',
+            onTap: () => onSelected('Rede'),
           ),
           const SizedBox(width: 8),
           _CompactFilterChip(

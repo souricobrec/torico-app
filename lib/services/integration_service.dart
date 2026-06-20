@@ -2,17 +2,32 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'local_storage_service.dart';
+
 class IntegrationService {
   static const String _backendBaseUrl =
       'https://torico-backend-16783123127.us-central1.run.app';
+
+  static const Map<String, String> _supportedPlatformIds = {
+    'Mercado Pago': 'mercado_pago',
+    'Rede': 'rede',
+  };
 
   bool _isMercadoPago(String plataforma) {
     return plataforma.trim().toLowerCase() == 'mercado pago';
   }
 
+  bool _isRede(String plataforma) {
+    return plataforma.trim().toLowerCase() == 'rede';
+  }
+
   String _platformId(String plataforma) {
-    if (_isMercadoPago(plataforma)) {
-      return 'mercado_pago';
+    final normalized = plataforma.trim().toLowerCase();
+
+    for (final entry in _supportedPlatformIds.entries) {
+      if (entry.key.toLowerCase() == normalized) {
+        return entry.value;
+      }
     }
 
     return plataforma
@@ -27,9 +42,13 @@ class IntegrationService {
       return _openMercadoPagoOAuth();
     }
 
-    // Stone e PagBank continuam simulados nesta fase do MVP.
-    await Future.delayed(const Duration(seconds: 2));
-    return true;
+    if (_isRede(plataforma)) {
+      return isPlatformConnected(plataforma);
+    }
+
+    // Stone e PagBank continuam indisponíveis nesta fase do MVP.
+    await Future.delayed(const Duration(milliseconds: 600));
+    return false;
   }
 
   Future<bool> _openMercadoPagoOAuth() async {
@@ -57,41 +76,13 @@ class IntegrationService {
   }
 
   Future<bool> isPlatformConnected(String plataforma) async {
-    if (!_isMercadoPago(plataforma)) {
-      return false;
-    }
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      throw Exception('Usuário não autenticado no TORICO.');
-    }
-
-    final platformId = _platformId(plataforma);
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('integration_status')
-        .doc(platformId)
-        .get();
-
-    final data = doc.data();
-
-    if (!doc.exists || data == null) {
-      return false;
-    }
-
-    return data['status'] == 'connected';
+    final integration = await getPlatformIntegration(plataforma);
+    return integration?['status'] == 'connected';
   }
 
   Future<Map<String, dynamic>?> getPlatformIntegration(
     String plataforma,
   ) async {
-    if (!_isMercadoPago(plataforma)) {
-      return null;
-    }
-
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -107,7 +98,44 @@ class IntegrationService {
         .doc(platformId)
         .get();
 
+    if (!doc.exists) {
+      return null;
+    }
+
     return doc.data();
+  }
+
+  Future<List<String>> getConnectedPlatforms() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      throw Exception('Usuário não autenticado no TORICO.');
+    }
+
+    final connectedPlatforms = <String>[];
+    final statusCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('integration_status');
+
+    for (final entry in _supportedPlatformIds.entries) {
+      final doc = await statusCollection.doc(entry.value).get();
+      final data = doc.data();
+
+      if (doc.exists && data != null && data['status'] == 'connected') {
+        connectedPlatforms.add(entry.key);
+      }
+    }
+
+    return connectedPlatforms;
+  }
+
+  Future<List<String>> syncConnectedPlatformsToLocalStorage(
+    LocalStorageService storage,
+  ) async {
+    final connectedPlatforms = await getConnectedPlatforms();
+    await storage.saveConnectedPlatforms(connectedPlatforms);
+    return connectedPlatforms;
   }
 
   String getConnectionModeLabel(String plataforma) {
@@ -115,7 +143,11 @@ class IntegrationService {
       return 'Conexão real por OAuth';
     }
 
-    return 'Conexão simulada';
+    if (_isRede(plataforma)) {
+      return 'Conexão real por API';
+    }
+
+    return 'Integração em andamento';
   }
 
   String getConnectionModeDescription(String plataforma) {
@@ -123,6 +155,10 @@ class IntegrationService {
       return 'O Mercado Pago será conectado usando autorização oficial. O TORICO não pede sua senha e os tokens ficam protegidos no backend.';
     }
 
-    return '$plataforma será adicionada em modo de teste. Vendas reais ainda não serão recebidas automaticamente.';
+    if (_isRede(plataforma)) {
+      return 'A Rede é sincronizada pelo backend via API Gestão de Vendas. O app consulta apenas o status público da integração.';
+    }
+
+    return '$plataforma será liberada quando houver integração oficial e segura no backend.';
   }
 }

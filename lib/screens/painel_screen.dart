@@ -4,6 +4,7 @@ import '../core/app_colors.dart';
 import '../core/currency_formatter.dart';
 import '../controllers/sales_controller.dart';
 import '../services/audio_service.dart';
+import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import '../widgets/coin_rain.dart';
 
@@ -20,6 +21,7 @@ class _PainelScreenState extends State<PainelScreen> {
   final SalesController _salesController = SalesController();
   final AudioService _audioService = AudioService();
   final LocalStorageService _storage = LocalStorageService();
+  final IntegrationService _integrationService = IntegrationService();
 
   bool mostrarMoedas = false;
   bool mostrarGanho = false;
@@ -98,7 +100,15 @@ class _PainelScreenState extends State<PainelScreen> {
   }
 
   Future<void> carregarPlataformas() async {
-    final platforms = await _storage.getConnectedPlatforms();
+    List<String> platforms;
+
+    try {
+      platforms = await _integrationService.syncConnectedPlatformsToLocalStorage(
+        _storage,
+      );
+    } catch (_) {
+      platforms = await _storage.getConnectedPlatforms();
+    }
 
     if (!mounted) return;
 
