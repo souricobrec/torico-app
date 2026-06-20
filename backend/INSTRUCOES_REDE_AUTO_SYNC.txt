@@ -1,0 +1,70 @@
+TORICO - Sincronização automática REDE
+
+Arquivo:
+- server.js atualizado
+
+O que foi adicionado:
+- Rota POST /integrations/rede/sync-connected-users
+- Protegida por x-torico-dev-key
+- Busca usuários com users/{uid}/integration_status/rede status=connected usando collectionGroup
+- Sincroniza CREDIT e DEBIT por usuário conectado
+- dryRun=true por padrão
+- dryRun=false salva no Firestore com saveSale()
+- Mantém idempotência por externalId
+- Usa a configuração salva em users/{uid}/integrations/rede
+- Atualiza daily_totals automaticamente pela função saveSale existente
+- Adiciona a rota no /health em health.rede.syncConnectedUsersRoute
+
+Teste local:
+node --check server.js
+
+Commit sugerido:
+git add server.js INSTRUCOES_REDE_AUTO_SYNC.txt
+git commit -m "Adiciona sincronizacao automatica REDE"
+git push origin visual-pre-lojas
+
+Deploy Cloud Run:
+gcloud run deploy torico-backend --source . --region us-central1 --allow-unauthenticated
+
+Teste dryRun sandbox hoje:
+$today = (Get-Date).ToString("yyyy-MM-dd")
+
+$body = @{
+  dryRun = $true
+  startDate = $today
+  endDate = $today
+  size = "5"
+  modalities = "CREDIT,DEBIT"
+  creditBrands = "1"
+  maxUsers = 10
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/sync-connected-users" `
+  -Headers @{ "x-torico-dev-key" = "$newKey" } `
+  -ContentType "application/json" `
+  -Body $body | ConvertTo-Json -Depth 20
+
+Salvar sandbox hoje:
+$body = @{
+  dryRun = $false
+  startDate = $today
+  endDate = $today
+  size = "5"
+  modalities = "CREDIT,DEBIT"
+  creditBrands = "1"
+  maxUsers = 10
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/sync-connected-users" `
+  -Headers @{ "x-torico-dev-key" = "$newKey" } `
+  -ContentType "application/json" `
+  -Body $body | ConvertTo-Json -Depth 20
+
+Observação:
+- creditBrands="1" foi mantido nos testes sandbox porque foi o filtro que retornou as vendas de crédito no ambiente REDE sandbox.
+- Em produção, avaliar remover creditBrands para não limitar marcas/bandeiras.
+- A rota ainda não cria Cloud Scheduler sozinha; primeiro vamos validar manualmente.

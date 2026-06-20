@@ -2091,6 +2091,7 @@ app.get('/health', (req, res) => {
       salesTestRoute: '/integrations/rede/sales-test',
       connectTestRoute: '/integrations/rede/connect-test',
       syncSalesRoute: '/integrations/rede/sync-sales',
+      syncConnectedUsersRoute: '/integrations/rede/sync-connected-users',
       processingEnabled: false,
       note:
         'Consulta inicial apenas para ler/normalizar vendas REDE. Nao grava venda no Firestore.',
@@ -2601,6 +2602,332 @@ app.post('/integrations/rede/connect-test', requireDevKey, async (req, res) => {
       ok: false,
       platform: 'rede',
       message: 'Erro interno ao registrar integracao REDE.',
+    });
+  }
+});
+
+
+async function getRedeConnectedUserIds(maxUsers = 50) {
+  const snapshot = await db
+    .collectionGroup('integration_status')
+    .where('platformId', '==', 'rede')
+    .where('status', '==', 'connected')
+    .limit(maxUsers)
+    .get();
+
+  const userIds = [];
+
+  snapshot.forEach((doc) => {
+    const userRef = doc.ref.parent.parent;
+
+    if (userRef?.id && !userIds.includes(userRef.id)) {
+      userIds.push(userRef.id);
+    }
+  });
+
+  return userIds;
+}
+
+function getRedeSyncDateRange({ startDate, endDate, lookbackDays } = {}) {
+  const parsedLookbackDays = Number(lookbackDays);
+  const safeLookbackDays = Number.isFinite(parsedLookbackDays)
+    ? Math.max(0, Math.min(parsedLookbackDays, 7))
+    : 0;
+
+  return {
+    startDate: getRedeQueryValue(startDate, getBrazilDateStringDaysAgo(safeLookbackDays)),
+    endDate: getRedeQueryValue(endDate, getBrazilDateStringDaysAgo(0)),
+  };
+}
+
+async function syncRedeSalesForUser({
+  userId,
+  dryRun = true,
+  startDate,
+  endDate,
+  size = '5',
+  status = 'APPROVED',
+  brands = '',
+  modalities = '',
+  nextKey = '',
+  limit = 100,
+  allowedCaptureTypes,
+  accessToken,
+} = {}) {
+  const redeIntegrationData = await getRedeIntegrationDataForUser(userId);
+
+  const parentCompanyNumber = getRedeQueryValue(
+    redeIntegrationData?.parentCompanyNumber,
+    REDE_DEFAULT_PARENT_COMPANY_NUMBER
+  );
+  const subsidiaries = getRedeQueryValue(
+    redeIntegrationData?.subsidiaries,
+    REDE_DEFAULT_SUBSIDIARIES
+  );
+  const captureTypes = getRedeCaptureTypes(
+    allowedCaptureTypes || redeIntegrationData?.allowedCaptureTypes
+  );
+  const safeLimit = Math.min(Math.max(Number(limit || 100), 1), 100);
+
+  const redeResponse = await fetchRedeSales({
+    accessToken,
+    parentCompanyNumber,
+    subsidiaries,
+    startDate,
+    endDate,
+    size,
+    status,
+    brands,
+    modalities,
+    nextKey,
+  });
+
+  const rawSales = getRedeSalesList(redeResponse);
+  const normalizedSales = rawSales.map((sale) => normalizeRedeSaleForTorico(sale));
+  const eligibleSales = normalizedSales
+    .filter((sale) => isRedeSaleEligibleForTorico(sale, captureTypes))
+    .slice(0, safeLimit);
+
+  const totalAmount = roundMoney(
+    eligibleSales.reduce((total, sale) => total + Number(sale.amount || 0), 0)
+  );
+
+  const savedSales = [];
+
+  if (!dryRun) {
+    for (const redeSale of eligibleSales) {
+      const savedSale = await saveSale({
+        userId,
+        amount: redeSale.amount,
+        platform: 'Rede',
+        status: 'approved',
+        source: 'api_polling',
+        externalId: redeSale.externalId,
+        createdAt: new Date(redeSale.createdAtIso),
+        rawPayload: {
+          receivedFrom: 'REDE Gestao de Vendas API',
+          parentCompanyNumber,
+          subsidiaries,
+          query: {
+            startDate,
+            endDate,
+            status: status || null,
+            brands: brands || null,
+            modalities: modalities || null,
+            captureTypes,
+            automaticSync: true,
+          },
+          sale: redeSale,
+        },
+      });
+
+      savedSales.push({
+        id: savedSale.id,
+        externalId: savedSale.externalId,
+        amount: savedSale.amount,
+        platform: savedSale.platform,
+        platformId: savedSale.platformId,
+        status: savedSale.status,
+        source: savedSale.source,
+        dateKey: savedSale.dateKey,
+        duplicated: Boolean(savedSale.duplicated),
+      });
+    }
+  }
+
+  return {
+    userId,
+    query: {
+      parentCompanyNumber,
+      subsidiaries,
+      startDate,
+      endDate,
+      size,
+      status: status || null,
+      brands: brands || null,
+      modalities: modalities || null,
+      nextKey: nextKey || null,
+      allowedCaptureTypes: captureTypes,
+    },
+    counts: {
+      rawSales: rawSales.length,
+      normalizedSales: normalizedSales.length,
+      eligibleSales: eligibleSales.length,
+      savedSales: savedSales.filter((sale) => !sale.duplicated).length,
+      duplicatedSales: savedSales.filter((sale) => sale.duplicated).length,
+    },
+    totalAmount,
+    cursor: redeResponse?.cursor || null,
+    sales: dryRun ? eligibleSales : savedSales,
+  };
+}
+
+app.post('/integrations/rede/sync-connected-users', requireDevKey, async (req, res) => {
+  try {
+    const missingConfig = getMissingRedeConfig();
+
+    if (missingConfig.length > 0) {
+      return res.status(503).json({
+        ok: false,
+        platform: 'rede',
+        message: 'Integracao REDE ainda nao configurada completamente no backend.',
+        missingConfig,
+      });
+    }
+
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const dryRunValue = getFirstStringValue([body.dryRun, req.query.dryRun, 'true']);
+    const dryRun = String(dryRunValue).toLowerCase().trim() !== 'false';
+    const maxUsers = Math.min(Math.max(Number(body.maxUsers || req.query.maxUsers || 50), 1), 100);
+    const limit = Math.min(Math.max(Number(body.limit || req.query.limit || 100), 1), 100);
+    const size = getRedeQueryValue(body.size ?? req.query.size, '5');
+    const status = getRedeQueryValue(body.status ?? req.query.status, 'APPROVED');
+    const creditBrands = getRedeQueryValue(
+      body.creditBrands ?? body.brands ?? req.query.creditBrands ?? req.query.brands,
+      ''
+    );
+    const requestedModalities = getRedeQueryValue(
+      body.modalities ?? req.query.modalities,
+      'CREDIT,DEBIT'
+    )
+      .split(',')
+      .map((item) => item.trim().toUpperCase())
+      .filter(Boolean);
+    const modalitiesToSync = requestedModalities.length > 0
+      ? requestedModalities
+      : ['CREDIT', 'DEBIT'];
+
+    const dateRange = getRedeSyncDateRange({
+      startDate: body.startDate ?? req.query.startDate,
+      endDate: body.endDate ?? req.query.endDate,
+      lookbackDays: body.lookbackDays ?? req.query.lookbackDays,
+    });
+
+    const userIds = await getRedeConnectedUserIds(maxUsers);
+    const tokenResponse = await fetchRedeAccessToken();
+    const results = [];
+
+    for (const userId of userIds) {
+      const userResults = [];
+
+      for (const modality of modalitiesToSync) {
+        const result = await syncRedeSalesForUser({
+          userId,
+          dryRun,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+          size,
+          status,
+          brands: modality === 'CREDIT' ? creditBrands : '',
+          modalities: modality,
+          limit,
+          accessToken: tokenResponse.access_token,
+        });
+
+        userResults.push(result);
+      }
+
+      const totals = userResults.reduce(
+        (accumulator, result) => {
+          accumulator.rawSales += result.counts.rawSales;
+          accumulator.normalizedSales += result.counts.normalizedSales;
+          accumulator.eligibleSales += result.counts.eligibleSales;
+          accumulator.savedSales += result.counts.savedSales;
+          accumulator.duplicatedSales += result.counts.duplicatedSales;
+          accumulator.totalAmount = roundMoney(accumulator.totalAmount + result.totalAmount);
+          return accumulator;
+        },
+        {
+          rawSales: 0,
+          normalizedSales: 0,
+          eligibleSales: 0,
+          savedSales: 0,
+          duplicatedSales: 0,
+          totalAmount: 0,
+        }
+      );
+
+      results.push({
+        userId,
+        totals,
+        runs: userResults.map((result) => ({
+          modalities: result.query.modalities,
+          brands: result.query.brands,
+          counts: result.counts,
+          totalAmount: result.totalAmount,
+          cursor: result.cursor,
+        })),
+      });
+    }
+
+    const summary = results.reduce(
+      (accumulator, result) => {
+        accumulator.rawSales += result.totals.rawSales;
+        accumulator.normalizedSales += result.totals.normalizedSales;
+        accumulator.eligibleSales += result.totals.eligibleSales;
+        accumulator.savedSales += result.totals.savedSales;
+        accumulator.duplicatedSales += result.totals.duplicatedSales;
+        accumulator.totalAmount = roundMoney(accumulator.totalAmount + result.totals.totalAmount);
+        return accumulator;
+      },
+      {
+        users: userIds.length,
+        rawSales: 0,
+        normalizedSales: 0,
+        eligibleSales: 0,
+        savedSales: 0,
+        duplicatedSales: 0,
+        totalAmount: 0,
+      }
+    );
+
+    console.log('Sincronizacao automatica REDE executada:', {
+      dryRun,
+      maxUsers,
+      userCount: userIds.length,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+      modalities: modalitiesToSync,
+      creditBrands: creditBrands || null,
+      summary,
+    });
+
+    return res.status(dryRun ? 200 : 201).json({
+      ok: true,
+      platform: 'rede',
+      processed: !dryRun,
+      saved: !dryRun,
+      dryRun,
+      message: dryRun
+        ? 'Dry run automatico REDE executado. Nenhuma venda foi salva.'
+        : 'Sincronizacao automatica REDE executada para usuarios conectados.',
+      query: {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        size,
+        status: status || null,
+        modalities: modalitiesToSync,
+        creditBrands: creditBrands || null,
+        maxUsers,
+        limit,
+      },
+      summary,
+      results,
+    });
+  } catch (error) {
+    console.error('Erro na sincronizacao automatica REDE:', {
+      message: error.message,
+      status: error.status,
+      responseBody: error.responseBody,
+      missingConfig: error.missingConfig,
+    });
+
+    return res.status(error.status || 500).json({
+      ok: false,
+      platform: 'rede',
+      message: error.message || 'Erro interno na sincronizacao automatica REDE.',
+      missingConfig: error.missingConfig || undefined,
+      details: error.responseBody || undefined,
     });
   }
 });
