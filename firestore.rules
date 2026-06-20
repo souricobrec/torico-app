@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isUpdatingOnlyAllowedUserFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'displayName',
+        'email',
+        'photoURL',
+        'businessName',
+        'phone',
+        'updatedAt',
+        'lastLoginAt',
+        'onboardingCompleted',
+        'connectedPlatform',
+        'hasConnectedPlatform',
+        'selectedPlatform'
+      ]);
+    }
+
+    match /users/{userId} {
+
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId);
+
+      allow update: if isOwner(userId)
+        && isUpdatingOnlyAllowedUserFields();
+
+      allow delete: if false;
+
+      match /sales/{saleId} {
+        allow read: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      match /daily_totals/{dateId} {
+        allow read: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      match /integrations/{integrationId} {
+        allow read, write: if false;
+      }
+
+      match /integration_status/{integrationId} {
+        allow read: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      match /integration_requests/{requestId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+        allow delete: if false;
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
