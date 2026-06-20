@@ -1,0 +1,34 @@
+TORICO - Correção parser REDE
+
+Motivo:
+A rota /integrations/rede/sales-test autenticou e consultou a API REDE com sucesso,
+mas retornou rawSales=0 mesmo com cursor.hasNextKey=true. Isso indica que a resposta
+da REDE veio com a lista de vendas em um objeto aninhado que o parser inicial ainda
+não estava encontrando.
+
+O que foi alterado:
+- getRedeSalesList agora procura recursivamente por uma lista de objetos com cara de venda.
+- Adicionado debug.responseShape quando rawSales=0.
+- Adicionado suporte ao parâmetro nextKey na consulta REDE.
+
+A rota continua segura:
+- Não grava nada no Firestore.
+- Exige x-torico-dev-key.
+- Remove dados sensíveis do retorno normalizado.
+
+Teste:
+node --check server.js
+
+Commit sugerido:
+git add server.js INSTRUCOES_REDE_PARSER_FIX.txt
+git commit -m "Corrige parser de resposta REDE"
+git push origin visual-pre-lojas
+
+Deploy:
+gcloud run deploy torico-backend --source . --region us-central1 --allow-unauthenticated
+
+Teste:
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/sales-test?limit=5&size=5" `
+  -Headers @{ "x-torico-dev-key" = "SUA_TORICO_DEV_KEY" } | ConvertTo-Json -Depth 20

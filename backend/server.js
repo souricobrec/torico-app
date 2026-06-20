@@ -599,6 +599,7 @@ async function fetchRedeSales({
   status,
   brands,
   modalities,
+  nextKey,
 }) {
   const url = new URL(`${REDE_API_BASE_URL}/merchant-statement/v1/sales`);
 
@@ -623,6 +624,10 @@ async function fetchRedeSales({
     url.searchParams.set('modalities', String(modalities));
   }
 
+  if (nextKey) {
+    url.searchParams.set('nextKey', String(nextKey));
+  }
+
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -643,26 +648,126 @@ async function fetchRedeSales({
   return responseBody;
 }
 
+function isRedeSaleLikeObject(value) {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      (
+        Object.prototype.hasOwnProperty.call(value, 'nsu') ||
+        Object.prototype.hasOwnProperty.call(value, 'amount') ||
+        Object.prototype.hasOwnProperty.call(value, 'saleDate') ||
+        Object.prototype.hasOwnProperty.call(value, 'movementDate') ||
+        Object.prototype.hasOwnProperty.call(value, 'captureType') ||
+        Object.prototype.hasOwnProperty.call(value, 'authorizationCode')
+      )
+  );
+}
+
 function getRedeSalesList(responseBody) {
-  const possibleLists = [
-    responseBody?.content,
-    responseBody?.sales,
-    responseBody?.items,
-    responseBody?.data,
-    responseBody?.transactions,
-  ];
+  const visited = new Set();
 
-  for (const list of possibleLists) {
-    if (Array.isArray(list)) {
-      return list;
+  function findSalesArray(value) {
+    if (!value || typeof value !== 'object') {
+      return null;
     }
+
+    if (visited.has(value)) {
+      return null;
+    }
+
+    visited.add(value);
+
+    if (Array.isArray(value)) {
+      const hasSaleLikeItem = value.some((item) => isRedeSaleLikeObject(item));
+
+      if (hasSaleLikeItem) {
+        return value;
+      }
+
+      for (const item of value) {
+        const nestedList = findSalesArray(item);
+
+        if (nestedList) {
+          return nestedList;
+        }
+      }
+
+      return null;
+    }
+
+    const priorityKeys = [
+      'content',
+      'sales',
+      'items',
+      'data',
+      'transactions',
+      'transactionStatements',
+      'merchantStatement',
+      'statement',
+      'details',
+      'results',
+      'entries',
+      'records',
+      'list',
+    ];
+
+    for (const key of priorityKeys) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        const nestedList = findSalesArray(value[key]);
+
+        if (nestedList) {
+          return nestedList;
+        }
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const nestedList = findSalesArray(nestedValue);
+
+      if (nestedList) {
+        return nestedList;
+      }
+    }
+
+    return null;
   }
 
-  if (Array.isArray(responseBody)) {
-    return responseBody;
+  return findSalesArray(responseBody) || [];
+}
+
+function getRedeResponseKeysSnapshot(value, depth = 0, maxDepth = 2) {
+  if (!value || typeof value !== 'object' || depth > maxDepth) {
+    return null;
   }
 
-  return [];
+  if (Array.isArray(value)) {
+    return {
+      type: 'array',
+      length: value.length,
+      sample: value.length > 0 ? getRedeResponseKeysSnapshot(value[0], depth + 1, maxDepth) : null,
+    };
+  }
+
+  const keys = Object.keys(value);
+
+  return {
+    type: 'object',
+    keys,
+    children: keys.slice(0, 10).reduce((accumulator, key) => {
+      const nestedValue = value[key];
+
+      if (nestedValue && typeof nestedValue === 'object') {
+        accumulator[key] = getRedeResponseKeysSnapshot(
+          nestedValue,
+          depth + 1,
+          maxDepth
+        );
+      }
+
+      return accumulator;
+    }, {}),
+  };
 }
 
 function getRedeSaleDateTime(sale) {
@@ -2262,6 +2367,7 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
     const status = getRedeQueryValue(req.query.status, '');
     const brands = getRedeQueryValue(req.query.brands, '');
     const modalities = getRedeQueryValue(req.query.modalities, '');
+    const nextKey = getRedeQueryValue(req.query.nextKey, '');
     const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
     const allowedCaptureTypes = String(
       req.query.captureTypes || REDE_ALLOWED_CAPTURE_TYPES.join(',')
@@ -2282,6 +2388,7 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
       status,
       brands,
       modalities,
+      nextKey,
     });
 
     const rawSales = getRedeSalesList(redeResponse);
@@ -2303,6 +2410,7 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
       status: status || null,
       brands: brands || null,
       modalities: modalities || null,
+      nextKey: nextKey || null,
       rawCount: rawSales.length,
       eligibleCount: eligibleSales.length,
       totalAmount,
@@ -2325,6 +2433,7 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
         status: status || null,
         brands: brands || null,
         modalities: modalities || null,
+        nextKey: nextKey || null,
         allowedCaptureTypes,
       },
       counts: {
@@ -2335,6 +2444,12 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
       },
       totalAmount,
       cursor: redeResponse?.cursor || null,
+      debug:
+        rawSales.length === 0
+          ? {
+              responseShape: getRedeResponseKeysSnapshot(redeResponse),
+            }
+          : undefined,
       sales: eligibleSales.slice(0, limit),
     });
   } catch (error) {
