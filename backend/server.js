@@ -2608,28 +2608,21 @@ app.post('/integrations/rede/connect-test', requireDevKey, async (req, res) => {
 
 
 async function getRedeConnectedUserIds(maxUsers = 50) {
-  const queryLimit = Math.min(Math.max(Number(maxUsers || 50) * 3, 10), 300);
-  const snapshot = await db
-    .collectionGroup('integration_status')
-    .where('platformId', '==', 'rede')
-    .limit(queryLimit)
-    .get();
-
+  const safeMaxUsers = Math.min(Math.max(Number(maxUsers || 50), 1), 100);
+  const usersSnapshot = await db.collection('users').limit(safeMaxUsers).get();
   const userIds = [];
 
-  snapshot.forEach((doc) => {
-    const data = doc.data() || {};
-    const userRef = doc.ref.parent.parent;
+  for (const userDoc of usersSnapshot.docs) {
+    const statusDoc = await userDoc.ref
+      .collection('integration_status')
+      .doc('rede')
+      .get();
+    const data = statusDoc.data() || {};
 
-    if (
-      data.status === 'connected' &&
-      userRef?.id &&
-      !userIds.includes(userRef.id) &&
-      userIds.length < maxUsers
-    ) {
-      userIds.push(userRef.id);
+    if (statusDoc.exists && data.status === 'connected') {
+      userIds.push(userDoc.id);
     }
-  });
+  }
 
   return userIds;
 }
