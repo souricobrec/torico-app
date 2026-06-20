@@ -1,0 +1,58 @@
+TORICO - Sincronização REDE no Firestore
+
+Arquivo:
+- server.js atualizado
+
+O que foi adicionado:
+- Rota POST /integrations/rede/sync-sales
+- Protegida por x-torico-dev-key
+- Recebe userId no body
+- dryRun=true por padrão
+- dryRun=true: consulta e normaliza, mas NÃO salva no Firestore
+- dryRun=false: salva vendas elegíveis no Firestore usando saveSale()
+- Usa idempotência pelo externalId
+- Atualiza daily_totals pela função saveSale existente
+- Não salva cardNumber, documentNumber ou dados sensíveis
+
+Teste local:
+node --check server.js
+
+Commit sugerido:
+git add server.js INSTRUCOES_REDE_SYNC_SALES.txt
+git commit -m "Adiciona sincronizacao REDE no Firestore"
+git push origin visual-pre-lojas
+
+Deploy:
+gcloud run deploy torico-backend --source . --region us-central1 --allow-unauthenticated
+
+Dry run crédito:
+$body = @{
+  userId = "SEU_UID_FIREBASE"
+  dryRun = $true
+  size = "5"
+  brands = "1"
+  modalities = "CREDIT"
+  captureTypes = "POS,PDV,ECOMMERCE"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/sync-sales" `
+  -Headers @{ "x-torico-dev-key" = $newKey; "Content-Type" = "application/json" } `
+  -Body $body | ConvertTo-Json -Depth 20
+
+Salvar crédito:
+$body = @{
+  userId = "SEU_UID_FIREBASE"
+  dryRun = $false
+  size = "5"
+  brands = "1"
+  modalities = "CREDIT"
+  captureTypes = "POS,PDV,ECOMMERCE"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "https://torico-backend-16783123127.us-central1.run.app/integrations/rede/sync-sales" `
+  -Headers @{ "x-torico-dev-key" = $newKey; "Content-Type" = "application/json" } `
+  -Body $body | ConvertTo-Json -Depth 20

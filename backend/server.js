@@ -2063,6 +2063,7 @@ app.get('/health', (req, res) => {
       defaultSubsidiariesConfigured: Boolean(REDE_DEFAULT_SUBSIDIARIES),
       allowedCaptureTypes: REDE_ALLOWED_CAPTURE_TYPES,
       salesTestRoute: '/integrations/rede/sales-test',
+      syncSalesRoute: '/integrations/rede/sync-sales',
       processingEnabled: false,
       note:
         'Consulta inicial apenas para ler/normalizar vendas REDE. Nao grava venda no Firestore.',
@@ -2464,6 +2465,201 @@ app.get('/integrations/rede/sales-test', requireDevKey, async (req, res) => {
       ok: false,
       platform: 'rede',
       message: error.message || 'Erro interno na consulta REDE.',
+      missingConfig: error.missingConfig || undefined,
+      details: error.responseBody || undefined,
+    });
+  }
+});
+
+
+app.post('/integrations/rede/sync-sales', requireDevKey, async (req, res) => {
+  try {
+    const missingConfig = getMissingRedeConfig();
+
+    if (missingConfig.length > 0) {
+      return res.status(503).json({
+        ok: false,
+        platform: 'rede',
+        message: 'Integracao REDE ainda nao configurada completamente no backend.',
+        missingConfig,
+      });
+    }
+
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const userId = getFirstStringValue([body.userId, req.query.userId]);
+
+    if (!userId) {
+      return res.status(400).json({
+        ok: false,
+        platform: 'rede',
+        message: 'Informe userId para sincronizar vendas REDE no Firestore.',
+      });
+    }
+
+    const dryRunValue = getFirstStringValue([body.dryRun, req.query.dryRun, 'true']);
+    const dryRun = String(dryRunValue).toLowerCase().trim() !== 'false';
+
+    const parentCompanyNumber = getRedeQueryValue(
+      body.parentCompanyNumber ?? req.query.parentCompanyNumber,
+      REDE_DEFAULT_PARENT_COMPANY_NUMBER
+    );
+    const subsidiaries = getRedeQueryValue(
+      body.subsidiaries ?? req.query.subsidiaries,
+      REDE_DEFAULT_SUBSIDIARIES
+    );
+    const startDate = getRedeQueryValue(
+      body.startDate ?? req.query.startDate,
+      getBrazilDateStringDaysAgo(REDE_DEFAULT_SALES_LOOKBACK_DAYS)
+    );
+    const endDate = getRedeQueryValue(
+      body.endDate ?? req.query.endDate,
+      getBrazilDateStringDaysAgo(0)
+    );
+    const size = getRedeQueryValue(body.size ?? req.query.size, '5');
+    const status = getRedeQueryValue(body.status ?? req.query.status, '');
+    const brands = getRedeQueryValue(body.brands ?? req.query.brands, '');
+    const modalities = getRedeQueryValue(body.modalities ?? req.query.modalities, '');
+    const nextKey = getRedeQueryValue(body.nextKey ?? req.query.nextKey, '');
+    const limit = Math.min(Math.max(Number(body.limit || req.query.limit || 50), 1), 100);
+
+    const allowedCaptureTypes = String(
+      body.captureTypes || req.query.captureTypes || REDE_ALLOWED_CAPTURE_TYPES.join(',')
+    )
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter(Boolean);
+
+    const tokenResponse = await fetchRedeAccessToken();
+
+    const redeResponse = await fetchRedeSales({
+      accessToken: tokenResponse.access_token,
+      parentCompanyNumber,
+      subsidiaries,
+      startDate,
+      endDate,
+      size,
+      status,
+      brands,
+      modalities,
+      nextKey,
+    });
+
+    const rawSales = getRedeSalesList(redeResponse);
+    const normalizedSales = rawSales.map((sale) => normalizeRedeSaleForTorico(sale));
+    const eligibleSales = normalizedSales
+      .filter((sale) => isRedeSaleEligibleForTorico(sale, allowedCaptureTypes))
+      .slice(0, limit);
+
+    const totalAmount = roundMoney(
+      eligibleSales.reduce((total, sale) => total + Number(sale.amount || 0), 0)
+    );
+
+    const savedSales = [];
+
+    if (!dryRun) {
+      for (const redeSale of eligibleSales) {
+        const savedSale = await saveSale({
+          userId,
+          amount: redeSale.amount,
+          platform: 'Rede',
+          status: 'approved',
+          source: 'api_polling',
+          externalId: redeSale.externalId,
+          createdAt: new Date(redeSale.createdAtIso),
+          rawPayload: {
+            receivedFrom: 'REDE Gestao de Vendas API',
+            parentCompanyNumber,
+            subsidiaries,
+            query: {
+              startDate,
+              endDate,
+              status: status || null,
+              brands: brands || null,
+              modalities: modalities || null,
+              captureTypes: allowedCaptureTypes,
+            },
+            sale: redeSale,
+          },
+        });
+
+        savedSales.push({
+          id: savedSale.id,
+          externalId: savedSale.externalId,
+          amount: savedSale.amount,
+          platform: savedSale.platform,
+          platformId: savedSale.platformId,
+          status: savedSale.status,
+          source: savedSale.source,
+          dateKey: savedSale.dateKey,
+          duplicated: Boolean(savedSale.duplicated),
+        });
+      }
+    }
+
+    console.log('Sincronizacao REDE executada:', {
+      userId,
+      dryRun,
+      parentCompanyNumber,
+      subsidiaries,
+      startDate,
+      endDate,
+      size,
+      status: status || null,
+      brands: brands || null,
+      modalities: modalities || null,
+      rawCount: rawSales.length,
+      eligibleCount: eligibleSales.length,
+      savedCount: savedSales.filter((sale) => !sale.duplicated).length,
+      duplicatedCount: savedSales.filter((sale) => sale.duplicated).length,
+      totalAmount,
+      allowedCaptureTypes,
+    });
+
+    return res.status(dryRun ? 200 : 201).json({
+      ok: true,
+      platform: 'rede',
+      processed: !dryRun,
+      saved: !dryRun,
+      dryRun,
+      message: dryRun
+        ? 'Dry run REDE executado. Nenhuma venda foi salva no Firestore.'
+        : 'Sincronizacao REDE executada e vendas elegiveis foram processadas.',
+      userId,
+      query: {
+        parentCompanyNumber,
+        subsidiaries,
+        startDate,
+        endDate,
+        size,
+        status: status || null,
+        brands: brands || null,
+        modalities: modalities || null,
+        nextKey: nextKey || null,
+        allowedCaptureTypes,
+      },
+      counts: {
+        rawSales: rawSales.length,
+        normalizedSales: normalizedSales.length,
+        eligibleSales: eligibleSales.length,
+        savedSales: savedSales.filter((sale) => !sale.duplicated).length,
+        duplicatedSales: savedSales.filter((sale) => sale.duplicated).length,
+      },
+      totalAmount,
+      cursor: redeResponse?.cursor || null,
+      sales: dryRun ? eligibleSales : savedSales,
+    });
+  } catch (error) {
+    console.error('Erro na sincronizacao REDE:', {
+      message: error.message,
+      status: error.status,
+      responseBody: error.responseBody,
+      missingConfig: error.missingConfig,
+    });
+
+    return res.status(error.status || 500).json({
+      ok: false,
+      platform: 'rede',
+      message: error.message || 'Erro interno na sincronizacao REDE.',
       missingConfig: error.missingConfig || undefined,
       details: error.responseBody || undefined,
     });
