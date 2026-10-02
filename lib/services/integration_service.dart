@@ -3,10 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'local_storage_service.dart';
+import '../config/api_config.dart';
 
 class IntegrationService {
-  static const String _backendBaseUrl =
-      'https://torico-backend-16783123127.us-central1.run.app';
+  static final String _backendBaseUrl = ApiConfig.baseUrl;
 
   static const Map<String, String> _supportedPlatformIds = {
     'Mercado Pago': 'mercado_pago',

@@ -1,5 +1,14 @@
 # TORICO Backend Simulado
 
+## Domínio oficial e health check
+
+API de produção preparada para `https://api.meutorico.com.br`, mantendo o Cloud Run.
+`GET /healthz` retorna `{"ok":true,"service":"torico-backend","status":"healthy"}`;
+`GET /health` continua disponível com seu contrato anterior.
+`PUBLIC_BACKEND_URL` preserva a configuração por ambiente. O callback Mercado Pago
+atual permanece até migração manual de `MERCADO_PAGO_REDIRECT_URI` e cadastro do provedor.
+Consultar [roteiro e checklist](../docs/api-domain-migration.md) antes de publicar.
+
 Backend local para preparar o fluxo futuro de webhooks oficiais.
 
 ## O que este backend faz agora

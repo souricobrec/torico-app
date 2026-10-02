@@ -49,8 +49,13 @@ https://torico-backend-16783123127.us-central1.run.app
 
 Para gerar o build web:
 
+Antes de publicar, seguir [migração da API oficial](api-domain-migration.md).
+Build sem defines agora usa `https://api.meutorico.com.br`, que precisa estar ativo.
+Para preview durante a transição, usar `APP_ENV=preview` e definir explicitamente
+`API_BASE_URL=https://torico-backend-16783123127.us-central1.run.app`.
+
 ```bash
-flutter build web --release
+flutter build web --release --dart-define=APP_ENV=production --dart-define=API_BASE_URL=https://api.meutorico.com.br
 ```
 
 Para publicar no Firebase Hosting:
