@@ -59,6 +59,9 @@ backend/yarn-debug.log*
 backend/yarn-error.log*
 
 # Environment files
+.env.*
+!.env.example
+!**/.env.example
 .env
 .env.local
 .env.development

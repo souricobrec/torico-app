@@ -43,6 +43,7 @@ const TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY;
 const MERCADO_PAGO_CLIENT_ID = process.env.MERCADO_PAGO_CLIENT_ID;
 const MERCADO_PAGO_CLIENT_SECRET = process.env.MERCADO_PAGO_CLIENT_SECRET;
 const MERCADO_PAGO_REDIRECT_URI =
+  // Preserve the registered callback until the provider is migrated manually.
   process.env.MERCADO_PAGO_REDIRECT_URI ||
   'https://torico-backend-16783123127.us-central1.run.app/integrations/mercado-pago/callback';
 
@@ -67,7 +68,7 @@ const MERCADO_PAGO_MERCHANT_ORDERS_API_URL =
 
 const PUBLIC_BACKEND_URL =
   process.env.PUBLIC_BACKEND_URL ||
-  'https://torico-backend-16783123127.us-central1.run.app';
+  'https://api.meutorico.com.br';
 
 const PUBLIC_APP_URL =
   process.env.PUBLIC_APP_URL || 'https://torico-ca479.web.app';
@@ -2041,6 +2042,15 @@ app.get('/', (req, res) => {
     app: 'TORICO Backend',
     message: 'TORICO Backend ativo.',
     health: '/health',
+  });
+});
+
+app.get('/healthz', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return res.status(200).json({
+    ok: true,
+    service: 'torico-backend',
+    status: 'healthy',
   });
 });
 
