@@ -3,7 +3,8 @@
 ## Domínio oficial e health check
 
 API de produção preparada para `https://api.meutorico.com.br`, mantendo o Cloud Run.
-`GET /healthz` retorna `{"ok":true,"service":"torico-backend","status":"healthy"}`;
+O health check público oficial é `GET /health`, com resposta
+`{"ok":true,"service":"torico-backend","status":"healthy"}`.
 `GET /health` continua disponível com HTTP 200 e resposta mínima em produção.
 Detalhes exigem chave interna; veja [health check público](../docs/public-health-check.md).
 `PUBLIC_BACKEND_URL` preserva a configuração por ambiente. O callback Mercado Pago

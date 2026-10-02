@@ -1,11 +1,10 @@
 # Health check público TORICO
 
-Validação remota em 01/10/2026, antes de deploy deste ajuste: `/` e `/health`
-retornaram 200; `/healthz` retornou 404. A rota já existe no fonte da branch
-`visual-pre-lojas`, mas ainda não está disponível no serviço consultado.
-Testes locais desta correção: 4 cenários aprovados, com sintaxe Node válida.
+O endpoint público oficial é `/health`. `/healthz` permanece no código apenas
+como alias opcional; sua disponibilidade não é requisito operacional.
 
-`GET /healthz` retorna HTTP 200, `Cache-Control: no-store` e somente:
+`GET /health` sem autorização interna retorna HTTP 200 em produção,
+`Cache-Control: no-store` e somente:
 
 ```json
 {"ok":true,"service":"torico-backend","status":"healthy"}
@@ -21,7 +20,7 @@ de ambiente em uma mudança operacional separada. Não reutilizar chaves dos adq
 
 Somente ambiente local explicitamente `NODE_ENV=development` ou `test`, sem
 `K_SERVICE`, permite detalhes sem chave. `/healthz` é sempre mínimo, inclusive
-com chave. A rota `/` mantém sua resposta e passa a apontar para `/healthz`.
+com chave. A rota `/` mantém sua resposta e aponta para `/health`.
 Liveness não consulta Firestore ou adquirentes e não certifica saúde das integrações.
 
 ## Validação local
@@ -37,13 +36,10 @@ node --test test/healthz.test.js
 ## Validação após deploy manual
 
 ```powershell
-curl.exe --fail-with-body --silent --show-error https://torico-backend-yx6k7amjza-uc.a.run.app/healthz
-curl.exe --fail-with-body --silent --show-error https://torico-backend-yx6k7amjza-uc.a.run.app/
-curl.exe --fail-with-body --silent --show-error https://torico-backend-yx6k7amjza-uc.a.run.app/health
+curl.exe --fail-with-body --silent --show-error https://torico-backend-16783123127.us-central1.run.app/
+curl.exe --fail-with-body --silent --show-error https://torico-backend-16783123127.us-central1.run.app/health
 ```
 
-Confirmar JSON exato em `/healthz` e `/health` público. Para os detalhes, usar o
-header interno por canal seguro. Se `/healthz` continuar 404, verificar se a imagem
-e a revisão com este commit foram implantadas, se o tráfego aponta para elas e se
-a construção utiliza `backend` como contexto (o Dockerfile executa `server.js`).
+Confirmar `"health":"/health"` na raiz e JSON exato em `/health` público.
+Para os detalhes, usar o header interno por canal seguro.
 Não alterar DNS, OAuth, webhooks, Scheduler ou lógica de vendas para corrigir isso.

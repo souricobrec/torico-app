@@ -45,7 +45,7 @@ async function verifyHealth(environment, detailedPublic = false) {
       if (path !== '/') assert.equal(result.headers.get('cache-control'), 'no-store');
       return result.json();
     };
-    assert.equal((await get('/')).health, '/healthz');
+    assert.equal((await get('/')).health, '/health');
     if (detailedPublic) {
       assert.equal((await get('/health')).projectId, 'torico-healthz-local-test');
     } else {

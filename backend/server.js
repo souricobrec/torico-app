@@ -2041,10 +2041,11 @@ app.get('/', (req, res) => {
     ok: true,
     app: 'TORICO Backend',
     message: 'TORICO Backend ativo.',
-    health: '/healthz',
+    health: '/health',
   });
 });
 
+// Optional compatibility alias; /health is the official public endpoint.
 app.get('/healthz', (req, res) => {
   res.set('Cache-Control', 'no-store');
   return res.status(200).json({
