@@ -30,7 +30,7 @@ flutter run --dart-define=APP_ENV=development --dart-define=API_BASE_URL=http://
 flutter build web --release --dart-define=APP_ENV=preview --dart-define=API_BASE_URL=https://torico-backend-16783123127.us-central1.run.app
 # Teste isolado do contrato de saúde; executar sem backend/.env
 cd backend
-node --test test/health.test.js
+node --test test/healthz.test.js
 ```
 
 Não houve mudança na lógica de processamento Mercado Pago/REDE, no CORS existente ou nas regras Firestore. As validações reais de integrações ficam no checklist manual.
@@ -119,7 +119,7 @@ A busca usa `-l` para listar arquivos, reduzindo risco de imprimir valores sens�
 - `flutter analyze --no-pub`: sem problemas.
 - `flutter test --no-pub test/api_config_test.dart`: 3 testes passaram.
 - `node --check backend/server.js`: sintaxe válida.
-- `node --test test/health.test.js` (em backend): passou; servidor real local, sem credenciais, retornou 200, JSON exato e Cache-Control no-store.
+- `node --test test/healthz.test.js` (em backend): passou; servidor real local, sem credenciais, retornou 200, JSON exato e Cache-Control no-store.
 - Build web release com os defines de produção: concluído, sem deploy.
 - Revalidar `/` e `/health` após deploy: a raiz deve anunciar `/health` e o endpoint público deve retornar o JSON mínimo.
 
