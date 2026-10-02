@@ -2041,7 +2041,7 @@ app.get('/', (req, res) => {
     ok: true,
     app: 'TORICO Backend',
     message: 'TORICO Backend ativo.',
-    health: '/health',
+    health: '/healthz',
   });
 });
 
@@ -2055,6 +2055,22 @@ app.get('/healthz', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  // Cloud Run remains protected even if NODE_ENV was not configured.
+  const localDiagnostics = !process.env.K_SERVICE &&
+    ['development', 'test'].includes(process.env.NODE_ENV);
+  const expectedKey = process.env.HEALTH_DETAILS_KEY;
+  const receivedKey = req.get('x-health-key');
+  const authorized = Boolean(expectedKey && receivedKey &&
+    Buffer.byteLength(expectedKey) === Buffer.byteLength(receivedKey) &&
+    crypto.timingSafeEqual(Buffer.from(expectedKey), Buffer.from(receivedKey)));
+  if (!localDiagnostics && !authorized) {
+    return res.status(200).json({
+      ok: true,
+      service: 'torico-backend',
+      status: 'healthy',
+    });
+  }
   res.json({
     ok: true,
     app: 'TORICO Backend',
