@@ -141,13 +141,29 @@ class _PilotGateState extends State<PilotGate> {
                       children: [
                         Text(
                           widget.access.official
-                              ? 'Acesse o TORICO'
+                              ? 'TORICO'
                               : 'Acesso piloto TORICO',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                           ),
                         ),
+                        if (widget.access.official) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Seu negócio vendendo. Onde você estiver.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFFF7D65C),
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Acesse o TORICO',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         TextField(
                           controller: email,
@@ -198,20 +214,21 @@ class _PilotGateState extends State<PilotGate> {
         return Column(
           children: [
             Expanded(child: content),
-            Material(
-              color: const Color(0xFF031226),
-              child: SafeArea(
-                top: false,
-                child: TextButton(
-                  onPressed: exit,
-                  child: Text(
-                    widget.access.official
-                        ? 'Sair da conta'
-                        : 'Sair do modo piloto',
+            if (!widget.access.official || uid != null)
+              Material(
+                color: const Color(0xFF031226),
+                child: SafeArea(
+                  top: false,
+                  child: TextButton(
+                    onPressed: exit,
+                    child: Text(
+                      widget.access.official
+                          ? 'Sair da conta'
+                          : 'Sair do modo piloto',
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         );
       },

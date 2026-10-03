@@ -32,11 +32,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     _PlatformFilterOption(name: 'Stone', status: 'Em andamento'),
     _PlatformFilterOption(name: 'PagBank', status: 'Em andamento'),
     _PlatformFilterOption(name: 'Cielo', status: 'Em andamento'),
-    _PlatformFilterOption(
-      name: 'Rede',
-      status: 'Conectado',
-      enabled: true,
-    ),
+    _PlatformFilterOption(name: 'Rede', status: 'Pausada'),
     _PlatformFilterOption(name: 'Getnet', status: 'Em andamento'),
     _PlatformFilterOption(name: 'Pagar.me', status: 'Em andamento'),
     _PlatformFilterOption(name: 'Asaas', status: 'Em andamento'),
@@ -186,7 +182,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _HistoryPlatformFilters(
+                      HistoryPlatformFilters(
                         selectedFilter: selectedFilter,
                         onSelected: (filter) {
                           setState(() {
@@ -298,12 +294,13 @@ class _PlatformFilterOption {
   });
 }
 
-class _HistoryPlatformFilters extends StatelessWidget {
+class HistoryPlatformFilters extends StatelessWidget {
   final String selectedFilter;
   final ValueChanged<String> onSelected;
   final VoidCallback onOpenPlatforms;
 
-  const _HistoryPlatformFilters({
+  const HistoryPlatformFilters({
+    super.key,
     required this.selectedFilter,
     required this.onSelected,
     required this.onOpenPlatforms,
@@ -335,9 +332,9 @@ class _HistoryPlatformFilters extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _CompactFilterChip(
-            text: 'Rede',
-            selected: selectedFilter == 'Rede',
-            onTap: () => onSelected('Rede'),
+            text: 'Rede · Pausada',
+            selected: false,
+            onTap: null,
           ),
           const SizedBox(width: 8),
           _CompactFilterChip(
@@ -356,7 +353,7 @@ class _CompactFilterChip extends StatelessWidget {
   final String text;
   final bool selected;
   final IconData? icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _CompactFilterChip({
     required this.text,
@@ -369,42 +366,45 @@ class _CompactFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.gold.withValues(alpha: 0.22)
-              : Colors.white.withValues(alpha: 0.045),
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(
+      child: Opacity(
+        opacity: onTap == null ? 0.45 : 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
             color: selected
-                ? AppColors.goldLight.withValues(alpha: 0.65)
-                : Colors.white.withValues(alpha: 0.12),
-            width: selected ? 1.4 : 1,
+                ? AppColors.gold.withValues(alpha: 0.22)
+                : Colors.white.withValues(alpha: 0.045),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+              color: selected
+                  ? AppColors.goldLight.withValues(alpha: 0.65)
+                  : Colors.white.withValues(alpha: 0.12),
+              width: selected ? 1.4 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon ??
-                  (selected
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded),
-              color: selected ? AppColors.goldLight : Colors.white54,
-              size: 14,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              text,
-              style: TextStyle(
-                color: selected ? AppColors.goldLight : Colors.white70,
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon ??
+                    (selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded),
+                color: selected ? AppColors.goldLight : Colors.white54,
+                size: 14,
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                text,
+                style: TextStyle(
+                  color: selected ? AppColors.goldLight : Colors.white70,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
