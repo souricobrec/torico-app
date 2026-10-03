@@ -11,9 +11,12 @@ import 'services/pilot_access_service.dart';
 import 'screens/splash_screen.dart';
 import 'services/domain_block_service.dart';
 import 'services/auth_service.dart';
+import 'services/mercado_pago_oauth_return.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final initialUri = Uri.base;
+  final oauthReturn = kIsWeb ? MercadoPagoOAuthReturn.parse(initialUri) : null;
   // Validate build configuration before opening the app, including release.
   ApiConfig.baseUrl;
 
@@ -25,13 +28,15 @@ Future<void> main() async {
 
   final pilotAccess = PilotAccessService();
   if (DomainBlockService.shouldBlock) await pilotAccess.initialize(Uri.base);
-  runApp(ToricoApp(pilotAccess: pilotAccess));
+  if (oauthReturn != null) MercadoPagoOAuthReturn.clearUrl(initialUri);
+  runApp(ToricoApp(pilotAccess: pilotAccess, oauthReturn: oauthReturn));
 }
 
 class ToricoApp extends StatelessWidget {
   final PilotAccessService pilotAccess;
   final AuthService auth = AuthService();
-  ToricoApp({super.key, required this.pilotAccess});
+  final MercadoPagoOAuthReturn? oauthReturn;
+  ToricoApp({super.key, required this.pilotAccess, this.oauthReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -61,9 +66,9 @@ class ToricoApp extends StatelessWidget {
                 await auth.register(email: email, password: password);
               },
               signOut: auth.logout,
-              appBuilder: (_) => const SplashScreen(),
+              appBuilder: (_) => SplashScreen(oauthReturn: oauthReturn),
             )
-          : const SplashScreen(),
+          : SplashScreen(oauthReturn: oauthReturn),
     );
   }
 }

@@ -8,9 +8,12 @@ import '../services/local_storage_service.dart';
 import 'main_navigation_screen.dart';
 import 'login_screen.dart';
 import 'owner_login_screen.dart';
+import 'auth_screen.dart';
+import '../services/mercado_pago_oauth_return.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final MercadoPagoOAuthReturn? oauthReturn;
+  const SplashScreen({super.key, this.oauthReturn});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -42,6 +45,19 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     List<String> connectedPlatforms;
+
+    if (widget.oauthReturn != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AuthScreen(
+            plataforma: 'Mercado Pago',
+            oauthReturn: widget.oauthReturn,
+          ),
+        ),
+      );
+      return;
+    }
 
     try {
       connectedPlatforms = await _integrationService
