@@ -6,15 +6,21 @@ import '../core/active_sales_sources.dart';
 import '../services/firestore_sales_service.dart';
 import '../services/user_plan_service.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/basic_sales_history.dart';
+import 'plan_screen.dart';
 
 class SalesHistoryScreen extends StatelessWidget {
   final Stream<UserPlan>? planStream;
+  final Stream<List<ToricoSaleRecord>> Function()? basicSalesLoader;
+  final VoidCallback? onViewPlans;
   final DateTime? initialDate;
   final Stream<DailySalesSummary> Function(DateTime)? summaryLoader;
   final Stream<List<ToricoSaleRecord>> Function(DateTime, String?)? salesLoader;
   const SalesHistoryScreen({
     super.key,
     this.planStream,
+    this.basicSalesLoader,
+    this.onViewPlans,
     this.initialDate,
     this.summaryLoader,
     this.salesLoader,
@@ -29,6 +35,18 @@ class SalesHistoryScreen extends StatelessWidget {
           initialDate: initialDate,
           summaryLoader: summaryLoader,
           salesLoader: salesLoader,
+        );
+      }
+      if (!snapshot.hasError && snapshot.hasData) {
+        return BasicSalesHistory(
+          salesLoader:
+              basicSalesLoader ??
+              () => FirestoreSalesService().watchBasicHistory(),
+          onViewPlans:
+              onViewPlans ??
+              () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const PlanScreen())),
         );
       }
       return Scaffold(
@@ -46,10 +64,12 @@ class SalesHistoryScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.lock_outline, color: AppColors.gold, size: 48),
                 const SizedBox(height: 16),
-                const Text(
-                  'Histórico de vendas é um recurso do TORICO Plus.',
+                Text(
+                  snapshot.hasError
+                      ? 'Não foi possível verificar seu plano. Tente novamente.'
+                      : 'Verificando plano...',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 20),
+                  style: const TextStyle(color: Colors.white, fontSize: 20),
                 ),
               ],
             ),
