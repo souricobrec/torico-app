@@ -50,6 +50,10 @@ class ToricoApp extends StatelessWidget {
               signInGoogle: () async {
                 await auth.loginWithGoogle();
               },
+              resetPassword: (email) => auth.resetPassword(email: email),
+              createAccount: (email, password) async {
+                await auth.register(email: email, password: password);
+              },
               signOut: auth.logout,
               appBuilder: (_) => const SplashScreen(),
             )

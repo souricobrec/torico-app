@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/pilot_access_service.dart';
 import 'launch_block_screen.dart';
+import '../widgets/official_login_layout.dart';
 
 /// Keeps the entire navigation stack behind the authenticated pilot UI gate.
 class PilotGate extends StatefulWidget {
@@ -10,6 +11,8 @@ class PilotGate extends StatefulWidget {
   final Stream<PilotIdentity?> authChanges;
   final PilotIdentity? initialIdentity;
   final Future<void> Function()? signInGoogle;
+  final Future<void> Function(String email)? resetPassword;
+  final Future<void> Function(String email, String password)? createAccount;
   final Future<void> Function(String email, String password) signIn;
   final Future<void> Function() signOut;
   final WidgetBuilder appBuilder;
@@ -20,6 +23,8 @@ class PilotGate extends StatefulWidget {
     required this.authChanges,
     required this.initialIdentity,
     this.signInGoogle,
+    this.resetPassword,
+    this.createAccount,
     required this.signIn,
     required this.signOut,
     required this.appBuilder,
@@ -91,6 +96,101 @@ class _PilotGateState extends State<PilotGate> {
     }
   }
 
+  Future<void> recoverPassword() async {
+    if (email.text.trim().isEmpty) {
+      setState(() => error = 'Digite seu e-mail para recuperar a senha.');
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.resetPassword!(email.text.trim());
+      if (mounted) {
+        setState(
+          () => error =
+              'Se houver uma conta elegível, você receberá as instruções por e-mail.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () =>
+              error = 'Não foi possível enviar as instruções. Tente novamente.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> registerAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Criar conta grátis'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'O acesso ao app continua sujeito à liberação da sua conta.',
+              ),
+              TextField(
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'E-mail'),
+              ),
+              TextField(
+                controller: password,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Senha (mínimo 6 caracteres)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Criar conta grátis'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    if (!email.text.trim().contains('@') || password.text.length < 6) {
+      setState(
+        () => error =
+            'Informe um e-mail válido e uma senha de pelo menos 6 caracteres.',
+      );
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.createAccount!(email.text.trim(), password.text);
+      password.clear();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => error =
+              'Não foi possível criar a conta. Se já tem conta, entre ou recupere sua senha.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.access.requested) return const LaunchBlockScreen();
@@ -126,6 +226,21 @@ class _PilotGateState extends State<PilotGate> {
                 ),
               ),
             ),
+          );
+        } else if (widget.access.official) {
+          content = OfficialLoginLayout(
+            email: email,
+            password: password,
+            busy: busy,
+            error: error,
+            onLogin: login,
+            onGoogle: widget.signInGoogle == null ? null : googleLogin,
+            onResetPassword: widget.resetPassword == null
+                ? null
+                : recoverPassword,
+            onCreateAccount: widget.createAccount == null
+                ? null
+                : registerAccount,
           );
         } else {
           content = Scaffold(
