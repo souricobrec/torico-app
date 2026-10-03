@@ -7,6 +7,7 @@ import '../services/local_storage_service.dart';
 import 'auth_screen.dart';
 import 'connected_screen.dart';
 import 'rede_connect_screen.dart';
+import '../core/active_sales_sources.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
       id: 'rede',
       name: 'Rede',
       available: false,
-      assistedActivation: true,
+      assistedActivation: false,
     ),
     _PaymentPlatformOption(id: 'getnet', name: 'Getnet', available: false),
     _PaymentPlatformOption(id: 'pagar_me', name: 'Pagar.me', available: false),
@@ -56,9 +57,8 @@ class _LoginScreenState extends State<LoginScreen> {
     List<String> platforms;
 
     try {
-      platforms = await _integrationService.syncConnectedPlatformsToLocalStorage(
-        _storage,
-      );
+      platforms = await _integrationService
+          .syncConnectedPlatformsToLocalStorage(_storage);
     } catch (_) {
       platforms = await _storage.getConnectedPlatforms();
     }
@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() {
-      connectedPlatforms = platforms;
+      connectedPlatforms = ActiveSalesSources.connected(platforms);
       selectedPlatformId = nextSelectedPlatformId;
       carregando = false;
     });
@@ -223,8 +223,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               : selectedAssisted
                               ? AppColors.goldLight
                               : _inProgressOrange,
-                          elevation:
-                              selected.available || selectedConnected ? 10 : 0,
+                          elevation: selected.available || selectedConnected
+                              ? 10
+                              : 0,
                           shadowColor: selectedInProgress
                               ? _inProgressOrange.withValues(alpha: 0.18)
                               : actionColor.withValues(alpha: 0.22),
@@ -575,7 +576,7 @@ class _IntegrationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Mercado Pago usa autorização oficial OAuth. A Rede está em ativação assistida via backend seguro. O TORICO não solicita senhas de plataformas externas.',
+              'Mercado Pago usa autorização oficial OAuth. A Rede está pausada e em preparação. O TORICO não solicita senhas de plataformas externas.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.70),
                 fontSize: isMobile ? 13 : 14,

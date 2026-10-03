@@ -88,6 +88,12 @@ void main() {
         ),
       );
       expect(find.text('Acesse o TORICO'), findsOneWidget);
+      expect(find.text('TORICO'), findsOneWidget);
+      expect(
+        find.text('Seu negócio vendendo. Onde você estiver.'),
+        findsOneWidget,
+      );
+      expect(find.text('Sair da conta'), findsNothing);
       expect(find.text('Entrar com Google'), findsOneWidget);
       expect(find.text('Sair do modo piloto'), findsNothing);
       auth.add(const PilotIdentity('stranger'));

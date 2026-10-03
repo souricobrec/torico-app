@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
+import '../core/active_sales_sources.dart';
 import '../services/auth_service.dart';
 import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
@@ -10,8 +11,13 @@ import 'owner_login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String plataforma;
+  final Future<List<String>> Function()? platformLoader;
 
-  const SettingsScreen({super.key, required this.plataforma});
+  const SettingsScreen({
+    super.key,
+    required this.plataforma,
+    this.platformLoader,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -49,8 +55,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _IntegrationInfo(
       platform: 'Rede',
       platformId: 'rede',
-      status: 'Ativação assistida',
-      description: 'Integração via API Gestão de Vendas, com ativação segura pelo backend.',
+      status: ActiveSalesSources.redeStatus,
+      description: 'Integração em preparação. Não está sendo monitorada.',
     ),
     _IntegrationInfo(
       platform: 'Getnet',
@@ -97,9 +103,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     List<String> platforms;
 
     try {
-      platforms = await _integrationService.syncConnectedPlatformsToLocalStorage(
-        _storage,
-      );
+      platforms = widget.platformLoader != null
+          ? await widget.platformLoader!()
+          : await _integrationService.syncConnectedPlatformsToLocalStorage(
+              _storage,
+            );
     } catch (_) {
       platforms = await _storage.getConnectedPlatforms();
     }
@@ -107,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
 
     setState(() {
-      connectedPlatforms = platforms;
+      connectedPlatforms = ActiveSalesSources.connected(platforms);
       carregando = false;
     });
   }
@@ -136,25 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .toList(growable: false);
   }
 
-  String get _statusText {
-    if (connectedPlatforms.isEmpty) {
-      return 'Nenhuma plataforma conectada';
-    }
-
-    if (connectedPlatforms.length == 1) {
-      if (connectedPlatforms.first == 'Mercado Pago') {
-        return 'Monitorando Mercado Pago com integração oficial';
-      }
-
-      if (connectedPlatforms.first == 'Rede') {
-        return 'Monitorando Rede com integração por API';
-      }
-
-      return 'Monitorando ${connectedPlatforms.first} em preparação';
-    }
-
-    return 'Monitorando ${connectedPlatforms.length} fontes de venda';
-  }
+  String get _statusText => ActiveSalesSources.status(connectedPlatforms);
 
   @override
   Widget build(BuildContext context) {
@@ -598,11 +588,11 @@ class _PlatformsOverviewCard extends StatelessWidget {
 
                 if (connectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
-                    text:
-                        'Conecte Mercado Pago ou Rede para iniciar o painel.',
+                    text: 'Conecte Mercado Pago para iniciar o painel.',
                   )
                 else
                   Wrap(
+                    key: const ValueKey('connected-sources'),
                     spacing: 8,
                     runSpacing: 8,
                     children: connectedPlatforms.map((platform) {
@@ -613,7 +603,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 const _PlatformSectionTitle(
-                  title: 'Disponíveis',
+                  title: 'Em preparação / pausadas',
                   icon: Icons.radio_button_unchecked_rounded,
                   color: Colors.white54,
                 ),

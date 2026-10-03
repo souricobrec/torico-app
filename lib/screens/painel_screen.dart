@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
+import '../core/active_sales_sources.dart';
 import '../core/currency_formatter.dart';
 import '../controllers/sales_controller.dart';
 import '../services/audio_service.dart';
@@ -103,9 +104,8 @@ class _PainelScreenState extends State<PainelScreen> {
     List<String> platforms;
 
     try {
-      platforms = await _integrationService.syncConnectedPlatformsToLocalStorage(
-        _storage,
-      );
+      platforms = await _integrationService
+          .syncConnectedPlatformsToLocalStorage(_storage);
     } catch (_) {
       platforms = await _storage.getConnectedPlatforms();
     }
@@ -113,7 +113,7 @@ class _PainelScreenState extends State<PainelScreen> {
     if (!mounted) return;
 
     setState(() {
-      connectedPlatforms = platforms;
+      connectedPlatforms = ActiveSalesSources.connected(platforms);
     });
   }
 
@@ -123,18 +123,6 @@ class _PainelScreenState extends State<PainelScreen> {
     if (mounted) {
       setState(() {});
     }
-  }
-
-  String get _fonteVendas {
-    if (connectedPlatforms.isEmpty) {
-      return widget.plataforma;
-    }
-
-    if (connectedPlatforms.length == 1) {
-      return connectedPlatforms.first;
-    }
-
-    return connectedPlatforms.join(' + ');
   }
 
   @override
@@ -270,9 +258,9 @@ class _PainelScreenState extends State<PainelScreen> {
                           const SizedBox(height: 10),
 
                           _SourceBadge(
-                            text: connectedPlatforms.length <= 1
-                                ? 'Fonte: $_fonteVendas'
-                                : 'Todas as plataformas: $_fonteVendas',
+                            text: ActiveSalesSources.panelLabel(
+                              connectedPlatforms,
+                            ),
                           ),
 
                           SizedBox(height: isMobile ? 4 : 8),
