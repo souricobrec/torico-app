@@ -20,7 +20,7 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('Rede · Pausada'));
+      await tester.tap(find.text('REDE · Pausada'));
       await tester.pumpAndSettle();
       expect(selected, isNull);
       await tester.tap(find.text('Mercado Pago'));
@@ -77,8 +77,12 @@ void main() {
     );
     expect(find.text('Pausada'), findsOneWidget);
     expect(
-      find.text('Integração em preparação. Não está sendo monitorada.'),
+      find.text('Integração pausada. Não está sendo monitorada.'),
       findsOneWidget,
     );
+    expect(find.text('Em andamento'), findsNothing);
+    expect(find.text('Em análise'), findsNothing);
+    expect(find.text('Em preparação'), findsNWidgets(7));
+    expect(find.text('Sair da conta'), findsOneWidget);
   });
 }

@@ -71,7 +71,7 @@ class PlanScreen extends StatelessWidget {
                       ),
                       _FeatureChip(
                         icon: Icons.receipt_long_rounded,
-                        text: 'Histórico de hoje',
+                        text: 'Histórico por data',
                       ),
                       _FeatureChip(
                         icon: Icons.filter_alt_rounded,
@@ -79,7 +79,7 @@ class PlanScreen extends StatelessWidget {
                       ),
                       _FeatureChip(
                         icon: Icons.layers_rounded,
-                        text: 'Múltiplas plataformas',
+                        text: 'Integração Mercado Pago',
                       ),
                       _FeatureChip(
                         icon: Icons.notifications_active_rounded,

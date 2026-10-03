@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
+import '../core/active_sales_sources.dart';
 import '../services/local_storage_service.dart';
 import 'main_navigation_screen.dart';
 
@@ -30,7 +31,7 @@ class _ConnectedScreenState extends State<ConnectedScreen> {
     if (!mounted) return;
 
     setState(() {
-      connectedPlatforms = platforms;
+      connectedPlatforms = ActiveSalesSources.connected(platforms);
     });
   }
 
@@ -123,7 +124,9 @@ class _ConnectedScreenState extends State<ConnectedScreen> {
                         const SizedBox(width: 14),
                         Expanded(
                           child: Text(
-                            totalPlatforms <= 1
+                            totalPlatforms == 0
+                                ? 'Nenhuma fonte ativa'
+                                : totalPlatforms == 1
                                 ? '1 plataforma conectada'
                                 : '$totalPlatforms plataformas conectadas',
                             style: const TextStyle(
