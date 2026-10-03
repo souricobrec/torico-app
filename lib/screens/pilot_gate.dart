@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 import '../services/pilot_access_service.dart';
 import 'launch_block_screen.dart';
 
 /// Keeps the entire navigation stack behind the authenticated pilot UI gate.
 class PilotGate extends StatefulWidget {
   final PilotAccessService access;
-  final Stream<String?> authChanges;
-  final String? initialUid;
+  final Stream<PilotIdentity?> authChanges;
+  final PilotIdentity? initialIdentity;
+  final Future<void> Function()? signInGoogle;
   final Future<void> Function(String email, String password) signIn;
   final Future<void> Function() signOut;
   final WidgetBuilder appBuilder;
@@ -15,7 +18,8 @@ class PilotGate extends StatefulWidget {
     super.key,
     required this.access,
     required this.authChanges,
-    required this.initialUid,
+    required this.initialIdentity,
+    this.signInGoogle,
     required this.signIn,
     required this.signOut,
     required this.appBuilder,
@@ -67,18 +71,43 @@ class _PilotGateState extends State<PilotGate> {
     }
   }
 
+  Future<void> googleLogin() async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.signInGoogle!();
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() => error = AuthService.googleErrorMessage(e.code));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => error = AuthService.googleErrorMessage('unknown'));
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.access.requested) return const LaunchBlockScreen();
-    return StreamBuilder<String?>(
+    return StreamBuilder<PilotIdentity?>(
       stream: widget.authChanges,
-      initialData: widget.initialUid,
+      initialData: widget.initialIdentity,
       builder: (context, snapshot) {
-        final uid = snapshot.data;
+        final identity = snapshot.data;
+        final uid = identity?.uid;
         Widget content;
         if (snapshot.hasError) {
           content = const LaunchBlockScreen();
-        } else if (widget.access.allows(uid)) {
+        } else if (widget.access.allows(
+          uid,
+          email: identity?.email,
+          emailVerified: identity?.emailVerified ?? false,
+        )) {
           content = Navigator(
             key: ValueKey('pilot-app-$uid'),
             onGenerateRoute: (_) =>
@@ -136,6 +165,11 @@ class _PilotGateState extends State<PilotGate> {
                           onPressed: busy ? null : login,
                           child: Text(busy ? 'Entrando…' : 'Entrar'),
                         ),
+                        if (widget.signInGoogle != null)
+                          OutlinedButton(
+                            onPressed: busy ? null : googleLogin,
+                            child: const Text('Entrar com Google'),
+                          ),
                       ],
                     ),
                   ),

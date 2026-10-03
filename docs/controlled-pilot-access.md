@@ -6,7 +6,8 @@ comportamento anterior. Nenhuma alteração de backend, regras Firestore ou conf
 
 `?pilot=1` solicita a tela de login piloto. Não é senha, convite secreto nem
 autorização por si só. O app só é mostrado após Firebase Authentication confirmar
-um UID presente em `PILOT_ALLOWED_UIDS`, configurado no build. Lista vazia (default)
+um UID presente em `PILOT_ALLOWED_UIDS` ou e-mail verificado presente em
+`PILOT_ALLOWED_EMAILS`, configurados no build. Ambas as listas vazias (default)
 bloqueia todos os pilotos, inclusive com parâmetro ou preferência salva.
 
 Os UIDs são identificadores públicos, não credenciais. Nunca colocar tokens,
@@ -18,7 +19,9 @@ flutter build web --release --dart-define=APP_ENV=production --dart-define=API_B
 
 Substituir somente por UIDs reais aprovados do Firebase Authentication. A lista
 nesta documentação é ilustrativa; não há pilotos reais configurados no fonte.
-As contas piloto devem já existir; o login dedicado não cria usuários.
+O login por senha exige conta existente; Google pode criar uma identidade Firebase
+para um novo usuário, mas o app continua bloqueado se não estiver nas allowlists.
+Veja [login Google](google-pilot-login.md) para configuração e vinculação de contas.
 
 ## Uso e limpeza
 

@@ -1,9 +1,21 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+class PilotIdentity {
+  final String uid;
+  final String? email;
+  final bool emailVerified;
+  const PilotIdentity(this.uid, {this.email, this.emailVerified = false});
+}
+
 /// Public UI rollout configuration, not an API/Firestore authorization mechanism.
 class PilotAccessService {
   static const storageKey = 'torico_pilot_requested';
   static const configuredUids = String.fromEnvironment('PILOT_ALLOWED_UIDS');
+  static const configuredEmails = String.fromEnvironment(
+    'PILOT_ALLOWED_EMAILS',
+  );
+  static Set<String> parseEmails(String value) =>
+      parseUids(value).map((email) => email.toLowerCase()).toSet();
   static Set<String> parseUids(String value) => value
       .split(',')
       .map((uid) => uid.trim())
@@ -11,13 +23,22 @@ class PilotAccessService {
       .toSet();
 
   final Set<String> allowedUids;
+  final Set<String> allowedEmails;
   bool requested = false;
 
-  PilotAccessService({Set<String>? allowedUids})
-    : allowedUids = allowedUids ?? parseUids(configuredUids);
+  PilotAccessService({Set<String>? allowedUids, Set<String>? allowedEmails})
+    : allowedUids = allowedUids ?? parseUids(configuredUids),
+      allowedEmails = parseEmails(
+        (allowedEmails ?? parseEmails(configuredEmails)).join(','),
+      );
 
-  bool allows(String? uid) =>
-      requested && uid != null && allowedUids.contains(uid);
+  bool allows(String? uid, {String? email, bool emailVerified = false}) =>
+      requested &&
+      uid != null &&
+      (allowedUids.contains(uid) ||
+          (emailVerified &&
+              email != null &&
+              allowedEmails.contains(email.trim().toLowerCase())));
 
   Future<void> initialize(Uri uri) async {
     requested = false;
@@ -29,7 +50,7 @@ class PilotAccessService {
         await prefs.remove(storageKey);
         return;
       }
-      if (allowedUids.isEmpty) {
+      if (allowedUids.isEmpty && allowedEmails.isEmpty) {
         await prefs.remove(storageKey);
         return;
       }

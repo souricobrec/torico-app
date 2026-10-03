@@ -8,6 +8,7 @@ import 'screens/pilot_gate.dart';
 import 'services/pilot_access_service.dart';
 import 'screens/splash_screen.dart';
 import 'services/domain_block_service.dart';
+import 'services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,27 +24,33 @@ Future<void> main() async {
 
 class ToricoApp extends StatelessWidget {
   final PilotAccessService pilotAccess;
-  const ToricoApp({super.key, required this.pilotAccess});
+  final AuthService auth = AuthService();
+  ToricoApp({super.key, required this.pilotAccess});
 
   @override
   Widget build(BuildContext context) {
+    PilotIdentity? identity(User? user) => user == null
+        ? null
+        : PilotIdentity(
+            user.uid,
+            email: user.email,
+            emailVerified: user.emailVerified,
+          );
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'TORICO',
       home: DomainBlockService.shouldBlock
           ? PilotGate(
               access: pilotAccess,
-              authChanges: FirebaseAuth.instance.authStateChanges().map(
-                (user) => user?.uid,
-              ),
-              initialUid: FirebaseAuth.instance.currentUser?.uid,
+              authChanges: FirebaseAuth.instance.userChanges().map(identity),
+              initialIdentity: identity(FirebaseAuth.instance.currentUser),
               signIn: (email, password) async {
-                await FirebaseAuth.instance.signInWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
+                await auth.login(email: email, password: password);
               },
-              signOut: FirebaseAuth.instance.signOut,
+              signInGoogle: () async {
+                await auth.loginWithGoogle();
+              },
+              signOut: auth.logout,
               appBuilder: (_) => const SplashScreen(),
             )
           : const SplashScreen(),
