@@ -326,6 +326,13 @@ class FirestoreSalesService {
     });
   }
 
+  /// Latest sales across dates. Fixed limit avoids exposing full basic history.
+  Stream<List<ToricoSaleRecord>> watchBasicHistory() => _salesCollection
+      .orderBy('createdAtClient', descending: true)
+      .limit(10)
+      .snapshots()
+      .map((snapshot) => snapshot.docs.map(ToricoSaleRecord.fromDoc).toList());
+
   Stream<List<ToricoSaleRecord>> watchTodaySales({
     String? platform,
     int limit = 10,

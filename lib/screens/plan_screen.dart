@@ -71,7 +71,7 @@ class PlanScreen extends StatelessWidget {
                       ),
                       _FeatureChip(
                         icon: Icons.receipt_long_rounded,
-                        text: 'Total do dia atual',
+                        text: 'Últimas 10 vendas',
                       ),
                       _FeatureChip(
                         icon: Icons.filter_alt_rounded,

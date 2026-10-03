@@ -1,5 +1,9 @@
 # UX de login e plano básico
 
+> Atualização: a decisão sobre navegação e Histórico foi substituída por
+> [Histórico limitado no Básico](basic-limited-history.md). O Básico agora tem
+> a aba Histórico com até dez vendas; login e limpeza/logout seguem iguais.
+
 Login Google mostra “Conectando com Google...” e “Aguarde a conclusão do login.”,
 com progresso acessível, campos somente leitura e botões sem perder suas cores.
 Mensagens amigáveis já existentes continuam sendo usadas para cancelamento/erro.

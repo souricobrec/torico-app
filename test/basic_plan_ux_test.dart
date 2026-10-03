@@ -14,68 +14,66 @@ import 'package:torico/services/user_plan_service.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets(
-    'basic navigation hides history; plus gains it; downgrade removes it',
-    (tester) async {
-      final plans = StreamController<UserPlan>.broadcast();
-      addTearDown(plans.close);
-      final built = <String>[];
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MainNavigationScreen(
-            plataforma: 'Mercado Pago',
-            planStream: plans.stream,
-            pageBuilder: (_, tab) {
-              built.add(tab);
-              return Text('$tab conteúdo');
-            },
-          ),
-        ),
-      );
-      expect(find.text('Histórico'), findsNothing);
-      plans.add(UserPlan.basic());
-      await tester.pumpAndSettle();
-      expect(find.text('Painel'), findsOneWidget);
-      expect(find.text('Plano'), findsOneWidget);
-      expect(find.text('Conta'), findsOneWidget);
-      expect(built, ['Painel']);
-      await tester.tap(find.text('Conta'));
-      await tester.pumpAndSettle();
-      expect(find.text('Conta conteúdo'), findsOneWidget);
-      plans.add(const UserPlan(code: 'plus', name: 'TORICO Plus'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Histórico'));
-      await tester.pumpAndSettle();
-      expect(find.text('Histórico conteúdo'), findsOneWidget);
-      plans.add(UserPlan.basic());
-      await tester.pumpAndSettle();
-      expect(find.text('Histórico'), findsNothing);
-      expect(find.text('Histórico conteúdo'), findsNothing);
-      expect(find.text('Painel conteúdo'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('direct history is blocked for basic without querying sales', (
-    tester,
-  ) async {
+  testWidgets('basic and plus navigation keep all four tabs', (tester) async {
+    final plans = StreamController<UserPlan>.broadcast();
+    addTearDown(plans.close);
+    final built = <String>[];
     await tester.pumpWidget(
       MaterialApp(
-        home: SalesHistoryScreen(
-          planStream: Stream.value(UserPlan.basic()),
-          summaryLoader: (_) => throw StateError('must not query summary'),
-          salesLoader: (_, _) => throw StateError('must not query sales'),
+        home: MainNavigationScreen(
+          plataforma: 'Mercado Pago',
+          planStream: plans.stream,
+          pageBuilder: (_, tab) {
+            built.add(tab);
+            return Text('$tab conteúdo');
+          },
         ),
       ),
     );
+    expect(find.text('Histórico'), findsOneWidget);
+    plans.add(UserPlan.basic());
     await tester.pumpAndSettle();
-    expect(
-      find.text('Histórico de vendas é um recurso do TORICO Plus.'),
-      findsOneWidget,
-    );
-    expect(find.byTooltip('Dia anterior'), findsNothing);
+    expect(find.text('Painel'), findsOneWidget);
+    expect(find.text('Plano'), findsOneWidget);
+    expect(find.text('Conta'), findsOneWidget);
+    expect(built, ['Painel']);
+    await tester.tap(find.text('Conta'));
+    await tester.pumpAndSettle();
+    expect(find.text('Conta conteúdo'), findsOneWidget);
+    plans.add(const UserPlan(code: 'plus', name: 'TORICO Plus'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Histórico'));
+    await tester.pumpAndSettle();
+    expect(find.text('Histórico conteúdo'), findsOneWidget);
+    plans.add(UserPlan.basic());
+    await tester.pumpAndSettle();
+    expect(find.text('Histórico'), findsOneWidget);
+    expect(find.text('Histórico conteúdo'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'direct basic history uses only limited loader without date queries',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SalesHistoryScreen(
+            planStream: Stream.value(UserPlan.basic()),
+            basicSalesLoader: () => Stream.value([]),
+            summaryLoader: (_) => throw StateError('must not query summary'),
+            salesLoader: (_, _) => throw StateError('must not query sales'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Plano Básico: exibindo apenas as últimas 10 vendas.'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Dia anterior'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'clear connections confirms, clears only local caches, signs out and opens login',

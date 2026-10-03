@@ -28,7 +28,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget page(String tab) {
     if (widget.pageBuilder != null) return widget.pageBuilder!(context, tab);
     return switch (tab) {
-      'Histórico' => SalesHistoryScreen(planStream: plans),
+      'Histórico' => SalesHistoryScreen(
+        planStream: plans,
+        onViewPlans: () => setState(() => selectedTab = 'Plano'),
+      ),
       'Plano' => const PlanScreen(),
       'Conta' => SettingsScreen(plataforma: widget.plataforma),
       _ => PainelScreen(plataforma: widget.plataforma),
@@ -39,11 +42,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) => StreamBuilder<UserPlan>(
     stream: plans,
     builder: (context, snapshot) {
-      final plus = !snapshot.hasError && snapshot.data?.isPlus == true;
-      final tabs = ['Painel', if (plus) 'Histórico', 'Plano', 'Conta'];
+      final tabs = ['Painel', 'Histórico', 'Plano', 'Conta'];
       if (!tabs.contains(selectedTab)) selectedTab = 'Painel';
-      if (!plus) loadedPages.remove('Histórico');
       loadedPages.putIfAbsent(selectedTab, () => page(selectedTab));
+      // Pass the already resolved plan: a late listener on a shared broadcast
+      // stream may miss its initial value when History is opened afterwards.
+      if (loadedPages.containsKey('Histórico')) {
+        loadedPages['Histórico'] = SalesHistoryScreen(
+          planStream: snapshot.hasError
+              ? Stream<UserPlan>.error(snapshot.error!)
+              : snapshot.hasData
+              ? Stream.value(snapshot.data!)
+              : const Stream<UserPlan>.empty(),
+          onViewPlans: () => setState(() => selectedTab = 'Plano'),
+        );
+        if (widget.pageBuilder != null) {
+          loadedPages['Histórico'] = widget.pageBuilder!(context, 'Histórico');
+        }
+      }
       const icons = {
         'Painel': Icons.dashboard_rounded,
         'Histórico': Icons.receipt_long_rounded,
