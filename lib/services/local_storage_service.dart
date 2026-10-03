@@ -143,4 +143,11 @@ class LocalStorageService {
     await prefs.remove(_totalSoldKey);
     await prefs.remove(_totalSoldDateKey);
   }
+
+  Future<void> clearDeviceData() async {
+    await clearConnectedPlatform();
+    await clearTotalSold();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('sales_sound_enabled');
+  }
 }

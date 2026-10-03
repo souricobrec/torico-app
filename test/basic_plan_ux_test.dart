@@ -97,11 +97,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final action = find.text('Limpar conexões deste dispositivo');
+      final action = find.text('Limpar dados deste dispositivo');
       await tester.ensureVisible(action);
       await tester.tap(action);
       await tester.pumpAndSettle();
       expect(find.textContaining('encerrará sua sessão'), findsOneWidget);
+      expect(
+        find.textContaining('integrações salvas na nuvem não serão removidas'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Cancelar'));
       await tester.pumpAndSettle();
       expect(signOuts, 0);
