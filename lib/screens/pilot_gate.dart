@@ -214,15 +214,24 @@ class _PilotGateState extends State<PilotGate> {
                 MaterialPageRoute(builder: widget.appBuilder),
           );
         } else if (uid != null) {
-          content = const Scaffold(
+          content = Scaffold(
             backgroundColor: Color(0xFF031226),
             body: Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text(
-                  'Acesso não liberado. Entre com uma conta autorizada.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Acesso não liberado. Entre com uma conta autorizada.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontSize: 20),
+                    ),
+                    TextButton(
+                      onPressed: exit,
+                      child: const Text('Trocar conta'),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -329,18 +338,14 @@ class _PilotGateState extends State<PilotGate> {
         return Column(
           children: [
             Expanded(child: content),
-            if (!widget.access.official || uid != null)
+            if (!widget.access.official && uid == null)
               Material(
                 color: const Color(0xFF031226),
                 child: SafeArea(
                   top: false,
                   child: TextButton(
                     onPressed: exit,
-                    child: Text(
-                      widget.access.official
-                          ? 'Sair da conta'
-                          : 'Sair do modo piloto',
-                    ),
+                    child: const Text('Sair do modo piloto'),
                   ),
                 ),
               ),

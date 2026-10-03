@@ -106,7 +106,8 @@ void main() {
       auth.add(const PilotIdentity('existing-uid'));
       await tester.pumpAndSettle();
       expect(find.text('Existing user app'), findsOneWidget);
-      await tester.tap(find.text('Sair da conta'));
+      expect(find.text('Sair da conta'), findsNothing);
+      auth.add(null);
       await tester.pumpAndSettle();
       expect(find.text('Existing user app'), findsNothing);
       expect(find.text('Acesse o TORICO'), findsOneWidget);

@@ -41,6 +41,11 @@ class _LoginScreenState extends State<LoginScreen> {
     _PaymentPlatformOption(id: 'getnet', name: 'Getnet', available: false),
     _PaymentPlatformOption(id: 'pagar_me', name: 'Pagar.me', available: false),
     _PaymentPlatformOption(id: 'asaas', name: 'Asaas', available: false),
+    _PaymentPlatformOption(
+      id: 'infinitepay',
+      name: 'InfinitePay',
+      available: false,
+    ),
   ];
 
   List<String> connectedPlatforms = [];
@@ -68,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String nextSelectedPlatformId = selectedPlatformId;
 
     for (final platform in _platformOptions) {
-      if (platforms.contains(platform.name)) {
+      if (ActiveSalesSources.connected(platforms).contains(platform.name)) {
         nextSelectedPlatformId = platform.id;
         break;
       }
@@ -132,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: const Color(0xFF06182C),
         behavior: SnackBarBehavior.floating,
         content: Text(
-          '${platform.name} está com integração em andamento e será liberado em uma próxima versão do TORICO.',
+          '${platform.name}: ${ActiveSalesSources.integrationStatus(platform.name)}. Esta fonte não está sendo monitorada.',
           style: const TextStyle(color: Colors.white),
         ),
       ),
@@ -258,7 +263,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? 'Conectar ${selected.name}'
                               : selectedAssisted
                               ? 'Solicitar ativação da Rede'
-                              : 'Integração em andamento',
+                              : ActiveSalesSources.integrationStatus(
+                                  selected.name,
+                                ),
                           style: const TextStyle(
                             fontSize: 16.5,
                             fontWeight: FontWeight.bold,
@@ -478,7 +485,7 @@ class _PlatformMenu extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      platform.name,
+                      ActiveSalesSources.displayName(platform.name),
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
@@ -489,13 +496,10 @@ class _PlatformMenu extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   _MiniStatusBadge(
-                    text: connected
-                        ? 'Conectado'
-                        : platform.available
-                        ? 'Disponível'
-                        : platform.assistedActivation
-                        ? 'Ativação assistida'
-                        : 'Em andamento',
+                    text: ActiveSalesSources.integrationStatus(
+                      ActiveSalesSources.displayName(platform.name),
+                      connected: connected,
+                    ),
                     color: connected
                         ? Colors.greenAccent
                         : platform.available
@@ -576,7 +580,7 @@ class _IntegrationNotice extends StatelessWidget {
 
           Expanded(
             child: Text(
-              'Mercado Pago usa autorização oficial OAuth. A Rede está pausada e em preparação. O TORICO não solicita senhas de plataformas externas.',
+              'Mercado Pago usa autorização oficial OAuth. A REDE está pausada. O TORICO não solicita senhas de plataformas externas.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.70),
                 fontSize: isMobile ? 13 : 14,

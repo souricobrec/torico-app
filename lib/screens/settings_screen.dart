@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/active_sales_sources.dart';
+import '../services/domain_block_service.dart';
 import '../services/auth_service.dart';
 import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
@@ -31,56 +32,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _IntegrationInfo(
       platform: 'Mercado Pago',
       platformId: 'mercado_pago',
-      status: 'Conectado oficialmente',
+      status: 'Conectado',
       description: 'Integração oficial ativa por autorização segura.',
     ),
     _IntegrationInfo(
       platform: 'Stone',
       platformId: 'stone',
-      status: 'Em andamento',
+      status: ActiveSalesSources.preparationStatus,
       description: 'Integração futura por canais oficiais.',
     ),
     _IntegrationInfo(
       platform: 'PagBank',
       platformId: 'pagbank',
-      status: 'Em andamento',
+      status: ActiveSalesSources.preparationStatus,
       description: 'Integração futura por canais oficiais.',
     ),
     _IntegrationInfo(
       platform: 'Cielo',
       platformId: 'cielo',
-      status: 'Em andamento',
+      status: ActiveSalesSources.preparationStatus,
       description: 'Integração futura por canais oficiais.',
     ),
     _IntegrationInfo(
       platform: 'Rede',
       platformId: 'rede',
       status: ActiveSalesSources.redeStatus,
-      description: 'Integração em preparação. Não está sendo monitorada.',
+      description: 'Integração pausada. Não está sendo monitorada.',
     ),
     _IntegrationInfo(
       platform: 'Getnet',
       platformId: 'getnet',
-      status: 'Em andamento',
+      status: ActiveSalesSources.preparationStatus,
       description: 'Integração futura por canais oficiais.',
     ),
     _IntegrationInfo(
       platform: 'Pagar.me',
       platformId: 'pagarme',
-      status: 'Em andamento',
+      status: ActiveSalesSources.preparationStatus,
       description: 'Integração futura por canais oficiais.',
     ),
     _IntegrationInfo(
       platform: 'Asaas',
       platformId: 'asaas',
-      status: 'Em andamento',
+      status: ActiveSalesSources.preparationStatus,
       description: 'Integração futura por canais oficiais.',
     ),
     _IntegrationInfo(
       platform: 'InfinitePay',
       platformId: 'infinitepay',
-      status: 'Em análise',
-      description: 'Integração em análise para versão futura.',
+      status: ActiveSalesSources.preparationStatus,
+      description: 'Integração em preparação para versão futura.',
     ),
   ];
 
@@ -231,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 8),
 
               _CollapsibleIntegrationsSection(
-                title: 'Integrações em andamento',
+                title: 'Integrações em preparação / pausadas',
                 subtitle: 'Plataformas planejadas para próximas versões.',
                 expanded: _pendingIntegrationsExpanded,
                 count: pendingIntegrations.length,
@@ -385,6 +386,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             await _storage.clearConnectedPlatform();
             await _storage.clearTotalSold();
             await authService.logout();
+
+            // The authenticated gate returns to login and destroys app routes.
+            if (DomainBlockService.shouldBlock) return;
 
             if (!context.mounted) return;
 
@@ -697,7 +701,7 @@ class _PlatformChip extends StatelessWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            platform,
+            ActiveSalesSources.displayName(platform),
             style: TextStyle(
               color: connected ? Colors.white : Colors.white70,
               fontSize: 12.3,
@@ -1067,7 +1071,7 @@ class _IntegrationStatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  platform,
+                  ActiveSalesSources.displayName(platform),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14.5,
@@ -1083,13 +1087,13 @@ class _IntegrationStatusCard extends StatelessWidget {
                       icon: connected
                           ? Icons.check_circle_rounded
                           : Icons.radio_button_unchecked_rounded,
-                      text: connected ? 'Conectado' : 'Em andamento',
+                      text: ActiveSalesSources.isActive(platform)
+                          ? ActiveSalesSources.integrationStatus(
+                              platform,
+                              connected: connected,
+                            )
+                          : realStatus,
                       color: simulationColor,
-                    ),
-                    _SmallStatusPill(
-                      icon: Icons.lock_outline_rounded,
-                      text: realStatus,
-                      color: AppColors.goldLight,
                     ),
                   ],
                 ),

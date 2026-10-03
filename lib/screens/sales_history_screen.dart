@@ -2,18 +2,40 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/currency_formatter.dart';
+import '../core/active_sales_sources.dart';
 import '../services/firestore_sales_service.dart';
 import '../widgets/app_snackbar.dart';
 
 class SalesHistoryScreen extends StatefulWidget {
-  const SalesHistoryScreen({super.key});
+  final DateTime? initialDate;
+  final Stream<DailySalesSummary> Function(DateTime)? summaryLoader;
+  final Stream<List<ToricoSaleRecord>> Function(DateTime, String?)? salesLoader;
+  const SalesHistoryScreen({
+    super.key,
+    this.initialDate,
+    this.summaryLoader,
+    this.salesLoader,
+  });
 
   @override
   State<SalesHistoryScreen> createState() => _SalesHistoryScreenState();
 }
 
 class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
-  final FirestoreSalesService _salesService = FirestoreSalesService();
+  late final FirestoreSalesService _salesService = FirestoreSalesService();
+  late DateTime selectedDate = widget.initialDate ?? DateTime.now();
+  String get dateLabel =>
+      '${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}';
+
+  Future<void> _chooseDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (date != null && mounted) setState(() => selectedDate = date);
+  }
 
   static const String allFilter = 'Todas';
   static const int basicSalesLimit = 10;
@@ -29,14 +51,35 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       status: 'Conectado',
       enabled: true,
     ),
-    _PlatformFilterOption(name: 'Stone', status: 'Em andamento'),
-    _PlatformFilterOption(name: 'PagBank', status: 'Em andamento'),
-    _PlatformFilterOption(name: 'Cielo', status: 'Em andamento'),
+    _PlatformFilterOption(
+      name: 'Stone',
+      status: ActiveSalesSources.preparationStatus,
+    ),
+    _PlatformFilterOption(
+      name: 'PagBank',
+      status: ActiveSalesSources.preparationStatus,
+    ),
+    _PlatformFilterOption(
+      name: 'Cielo',
+      status: ActiveSalesSources.preparationStatus,
+    ),
     _PlatformFilterOption(name: 'Rede', status: 'Pausada'),
-    _PlatformFilterOption(name: 'Getnet', status: 'Em andamento'),
-    _PlatformFilterOption(name: 'Pagar.me', status: 'Em andamento'),
-    _PlatformFilterOption(name: 'Asaas', status: 'Em andamento'),
-    _PlatformFilterOption(name: 'InfinitePay', status: 'Em análise'),
+    _PlatformFilterOption(
+      name: 'Getnet',
+      status: ActiveSalesSources.preparationStatus,
+    ),
+    _PlatformFilterOption(
+      name: 'Pagar.me',
+      status: ActiveSalesSources.preparationStatus,
+    ),
+    _PlatformFilterOption(
+      name: 'Asaas',
+      status: ActiveSalesSources.preparationStatus,
+    ),
+    _PlatformFilterOption(
+      name: 'InfinitePay',
+      status: ActiveSalesSources.preparationStatus,
+    ),
   ];
 
   String selectedFilter = allFilter;
@@ -132,17 +175,24 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<DailySalesSummary>(
-          stream: _salesService.watchTodaySummary(),
+          key: ValueKey('history-summary-$selectedDate'),
+          stream:
+              widget.summaryLoader?.call(selectedDate) ??
+              _salesService.watchSummaryForDate(selectedDate),
           builder: (context, summarySnapshot) {
             final summary =
                 summarySnapshot.data ??
-                DailySalesSummary.empty(DateTime.now().toIso8601String());
+                DailySalesSummary.empty(selectedDate.toIso8601String());
 
             return StreamBuilder<List<ToricoSaleRecord>>(
-              stream: _salesService.watchTodaySales(
-                platform: _selectedPlatform,
-                limit: basicSalesLimit,
-              ),
+              key: ValueKey('history-sales-$selectedDate-$selectedFilter'),
+              stream:
+                  widget.salesLoader?.call(selectedDate, _selectedPlatform) ??
+                  _salesService.watchSalesForDate(
+                    selectedDate,
+                    platform: _selectedPlatform,
+                    limit: basicSalesLimit,
+                  ),
               builder: (context, salesSnapshot) {
                 if ((summarySnapshot.connectionState ==
                             ConnectionState.waiting ||
@@ -182,6 +232,58 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Dia anterior',
+                            onPressed: () => setState(
+                              () => selectedDate = DateTime(
+                                selectedDate.year,
+                                selectedDate.month,
+                                selectedDate.day - 1,
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.chevron_left,
+                              color: AppColors.gold,
+                            ),
+                          ),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _chooseDate,
+                              icon: const Icon(Icons.calendar_month),
+                              label: Text(dateLabel),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Próximo dia',
+                            onPressed:
+                                DateTime(
+                                  selectedDate.year,
+                                  selectedDate.month,
+                                  selectedDate.day,
+                                ).isBefore(
+                                  DateTime(
+                                    DateTime.now().year,
+                                    DateTime.now().month,
+                                    DateTime.now().day,
+                                  ),
+                                )
+                                ? () => setState(
+                                    () => selectedDate = DateTime(
+                                      selectedDate.year,
+                                      selectedDate.month,
+                                      selectedDate.day + 1,
+                                    ),
+                                  )
+                                : null,
+                            icon: const Icon(
+                              Icons.chevron_right,
+                              color: AppColors.gold,
+                            ),
+                          ),
+                        ],
+                      ),
                       HistoryPlatformFilters(
                         selectedFilter: selectedFilter,
                         onSelected: (filter) {
@@ -211,8 +313,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         _EmptyCard(
                           icon: Icons.hub_rounded,
                           title: selectedFilter == allFilter
-                              ? 'Nenhuma plataforma vendeu hoje ainda'
-                              : 'Nenhuma venda em $selectedFilter hoje',
+                              ? 'Nenhuma plataforma vendeu nesta data'
+                              : 'Nenhuma venda em $selectedFilter nesta data',
                           text: selectedFilter == allFilter
                               ? 'Assim que uma venda entrar, o resumo por plataforma será atualizado automaticamente.'
                               : 'Quando houver uma venda em $selectedFilter, ela aparecerá neste resumo.',
@@ -238,8 +340,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         _EmptyCard(
                           icon: Icons.receipt_long_rounded,
                           title: selectedFilter == allFilter
-                              ? 'Nenhuma venda registrada hoje'
-                              : 'Nenhuma venda de $selectedFilter hoje',
+                              ? 'Nenhuma venda registrada nesta data'
+                              : 'Nenhuma venda de $selectedFilter nesta data',
                           text: selectedFilter == allFilter
                               ? 'As vendas do dia aparecerão aqui com valor, plataforma e horário.'
                               : 'As vendas dessa plataforma aparecerão aqui com valor e horário.',
@@ -332,7 +434,7 @@ class HistoryPlatformFilters extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _CompactFilterChip(
-            text: 'Rede · Pausada',
+            text: 'REDE · Pausada',
             selected: false,
             onTap: null,
           ),
@@ -537,7 +639,7 @@ class _PlatformFilterTile extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  option.name,
+                  ActiveSalesSources.displayName(option.name),
                   style: TextStyle(
                     color: enabled ? Colors.white : Colors.white70,
                     fontSize: 14.5,
@@ -612,8 +714,8 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = salesCount == 1
-        ? '1 venda hoje'
-        : '$salesCount vendas hoje';
+        ? '1 venda nesta data'
+        : '$salesCount vendas nesta data';
 
     final sourceText = selectedFilter == _SalesHistoryScreenState.allFilter
         ? 'Todas as plataformas'
@@ -645,7 +747,7 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'RESUMO DE HOJE',
+            'RESUMO DA DATA SELECIONADA',
             style: TextStyle(
               color: AppColors.gold,
               letterSpacing: 3,

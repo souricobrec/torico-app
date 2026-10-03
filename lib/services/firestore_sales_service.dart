@@ -297,11 +297,15 @@ class FirestoreSalesService {
   }
 
   Stream<DailySalesSummary> watchTodaySummary() {
-    final todayKey = _todayKey();
+    return watchSummaryForDate(DateTime.now());
+  }
+
+  Stream<DailySalesSummary> watchSummaryForDate(DateTime date) {
+    final todayKey = _dateKeyFromDate(date);
 
     return _dailyTotalDocument(todayKey).snapshots().map(
-          (snapshot) => DailySalesSummary.fromDoc(snapshot, todayKey),
-        );
+      (snapshot) => DailySalesSummary.fromDoc(snapshot, todayKey),
+    );
   }
 
   Stream<double> watchTodayTotal() {
@@ -326,8 +330,16 @@ class FirestoreSalesService {
     String? platform,
     int limit = 10,
   }) {
+    return watchSalesForDate(DateTime.now(), platform: platform, limit: limit);
+  }
+
+  Stream<List<ToricoSaleRecord>> watchSalesForDate(
+    DateTime date, {
+    String? platform,
+    int limit = 10,
+  }) {
     Query<Map<String, dynamic>> query = _salesCollection
-        .where('dateKey', isEqualTo: _todayKey())
+        .where('dateKey', isEqualTo: _dateKeyFromDate(date))
         .where('status', isEqualTo: 'approved');
 
     if (platform != null && platform.trim().isNotEmpty) {
@@ -341,7 +353,9 @@ class FirestoreSalesService {
         .orderBy('createdAtClient', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(ToricoSaleRecord.fromDoc).toList());
+        .map(
+          (snapshot) => snapshot.docs.map(ToricoSaleRecord.fromDoc).toList(),
+        );
   }
 
   double _sumSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {

@@ -13,4 +13,15 @@ class ActiveSalesSources {
       ? 'Nenhuma plataforma ativa'
       : 'Plataforma ativa: Mercado Pago';
   static const redeStatus = 'Pausada';
+  static const preparationStatus = 'Em preparação';
+  static bool isRede(String platform) =>
+      platform.trim().toLowerCase() == 'rede';
+  static String displayName(String platform) =>
+      isRede(platform) ? 'REDE' : platform;
+  static String integrationStatus(String platform, {bool connected = false}) =>
+      isRede(platform)
+      ? redeStatus
+      : isActive(platform)
+      ? (connected ? 'Conectado' : 'Disponível')
+      : preparationStatus;
 }

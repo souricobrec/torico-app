@@ -258,9 +258,7 @@ class _PainelScreenState extends State<PainelScreen> {
                           const SizedBox(height: 10),
 
                           _SourceBadge(
-                            text: ActiveSalesSources.panelLabel(
-                              connectedPlatforms,
-                            ),
+                            text: ActiveSalesSources.status(connectedPlatforms),
                           ),
 
                           SizedBox(height: isMobile ? 4 : 8),
