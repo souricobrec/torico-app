@@ -49,7 +49,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (abriu) {
         _showMessage(
-          'A autorização do Mercado Pago foi aberta. Depois de autorizar, volte ao TORICO e clique em verificar conexão.',
+          'Mercado Pago aberto no navegador. Integração ainda não concluída. Após autorizar, volte e toque em verificar conexão.',
         );
       } else {
         _showMessage(
@@ -83,7 +83,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (!conectado) {
         _showMessage(
-          'Ainda não encontrei a autorização do Mercado Pago. Confirme se você concluiu a autorização e tente novamente.',
+          'Integração ainda não concluída. Termine a autorização no navegador externo e toque em verificar conexão.',
           error: true,
         );
         return;
@@ -239,7 +239,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               children: [
                                 Text(
                                   isMercadoPago
-                                      ? 'Autorizar no Mercado Pago'
+                                      ? 'Abrir Mercado Pago'
                                       : 'Ativar conexão',
                                   style: const TextStyle(
                                     fontSize: 20,
@@ -288,11 +288,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                 children: [
                                   Icon(Icons.verified_rounded, size: 22),
                                   SizedBox(width: 10),
-                                  Text(
-                                    'Já autorizei, verificar conexão',
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
+                                  Flexible(
+                                    child: Text(
+                                      'Verificar conexão',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -388,10 +391,10 @@ class _ConnectionCard extends StatelessWidget {
         description = 'Abrindo autorização oficial do Mercado Pago...';
       } else if (oauthAberto) {
         description =
-            'Depois de autorizar no Mercado Pago, volte para esta tela e confirme a conexão.';
+            'Integração ainda não concluída. Depois de autorizar no navegador externo, volte e toque em verificar conexão.';
       } else {
         description =
-            'Autorize sua conta Mercado Pago usando o fluxo oficial. O TORICO não pede sua senha.';
+            'Você será direcionado ao Mercado Pago para autorizar a integração. Se for solicitada verificação por câmera, conclua pelo navegador externo.';
       }
     } else {
       description = carregando
