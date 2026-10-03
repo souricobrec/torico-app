@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
 import 'config/api_config.dart';
+import 'config/firebase_auth_config.dart';
 import 'screens/pilot_gate.dart';
 import 'services/pilot_access_service.dart';
 import 'screens/splash_screen.dart';
@@ -15,7 +17,11 @@ Future<void> main() async {
   // Validate build configuration before opening the app, including release.
   ApiConfig.baseUrl;
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final baseOptions = DefaultFirebaseOptions.currentPlatform;
+  final firebaseOptions = kIsWeb
+      ? FirebaseAuthConfig.resolveWebOptions(baseOptions, Uri.base)
+      : baseOptions;
+  await Firebase.initializeApp(options: firebaseOptions);
 
   final pilotAccess = PilotAccessService();
   if (DomainBlockService.shouldBlock) await pilotAccess.initialize(Uri.base);
