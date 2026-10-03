@@ -1,12 +1,16 @@
 # Acesso piloto controlado — fase pré-lojas
 
-O bloqueio público de `DomainBlockService` permanece intacto. Hosts de produção
+O bloqueio público de `DomainBlockService` permanece ativo. Hosts técnicos de produção
 mostram pré-lançamento por padrão; localhost, preview e apps nativos mantêm seu
 comportamento anterior. Nenhuma alteração de backend, regras Firestore ou configuração Firebase.
 
+Exceção controlada: o [domínio oficial do app](official-app-domain.md) abre login
+sem parâmetro e mantém a mesma allowlist autenticada, com linguagem de acesso controlado.
+
 `?pilot=1` solicita a tela de login piloto. Não é senha, convite secreto nem
 autorização por si só. O app só é mostrado após Firebase Authentication confirmar
-um UID presente em `PILOT_ALLOWED_UIDS`, configurado no build. Lista vazia (default)
+um UID presente em `PILOT_ALLOWED_UIDS` ou e-mail verificado presente em
+`PILOT_ALLOWED_EMAILS`, configurados no build. Ambas as listas vazias (default)
 bloqueia todos os pilotos, inclusive com parâmetro ou preferência salva.
 
 Os UIDs são identificadores públicos, não credenciais. Nunca colocar tokens,
@@ -18,7 +22,9 @@ flutter build web --release --dart-define=APP_ENV=production --dart-define=API_B
 
 Substituir somente por UIDs reais aprovados do Firebase Authentication. A lista
 nesta documentação é ilustrativa; não há pilotos reais configurados no fonte.
-As contas piloto devem já existir; o login dedicado não cria usuários.
+O login por senha exige conta existente; Google pode criar uma identidade Firebase
+para um novo usuário, mas o app continua bloqueado se não estiver nas allowlists.
+Veja [login Google](google-pilot-login.md) para configuração e vinculação de contas.
 
 ## Uso e limpeza
 

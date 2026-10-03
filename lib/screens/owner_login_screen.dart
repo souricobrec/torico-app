@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../core/app_colors.dart';
 import '../services/auth_service.dart';
@@ -31,6 +32,29 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
 
   bool emailValido(String email) {
     return email.contains('@') && email.contains('.');
+  }
+
+  Future<void> entrarGoogle() async {
+    setState(() => carregando = true);
+    try {
+      await _authService.loginWithGoogle();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        AppSnackBar.show(context, AuthService.googleErrorMessage(e.code));
+      }
+    } catch (_) {
+      if (mounted) {
+        AppSnackBar.show(context, AuthService.googleErrorMessage('unknown'));
+      }
+    } finally {
+      if (mounted) setState(() => carregando = false);
+    }
   }
 
   Future<void> entrar() async {
@@ -242,6 +266,7 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
                         });
                       },
                       onEntrar: entrar,
+                      onGoogle: kIsWeb ? entrarGoogle : null,
                       onRecuperarSenha: recuperarSenha,
                     ),
                   ),
@@ -363,6 +388,7 @@ class _LoginCard extends StatelessWidget {
   final bool ocultarSenha;
   final VoidCallback onToggleSenha;
   final VoidCallback onEntrar;
+  final VoidCallback? onGoogle;
   final VoidCallback onRecuperarSenha;
 
   const _LoginCard({
@@ -372,6 +398,7 @@ class _LoginCard extends StatelessWidget {
     required this.ocultarSenha,
     required this.onToggleSenha,
     required this.onEntrar,
+    this.onGoogle,
     required this.onRecuperarSenha,
   });
 
@@ -448,6 +475,17 @@ class _LoginCard extends StatelessWidget {
           ),
 
           SizedBox(height: isMobile ? 16 : 30),
+
+          if (onGoogle != null) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: carregando ? null : onGoogle,
+                child: const Text('Entrar com Google'),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           const Text(
             'E-mail',

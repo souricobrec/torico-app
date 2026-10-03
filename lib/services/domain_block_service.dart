@@ -1,6 +1,17 @@
 import 'package:flutter/foundation.dart';
 
 class DomainBlockService {
+  static const officialHostsConfig = String.fromEnvironment(
+    'OFFICIAL_APP_HOSTS',
+    defaultValue: 'app.meutorico.com.br',
+  );
+  static final Set<String> officialHosts = officialHostsConfig
+      .split(',')
+      .map((host) => host.trim().toLowerCase())
+      .where((host) => host.isNotEmpty)
+      .toSet();
+  static bool isOfficialHost(String host) =>
+      officialHosts.contains(host.trim().toLowerCase());
   // Bloqueio temporário usado apenas na fase pré-lojas.
   // Após publicação na Apple App Store e Google Play,
   // remover esta regra e liberar o domínio oficial normalmente.
@@ -9,6 +20,7 @@ class DomainBlockService {
     'meutorico.com.br',
     'torico-ca479.web.app',
     'torico-ca479.firebaseapp.com',
+    'app.meutorico.com.br',
   };
 
   static bool get shouldBlock {
@@ -16,7 +28,13 @@ class DomainBlockService {
       return false;
     }
 
-    final host = Uri.base.host.trim().toLowerCase();
+    return shouldBlockHost(Uri.base.host);
+  }
+
+  /// Official hosts must also pass the authenticated allowlist gate.
+  static bool shouldBlockHost(String value) {
+    final host = value.trim().toLowerCase();
+    if (isOfficialHost(host)) return true;
 
     if (host.isEmpty) {
       return false;

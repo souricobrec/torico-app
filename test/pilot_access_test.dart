@@ -53,20 +53,64 @@ void main() {
     expect(PilotAccessService.parseUids(' a, b ,a,, '), {'a', 'b'});
   });
 
+  test(
+    'email allowlist requires authenticated verified email and pilot request',
+    () async {
+      final access = PilotAccessService(
+        allowedUids: {},
+        allowedEmails: {' Pilot@Example.com '},
+      );
+      expect(
+        access.allows('uid', email: 'pilot@example.com', emailVerified: true),
+        false,
+      );
+      await access.initialize(
+        Uri.parse('https://torico-ca479.web.app/?pilot=1'),
+      );
+      expect(access.requested, true);
+      expect(
+        access.allows(null, email: 'pilot@example.com', emailVerified: true),
+        false,
+      );
+      expect(access.allows('uid', email: 'pilot@example.com'), false);
+      expect(
+        access.allows('uid', email: 'other@example.com', emailVerified: true),
+        false,
+      );
+      expect(
+        access.allows('uid', email: 'PILOT@example.com', emailVerified: true),
+        true,
+      );
+      await access.initialize(
+        Uri.parse('https://torico-ca479.web.app/?pilot=0'),
+      );
+      expect(
+        access.allows('uid', email: 'pilot@example.com', emailVerified: true),
+        false,
+      );
+    },
+  );
+
   testWidgets('URL flag alone never shows app; logout closes nested routes', (
     tester,
   ) async {
     final access = PilotAccessService(allowedUids: {'invited'});
     await access.initialize(Uri.parse('https://torico-ca479.web.app/?pilot=1'));
     final auth = StreamController<String?>.broadcast();
+    var googleCalls = 0;
     addTearDown(auth.close);
     await tester.pumpWidget(
       MaterialApp(
         home: PilotGate(
           access: access,
-          authChanges: auth.stream,
-          initialUid: null,
+          authChanges: auth.stream.map(
+            (uid) => uid == null ? null : PilotIdentity(uid),
+          ),
+          initialIdentity: null,
           signIn: (_, _) async {},
+          signInGoogle: () async {
+            googleCalls++;
+          },
           signOut: () async {},
           appBuilder: (context) => Scaffold(
             body: TextButton(
@@ -83,6 +127,10 @@ void main() {
       ),
     );
     expect(find.text('Acesso piloto TORICO'), findsOneWidget);
+    expect(find.text('Private app'), findsNothing);
+    await tester.tap(find.text('Entrar com Google'));
+    await tester.pumpAndSettle();
+    expect(googleCalls, 1);
     expect(find.text('Private app'), findsNothing);
     auth.add('other');
     await tester.pumpAndSettle();
