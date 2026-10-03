@@ -6,6 +6,7 @@ import '../services/domain_block_service.dart';
 import '../services/auth_service.dart';
 import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/platform_disconnect_service.dart';
 import 'about_screen.dart';
 import 'login_screen.dart';
 import 'owner_login_screen.dart';
@@ -15,6 +16,8 @@ class SettingsScreen extends StatefulWidget {
   final Future<List<String>> Function()? platformLoader;
   final Future<void> Function()? signOut;
   final WidgetBuilder? loginBuilder;
+  final Future<void> Function(String)? disconnectPlatform;
+  final WidgetBuilder? connectionBuilder;
 
   const SettingsScreen({
     super.key,
@@ -22,6 +25,8 @@ class SettingsScreen extends StatefulWidget {
     this.platformLoader,
     this.signOut,
     this.loginBuilder,
+    this.disconnectPlatform,
+    this.connectionBuilder,
   });
 
   @override
@@ -97,6 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool carregando = true;
   bool _activeIntegrationsExpanded = true;
   bool _pendingIntegrationsExpanded = true;
+  bool _disconnecting = false;
 
   @override
   void initState() {
@@ -228,6 +234,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               connected: true,
                               realStatus: integration.status,
                               description: integration.description,
+                              onDisconnect:
+                                  integration.platformId == 'mercado_pago'
+                                  ? () => _showPlatformDisconnectDialog()
+                                  : null,
+                              busy: _disconnecting,
                             ),
                           )
                           .toList(),
@@ -306,8 +317,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _SettingsActionTile(
                 icon: Icons.link_off_rounded,
-                title: 'Limpar conexões deste dispositivo',
-                subtitle: 'Remove conexões locais deste navegador',
+                title: 'Limpar dados deste dispositivo',
+                subtitle: 'Limpa dados locais e encerra a sessão',
                 iconColor: Colors.redAccent,
                 danger: true,
                 onTap: () {
@@ -352,15 +363,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return _ToricoDialog(
-          title: 'Limpar conexões deste dispositivo?',
+          title: 'Limpar dados deste dispositivo?',
           message:
-              'Isso removerá as conexões locais deste dispositivo e encerrará sua sessão. O histórico salvo na nuvem não será apagado.',
+              'Isso removerá os dados locais deste navegador e encerrará sua sessão. As integrações salvas na nuvem não serão removidas. O histórico salvo será mantido.',
           primaryText: 'Limpar e sair',
           primaryColor: Colors.redAccent,
           onPrimary: () async {
             Navigator.pop(context);
-            await _storage.clearConnectedPlatform();
-            await _storage.clearTotalSold();
+            await _storage.clearDeviceData();
             await (widget.signOut?.call() ?? AuthService().logout());
 
             if (DomainBlockService.shouldBlock || !mounted) return;
@@ -385,15 +395,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return _ToricoDialog(
           title: 'Sair da conta?',
           message:
-              'Você deseja sair da sua conta TORICO? Os dados locais deste dispositivo serão limpos.',
+              'Você deseja sair da sua conta TORICO? As integrações e o histórico salvo serão mantidos.',
           primaryText: 'Sair',
           primaryColor: AppColors.goldLight,
           onPrimary: () async {
-            final authService = AuthService();
-
-            await _storage.clearConnectedPlatform();
-            await _storage.clearTotalSold();
-            await (widget.signOut?.call() ?? authService.logout());
+            await (widget.signOut?.call() ?? AuthService().logout());
 
             // The authenticated gate returns to login and destroys app routes.
             if (DomainBlockService.shouldBlock) return;
@@ -402,12 +408,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const OwnerLoginScreen()),
+              MaterialPageRoute(
+                builder: widget.loginBuilder ?? (_) => const OwnerLoginScreen(),
+              ),
               (route) => false,
             );
           },
         );
       },
+    );
+  }
+
+  void _showPlatformDisconnectDialog() {
+    if (_disconnecting) return;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _ToricoDialog(
+        title: 'Desconectar Mercado Pago?',
+        message:
+            'O TORICO deixará de receber novas vendas desta conta. O histórico já salvo será mantido.',
+        primaryText: 'Desconectar',
+        primaryColor: Colors.redAccent,
+        onPrimary: () async {
+          Navigator.pop(dialogContext);
+          setState(() => _disconnecting = true);
+          try {
+            await (widget.disconnectPlatform?.call('mercado_pago') ??
+                PlatformDisconnectService().disconnect('mercado_pago'));
+            final remaining = connectedPlatforms
+                .where((p) => p != 'Mercado Pago')
+                .toList();
+            await _storage.saveConnectedPlatforms(remaining);
+            if (!mounted) return;
+            setState(() => connectedPlatforms = remaining);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Mercado Pago desconectado. O histórico salvo foi mantido.',
+                ),
+              ),
+            );
+            // Discard the old dashboard routes so stale connected state cannot reappear.
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: widget.connectionBuilder ?? (_) => const LoginScreen(),
+              ),
+              (_) => false,
+            );
+          } catch (_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Não foi possível desconectar Mercado Pago. Tente novamente.',
+                  ),
+                ),
+              );
+            }
+          } finally {
+            if (mounted) setState(() => _disconnecting = false);
+          }
+        },
+      ),
     );
   }
 }
@@ -1007,6 +1070,8 @@ class _IntegrationStatusCard extends StatelessWidget {
   final bool connected;
   final String realStatus;
   final String description;
+  final VoidCallback? onDisconnect;
+  final bool busy;
 
   const _IntegrationStatusCard({
     required this.platform,
@@ -1014,6 +1079,8 @@ class _IntegrationStatusCard extends StatelessWidget {
     required this.connected,
     required this.realStatus,
     required this.description,
+    this.onDisconnect,
+    this.busy = false,
   });
 
   IconData get _platformIcon {
@@ -1114,6 +1181,13 @@ class _IntegrationStatusCard extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
+                if (onDisconnect != null)
+                  TextButton(
+                    onPressed: busy ? null : onDisconnect,
+                    child: Text(
+                      busy ? 'Desconectando...' : 'Desconectar Mercado Pago',
+                    ),
+                  ),
               ],
             ),
           ),

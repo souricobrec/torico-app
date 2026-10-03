@@ -82,7 +82,7 @@ class IntegrationService {
         .doc(user.uid)
         .collection('integration_status')
         .doc(platformId)
-        .get();
+        .get(const GetOptions(source: Source.server));
 
     if (!doc.exists) {
       return null;
@@ -105,7 +105,9 @@ class IntegrationService {
         .collection('integration_status');
 
     for (final entry in _supportedPlatformIds.entries) {
-      final doc = await statusCollection.doc(entry.value).get();
+      final doc = await statusCollection
+          .doc(entry.value)
+          .get(const GetOptions(source: Source.server));
       final data = doc.data();
 
       if (doc.exists && data != null && data['status'] == 'connected') {

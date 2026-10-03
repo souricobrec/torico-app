@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
 import { mercadoPagoReturnPage } from './mercado-pago-return.js';
+import { disconnectPlatformHandler } from './disconnect-platform.js';
 
 // TORICO Backend
 // Production-focused version:
@@ -1626,6 +1627,15 @@ async function saveSale({
   let result;
 
   await db.runTransaction(async (transaction) => {
+    // Read inside the sale transaction: concurrent disconnects force a retry.
+    // Also covers the legacy environment-token fallback without re-enabling it.
+    if (platformId === 'mercado_pago' && source === 'webhook') {
+      const integration = await transaction.get(userRef.collection('integrations').doc('mercado_pago'));
+      if (integration.data()?.status === 'disconnected') {
+        result = { ignored: true };
+        return;
+      }
+    }
     const existingSale = await transaction.get(saleRef);
     const dailyTotalSnapshot = await transaction.get(dailyTotalRef);
 
@@ -1806,6 +1816,10 @@ async function processMercadoPagoPaymentWebhook({
       },
     },
   });
+
+  if (sale.ignored) {
+    return { processed: false, paymentId, status, reason: 'Integracao Mercado Pago desconectada.' };
+  }
 
   console.log('Venda Mercado Pago salva:', {
     toricoUserId: mercadoPagoContext.userId,
@@ -3168,6 +3182,10 @@ app.post('/integrations/rede/sync-sales', requireDevKey, async (req, res) => {
     });
   }
 });
+
+app.post('/integrations/:platform/disconnect', disconnectPlatformHandler({
+  auth: admin.auth(), db, fieldValue: admin.firestore.FieldValue,
+}));
 
 app.get('/integrations/mercado-pago/connect', (req, res) => {
   try {
