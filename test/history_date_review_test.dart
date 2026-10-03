@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:torico/core/active_sales_sources.dart';
 import 'package:torico/screens/sales_history_screen.dart';
 import 'package:torico/services/firestore_sales_service.dart';
+import 'package:torico/services/user_plan_service.dart';
 
 void main() {
   test('inactive integrations ignore stale connection flags', () {
@@ -53,6 +54,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: SalesHistoryScreen(
+          planStream: Stream.value(
+            const UserPlan(code: 'plus', name: 'TORICO Plus'),
+          ),
           initialDate: today,
           summaryLoader: (date) =>
               Stream.value(DailySalesSummary.empty(date.toIso8601String())),
