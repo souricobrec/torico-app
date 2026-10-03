@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
@@ -5,6 +6,8 @@ import '../core/active_sales_sources.dart';
 import '../core/currency_formatter.dart';
 import '../controllers/sales_controller.dart';
 import '../services/audio_service.dart';
+import '../services/firestore_sales_service.dart';
+import '../services/new_sale_tracker.dart';
 import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import '../widgets/coin_rain.dart';
@@ -21,6 +24,8 @@ class PainelScreen extends StatefulWidget {
 class _PainelScreenState extends State<PainelScreen> {
   final SalesController _salesController = SalesController();
   final AudioService _audioService = AudioService();
+  final NewSaleTracker _saleTracker = NewSaleTracker();
+  StreamSubscription<List<ToricoSaleRecord>>? _salesSubscription;
   final LocalStorageService _storage = LocalStorageService();
   final IntegrationService _integrationService = IntegrationService();
 
@@ -43,6 +48,14 @@ class _PainelScreenState extends State<PainelScreen> {
     carregarPlataformas();
     carregarTotalSalvo();
     _salesController.startWatchingTodayTotal();
+    _audioService.loadPreference().then((_) {
+      if (mounted) setState(() {});
+    });
+    _salesSubscription = FirestoreSalesService()
+        .watchTodaySales(platform: 'Mercado Pago', serverOnly: true)
+        .listen((sales) {
+          if (_saleTracker.observe(sales)) _audioService.playCashSound();
+        }, onError: (_) {});
   }
 
   void _atualizarTela() {
@@ -74,7 +87,6 @@ class _PainelScreenState extends State<PainelScreen> {
     _ultimoGanho = valor;
 
     // No iPhone/Safari, o som pode depender de permissão/interação prévia do usuário.
-    _audioService.playCashSound();
 
     setState(() {
       mostrarMoedas = true;
@@ -129,6 +141,7 @@ class _PainelScreenState extends State<PainelScreen> {
   void dispose() {
     _salesController.removeListener(_atualizarTela);
     _audioService.dispose();
+    _salesSubscription?.cancel();
     _salesController.dispose();
     super.dispose();
   }
@@ -151,8 +164,6 @@ class _PainelScreenState extends State<PainelScreen> {
       backgroundColor: AppColors.background,
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTapDown: (_) => _audioService.unlockCashSound(),
-        onPanDown: (_) => _audioService.unlockCashSound(),
         child: Stack(
           children: [
             SafeArea(
@@ -300,6 +311,40 @@ class _PainelScreenState extends State<PainelScreen> {
 
                     SizedBox(height: isMobile ? 12 : 24),
 
+                    TextButton.icon(
+                      onPressed: () async {
+                        final success = await _audioService.activate();
+                        if (!mounted || !context.mounted) return;
+                        setState(() {});
+                        if (!success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Não foi possível liberar o som. Toque novamente para tentar.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(
+                        _audioService.ready
+                            ? Icons.volume_up
+                            : Icons.volume_off,
+                        color: AppColors.gold,
+                      ),
+                      label: Text(
+                        _audioService.ready
+                            ? 'Som de vendas ativado · Testar'
+                            : 'Ativar som de vendas',
+                        style: const TextStyle(color: AppColors.gold),
+                      ),
+                    ),
+                    if (!_audioService.ready)
+                      const Text(
+                        'No celular, toque aqui uma vez para liberar o som de novas vendas.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, constraints) {

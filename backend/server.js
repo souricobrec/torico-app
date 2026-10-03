@@ -1739,6 +1739,13 @@ async function processMercadoPagoPaymentWebhook({
   const amount = getMercadoPagoPaymentAmount(payment);
 
   if (status !== 'approved') {
+    console.log('Pagamento Mercado Pago ignorado por status diferente de approved', {
+      paymentId,
+      status,
+      ...(Number.isFinite(Number(payment?.transaction_amount)) && payment?.transaction_amount != null
+        ? { amount }
+        : {}),
+    });
     return {
       processed: false,
       reason: `Pagamento ignorado porque status atual e "${status || 'desconhecido'}".`,

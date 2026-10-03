@@ -329,14 +329,21 @@ class FirestoreSalesService {
   Stream<List<ToricoSaleRecord>> watchTodaySales({
     String? platform,
     int limit = 10,
+    bool serverOnly = false,
   }) {
-    return watchSalesForDate(DateTime.now(), platform: platform, limit: limit);
+    return watchSalesForDate(
+      DateTime.now(),
+      platform: platform,
+      limit: limit,
+      serverOnly: serverOnly,
+    );
   }
 
   Stream<List<ToricoSaleRecord>> watchSalesForDate(
     DateTime date, {
     String? platform,
     int limit = 10,
+    bool serverOnly = false,
   }) {
     Query<Map<String, dynamic>> query = _salesCollection
         .where('dateKey', isEqualTo: _dateKeyFromDate(date))
@@ -352,7 +359,8 @@ class FirestoreSalesService {
     return query
         .orderBy('createdAtClient', descending: true)
         .limit(limit)
-        .snapshots()
+        .snapshots(includeMetadataChanges: serverOnly)
+        .where((snapshot) => !serverOnly || !snapshot.metadata.isFromCache)
         .map(
           (snapshot) => snapshot.docs.map(ToricoSaleRecord.fromDoc).toList(),
         );
