@@ -1,54 +1,68 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AudioService {
-  final AudioPlayer _player = AudioPlayer();
+  AudioService({Future<void> Function()? play, void Function()? dispose})
+    : _testPlay = play,
+      _testDispose = dispose;
 
-  bool _cashSoundUnlocked = false;
-  bool _isUnlocking = false;
+  AudioPlayer? _player;
+  final Future<void> Function()? _testPlay;
+  final void Function()? _testDispose;
+  static const preferenceKey = 'sales_sound_enabled';
+  bool enabled = false;
+  bool _unlocked = false;
+  bool _activating = false;
 
-  /// Prepara o áudio após uma interação real do usuário.
-  ///
-  /// Navegadores e iOS/Safari costumam bloquear sons automáticos até que o
-  /// usuário toque na tela. Por isso essa função deve ser chamada em eventos
-  /// como toque/clique no painel.
-  Future<void> unlockCashSound() async {
-    if (_cashSoundUnlocked || _isUnlocking) return;
+  Future<void> loadPreference() async {
+    enabled =
+        (await SharedPreferences.getInstance()).getBool(preferenceKey) ?? false;
+  }
 
-    _isUnlocking = true;
+  Future<void> _play() async {
+    if (_testPlay != null) return _testPlay();
+    final player = _player ??= AudioPlayer();
+    await player.setReleaseMode(ReleaseMode.stop);
+    await player.stop();
+    await player.setVolume(1);
+    await player.play(AssetSource('sounds/cash.mp3'));
+  }
 
+  /// Call only from the explicit sound button. Browsers can require a new
+  /// gesture after reopening the app even when the preference is saved.
+  Future<bool> activate() async {
+    if (_activating) return false;
+    _activating = true;
     try {
-      await _player.setReleaseMode(ReleaseMode.stop);
-      await _player.setVolume(0);
-      await _player.play(AssetSource('sounds/cash.mp3'));
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      await _player.stop();
-      await _player.setVolume(1);
-
-      _cashSoundUnlocked = true;
+      await _play();
+      _unlocked = true;
+      enabled = true;
+      await (await SharedPreferences.getInstance()).setBool(
+        preferenceKey,
+        true,
+      );
+      return true;
     } catch (_) {
-      _cashSoundUnlocked = false;
-
-      try {
-        await _player.setVolume(1);
-      } catch (_) {}
+      _unlocked = false;
+      return false;
     } finally {
-      _isUnlocking = false;
+      _activating = false;
     }
   }
 
+  bool get ready => enabled && _unlocked;
+
   Future<void> playCashSound() async {
+    if (!ready) return;
     try {
-      await _player.setReleaseMode(ReleaseMode.stop);
-      await _player.stop();
-      await _player.setVolume(1);
-      await _player.play(AssetSource('sounds/cash.mp3'));
+      await _play();
     } catch (_) {
-      // Em Web/iOS o navegador pode bloquear áudio sem interação prévia.
-      // Não deixamos isso quebrar a tela nem o recebimento da venda.
+      _unlocked = false;
     }
   }
 
   void dispose() {
-    _player.dispose();
+    _player?.dispose();
+    _testDispose?.call();
   }
 }
