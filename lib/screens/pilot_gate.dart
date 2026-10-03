@@ -114,7 +114,19 @@ class _PilotGateState extends State<PilotGate> {
                 MaterialPageRoute(builder: widget.appBuilder),
           );
         } else if (uid != null) {
-          content = const LaunchBlockScreen();
+          content = const Scaffold(
+            backgroundColor: Color(0xFF031226),
+            body: Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Acesso não liberado. Entre com uma conta autorizada.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ),
+            ),
+          );
         } else {
           content = Scaffold(
             backgroundColor: const Color(0xFF031226),
@@ -127,9 +139,14 @@ class _PilotGateState extends State<PilotGate> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Acesso piloto TORICO',
-                          style: TextStyle(color: Colors.white, fontSize: 24),
+                        Text(
+                          widget.access.official
+                              ? 'Acesse o TORICO'
+                              : 'Acesso piloto TORICO',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         TextField(
@@ -187,7 +204,11 @@ class _PilotGateState extends State<PilotGate> {
                 top: false,
                 child: TextButton(
                   onPressed: exit,
-                  child: const Text('Sair do modo piloto'),
+                  child: Text(
+                    widget.access.official
+                        ? 'Sair da conta'
+                        : 'Sair do modo piloto',
+                  ),
                 ),
               ),
             ),

@@ -1,8 +1,11 @@
 # Acesso piloto controlado — fase pré-lojas
 
-O bloqueio público de `DomainBlockService` permanece intacto. Hosts de produção
+O bloqueio público de `DomainBlockService` permanece ativo. Hosts técnicos de produção
 mostram pré-lançamento por padrão; localhost, preview e apps nativos mantêm seu
 comportamento anterior. Nenhuma alteração de backend, regras Firestore ou configuração Firebase.
+
+Exceção controlada: o [domínio oficial do app](official-app-domain.md) abre login
+sem parâmetro e mantém a mesma allowlist autenticada, com linguagem de acesso controlado.
 
 `?pilot=1` solicita a tela de login piloto. Não é senha, convite secreto nem
 autorização por si só. O app só é mostrado após Firebase Authentication confirmar

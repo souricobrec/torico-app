@@ -5,6 +5,9 @@ Firebase Authentication, sem SDK adicional ou secrets no cliente. O bloqueio
 público continua intacto: `?pilot=1` apenas solicita login. A preferência piloto
 e a limpeza por `?pilot=0`/“Sair do modo piloto” seguem funcionando.
 
+No [domínio oficial do app](official-app-domain.md), login dispensa o parâmetro;
+as mesmas allowlists continuam obrigatórias para acessar o app.
+
 O acesso exige UID em `PILOT_ALLOWED_UIDS` **ou** e-mail verificado pelo Firebase
 em `PILOT_ALLOWED_EMAILS`. E-mails são normalizados (trim/minúsculas), com comparação
 exata, sem curingas. Nenhum UID/e-mail real foi adicionado. Essas listas são públicas

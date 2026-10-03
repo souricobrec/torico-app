@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'domain_block_service.dart';
 
 class PilotIdentity {
   final String uid;
@@ -25,6 +26,7 @@ class PilotAccessService {
   final Set<String> allowedUids;
   final Set<String> allowedEmails;
   bool requested = false;
+  bool official = false;
 
   PilotAccessService({Set<String>? allowedUids, Set<String>? allowedEmails})
     : allowedUids = allowedUids ?? parseUids(configuredUids),
@@ -41,6 +43,12 @@ class PilotAccessService {
               allowedEmails.contains(email.trim().toLowerCase())));
 
   Future<void> initialize(Uri uri) async {
+    official = DomainBlockService.isOfficialHost(uri.host);
+    if (official) {
+      // Login is always available here; the allowlist still controls app access.
+      requested = true;
+      return;
+    }
     requested = false;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -63,6 +71,7 @@ class PilotAccessService {
   }
 
   Future<void> clear() async {
+    if (official) return;
     requested = false;
     try {
       await (await SharedPreferences.getInstance()).remove(storageKey);
