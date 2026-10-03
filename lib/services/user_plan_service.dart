@@ -83,4 +83,8 @@ class UserPlanService {
       return UserPlan.fromMap(snapshot.data());
     });
   }
+
+  /// Read-only entitlement used by navigation; missing plans remain basic.
+  Stream<UserPlan> watchPlanReadOnly() =>
+      _userDoc.snapshots().map((snapshot) => UserPlan.fromMap(snapshot.data()));
 }

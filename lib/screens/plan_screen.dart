@@ -71,11 +71,11 @@ class PlanScreen extends StatelessWidget {
                       ),
                       _FeatureChip(
                         icon: Icons.receipt_long_rounded,
-                        text: 'Histórico por data',
+                        text: 'Total do dia atual',
                       ),
                       _FeatureChip(
                         icon: Icons.filter_alt_rounded,
-                        text: 'Filtro por plataforma',
+                        text: 'Painel de vendas',
                       ),
                       _FeatureChip(
                         icon: Icons.layers_rounded,
@@ -438,7 +438,7 @@ class _PlusCompactCard extends StatelessWidget {
               Expanded(
                 child: _PlusMiniFeature(
                   icon: Icons.bar_chart_rounded,
-                  text: 'Relatórios Plus',
+                  text: 'Histórico de vendas',
                 ),
               ),
               Expanded(

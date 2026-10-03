@@ -5,6 +5,7 @@ class OfficialLoginLayout extends StatelessWidget {
   final TextEditingController email;
   final TextEditingController password;
   final bool busy;
+  final bool googleBusy;
   final String? error;
   final VoidCallback onLogin;
   final VoidCallback? onGoogle;
@@ -16,6 +17,7 @@ class OfficialLoginLayout extends StatelessWidget {
     required this.email,
     required this.password,
     required this.busy,
+    this.googleBusy = false,
     this.error,
     required this.onLogin,
     this.onGoogle,
@@ -70,6 +72,7 @@ class OfficialLoginLayout extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      if (googleBusy) const GoogleLoginProgress(),
                       Container(
                         key: const ValueKey('official-login-card'),
                         padding: const EdgeInsets.all(20),
@@ -96,7 +99,7 @@ class OfficialLoginLayout extends StatelessWidget {
                               const SizedBox(height: 20),
                               TextField(
                                 controller: email,
-                                enabled: !busy,
+                                readOnly: busy,
                                 keyboardType: TextInputType.emailAddress,
                                 autofillHints: const [AutofillHints.username],
                                 style: const TextStyle(color: Colors.white),
@@ -108,7 +111,7 @@ class OfficialLoginLayout extends StatelessWidget {
                               const SizedBox(height: 16),
                               TextField(
                                 controller: password,
-                                enabled: !busy,
+                                readOnly: busy,
                                 obscureText: true,
                                 autofillHints: const [AutofillHints.password],
                                 style: const TextStyle(color: Colors.white),
@@ -126,6 +129,8 @@ class OfficialLoginLayout extends StatelessWidget {
                                 style: FilledButton.styleFrom(
                                   backgroundColor: gold,
                                   foregroundColor: Colors.black,
+                                  disabledBackgroundColor: gold,
+                                  disabledForegroundColor: Colors.black,
                                   minimumSize: const Size(0, 52),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
@@ -133,7 +138,9 @@ class OfficialLoginLayout extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  busy ? 'Entrando…' : 'Entrar no TORICO →',
+                                  busy && !googleBusy
+                                      ? 'Entrando…'
+                                      : 'Entrar no TORICO →',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -184,6 +191,8 @@ class OfficialLoginLayout extends StatelessWidget {
                           style: FilledButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: const Color(0xFF242424),
+                            disabledBackgroundColor: Colors.white,
+                            disabledForegroundColor: const Color(0xFF242424),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 16,
@@ -269,6 +278,46 @@ class OfficialLoginLayout extends StatelessWidget {
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: const BorderSide(color: gold),
+    ),
+  );
+}
+
+class GoogleLoginProgress extends StatelessWidget {
+  const GoogleLoginProgress({super.key});
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E2036),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: OfficialLoginLayout.gold),
+      ),
+      child: const Column(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              color: OfficialLoginLayout.gold,
+              strokeWidth: 2,
+            ),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Conectando com Google...',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Aguarde a conclusão do login.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ],
+      ),
     ),
   );
 }

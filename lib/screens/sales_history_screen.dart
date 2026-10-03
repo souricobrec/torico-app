@@ -4,24 +4,77 @@ import '../core/app_colors.dart';
 import '../core/currency_formatter.dart';
 import '../core/active_sales_sources.dart';
 import '../services/firestore_sales_service.dart';
+import '../services/user_plan_service.dart';
 import '../widgets/app_snackbar.dart';
 
-class SalesHistoryScreen extends StatefulWidget {
+class SalesHistoryScreen extends StatelessWidget {
+  final Stream<UserPlan>? planStream;
   final DateTime? initialDate;
   final Stream<DailySalesSummary> Function(DateTime)? summaryLoader;
   final Stream<List<ToricoSaleRecord>> Function(DateTime, String?)? salesLoader;
   const SalesHistoryScreen({
     super.key,
+    this.planStream,
     this.initialDate,
     this.summaryLoader,
     this.salesLoader,
   });
 
   @override
-  State<SalesHistoryScreen> createState() => _SalesHistoryScreenState();
+  Widget build(BuildContext context) => StreamBuilder<UserPlan>(
+    stream: planStream ?? UserPlanService().watchPlanReadOnly(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasError && snapshot.data?.isPlus == true) {
+        return _SalesHistoryContent(
+          initialDate: initialDate,
+          summaryLoader: summaryLoader,
+          salesLoader: salesLoader,
+        );
+      }
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          foregroundColor: Colors.white,
+          title: const Text('TORICO Plus'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_outline, color: AppColors.gold, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'Histórico de vendas é um recurso do TORICO Plus.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
-class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
+class _SalesHistoryContent extends StatefulWidget {
+  final DateTime? initialDate;
+  final Stream<DailySalesSummary> Function(DateTime)? summaryLoader;
+  final Stream<List<ToricoSaleRecord>> Function(DateTime, String?)? salesLoader;
+  const _SalesHistoryContent({
+    this.initialDate,
+    this.summaryLoader,
+    this.salesLoader,
+  });
+
+  @override
+  State<_SalesHistoryContent> createState() => _SalesHistoryScreenState();
+}
+
+class _SalesHistoryScreenState extends State<_SalesHistoryContent> {
   late final FirestoreSalesService _salesService = FirestoreSalesService();
   late DateTime selectedDate = widget.initialDate ?? DateTime.now();
   String get dateLabel =>

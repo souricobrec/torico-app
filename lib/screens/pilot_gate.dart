@@ -38,6 +38,7 @@ class _PilotGateState extends State<PilotGate> {
   final email = TextEditingController();
   final password = TextEditingController();
   bool busy = false;
+  bool googleBusy = false;
   String? error;
 
   @override
@@ -79,6 +80,7 @@ class _PilotGateState extends State<PilotGate> {
   Future<void> googleLogin() async {
     setState(() {
       busy = true;
+      googleBusy = true;
       error = null;
     });
     try {
@@ -92,7 +94,12 @@ class _PilotGateState extends State<PilotGate> {
         setState(() => error = AuthService.googleErrorMessage('unknown'));
       }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() {
+          busy = false;
+          googleBusy = false;
+        });
+      }
     }
   }
 
@@ -241,6 +248,7 @@ class _PilotGateState extends State<PilotGate> {
             email: email,
             password: password,
             busy: busy,
+            googleBusy: googleBusy,
             error: error,
             onLogin: login,
             onGoogle: widget.signInGoogle == null ? null : googleLogin,
@@ -318,6 +326,7 @@ class _PilotGateState extends State<PilotGate> {
                             error!,
                             style: const TextStyle(color: Colors.white70),
                           ),
+                        if (googleBusy) const GoogleLoginProgress(),
                         FilledButton(
                           onPressed: busy ? null : login,
                           child: Text(busy ? 'Entrando…' : 'Entrar'),

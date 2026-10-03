@@ -13,11 +13,15 @@ import 'owner_login_screen.dart';
 class SettingsScreen extends StatefulWidget {
   final String plataforma;
   final Future<List<String>> Function()? platformLoader;
+  final Future<void> Function()? signOut;
+  final WidgetBuilder? loginBuilder;
 
   const SettingsScreen({
     super.key,
     required this.plataforma,
     this.platformLoader,
+    this.signOut,
+    this.loginBuilder,
   });
 
   @override
@@ -350,18 +354,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return _ToricoDialog(
           title: 'Limpar conexões deste dispositivo?',
           message:
-              'Isso removerá as conexões salvas neste dispositivo. O histórico de vendas salvo na nuvem não será apagado.',
-          primaryText: 'Limpar',
+              'Isso removerá as conexões locais deste dispositivo e encerrará sua sessão. O histórico salvo na nuvem não será apagado.',
+          primaryText: 'Limpar e sair',
           primaryColor: Colors.redAccent,
           onPrimary: () async {
+            Navigator.pop(context);
             await _storage.clearConnectedPlatform();
             await _storage.clearTotalSold();
+            await (widget.signOut?.call() ?? AuthService().logout());
 
-            if (!context.mounted) return;
+            if (DomainBlockService.shouldBlock || !mounted) return;
 
             Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              this.context,
+              MaterialPageRoute(
+                builder: widget.loginBuilder ?? (_) => const OwnerLoginScreen(),
+              ),
               (route) => false,
             );
           },
@@ -385,7 +393,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             await _storage.clearConnectedPlatform();
             await _storage.clearTotalSold();
-            await authService.logout();
+            await (widget.signOut?.call() ?? authService.logout());
 
             // The authenticated gate returns to login and destroys app routes.
             if (DomainBlockService.shouldBlock) return;
