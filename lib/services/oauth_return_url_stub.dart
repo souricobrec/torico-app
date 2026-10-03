@@ -1,0 +1,1 @@
+void replaceOAuthReturnUrl(Uri uri) {}

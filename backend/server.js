@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
+import { mercadoPagoReturnPage } from './mercado-pago-return.js';
 
 // TORICO Backend
 // Production-focused version:
@@ -1944,7 +1945,18 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  await integrationRef.set(integrationData, { merge: true });
+  // Publish only the status the app is allowed to read; tokens stay private.
+  const publicStatusRef = db.collection('users').doc(userId)
+    .collection('integration_status').doc('mercado_pago');
+  const batch = db.batch();
+  batch.set(integrationRef, integrationData, { merge: true });
+  batch.set(publicStatusRef, {
+    platform: 'Mercado Pago',
+    platformId: 'mercado_pago',
+    status: 'connected',
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  await batch.commit();
 
   return {
     userId,
@@ -3201,6 +3213,7 @@ app.get('/integrations/mercado-pago/connect', (req, res) => {
 });
 
 app.get('/integrations/mercado-pago/callback', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const { code, state, error, error_description: errorDescription } = req.query;
 
@@ -3210,26 +3223,11 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
         errorDescription,
       });
 
-      return res.status(400).send(`
-        <html>
-          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-            <h2>Conexao Mercado Pago nao concluida</h2>
-            <p>O Mercado Pago retornou uma recusa ou erro de autorizacao.</p>
-            <p>Voce pode fechar esta janela e tentar novamente pelo TORICO.</p>
-          </body>
-        </html>
-      `);
+      return res.status(400).send(mercadoPagoReturnPage('error'));
     }
 
     if (!code || !state) {
-      return res.status(400).send(`
-        <html>
-          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-            <h2>Callback invalido</h2>
-            <p>Parametros obrigatorios ausentes.</p>
-          </body>
-        </html>
-      `);
+      return res.status(400).send(mercadoPagoReturnPage('error'));
     }
 
     const missingConfig = getMissingMercadoPagoOAuthConfig();
@@ -3237,14 +3235,7 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
     if (missingConfig.length > 0) {
       console.warn('Configuracao OAuth Mercado Pago incompleta:', missingConfig);
 
-      return res.status(503).send(`
-        <html>
-          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-            <h2>Integracao nao configurada</h2>
-            <p>O backend ainda nao esta com todas as variaveis do Mercado Pago configuradas.</p>
-          </body>
-        </html>
-      `);
+      return res.status(503).send(mercadoPagoReturnPage('error'));
     }
 
     const statePayload = verifyOAuthState(String(state));
@@ -3273,14 +3264,7 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
         body: tokenResponseBody,
       });
 
-      return res.status(502).send(`
-        <html>
-          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-            <h2>Falha ao conectar Mercado Pago</h2>
-            <p>Nao foi possivel concluir a troca do codigo de autorizacao.</p>
-          </body>
-        </html>
-      `);
+      return res.status(502).send(mercadoPagoReturnPage('error'));
     }
 
     const integration = await saveMercadoPagoIntegration({
@@ -3295,26 +3279,11 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
       status: integration.status,
     });
 
-    return res.status(200).send(`
-      <html>
-        <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-          <h2>Mercado Pago conectado com sucesso</h2>
-          <p>A integracao foi autorizada e registrada no backend do TORICO.</p>
-          <p>Voce ja pode fechar esta janela e voltar para o app.</p>
-        </body>
-      </html>
-    `);
+    return res.status(200).send(mercadoPagoReturnPage('connected'));
   } catch (error) {
     console.error('Erro no callback Mercado Pago:', error.message);
 
-    return res.status(500).send(`
-      <html>
-        <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-          <h2>Erro interno</h2>
-          <p>Nao foi possivel concluir a conexao Mercado Pago neste momento.</p>
-        </body>
-      </html>
-    `);
+    return res.status(500).send(mercadoPagoReturnPage('error'));
   }
 });
 

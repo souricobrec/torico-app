@@ -4,18 +4,26 @@ import '../core/app_colors.dart';
 import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import 'connected_screen.dart';
+import '../services/mercado_pago_oauth_return.dart';
 
 class AuthScreen extends StatefulWidget {
   final String plataforma;
+  final MercadoPagoOAuthReturn? oauthReturn;
+  final IntegrationService? integrationService;
 
-  const AuthScreen({super.key, required this.plataforma});
+  const AuthScreen({
+    super.key,
+    required this.plataforma,
+    this.oauthReturn,
+    this.integrationService,
+  });
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
-  final IntegrationService _integrationService = IntegrationService();
+class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
+  late final IntegrationService _integrationService;
   final LocalStorageService _localStorageService = LocalStorageService();
 
   bool carregando = false;
@@ -23,6 +31,43 @@ class _AuthScreenState extends State<AuthScreen> {
   bool oauthAberto = false;
 
   bool get isMercadoPago => widget.plataforma == 'Mercado Pago';
+
+  @override
+  void initState() {
+    super.initState();
+    _integrationService = widget.integrationService ?? IntegrationService();
+    WidgetsBinding.instance.addObserver(this);
+    if (isMercadoPago && widget.oauthReturn != null) {
+      oauthAberto = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (widget.oauthReturn!.reportedConnected) {
+          _verificarConexaoMercadoPago();
+        } else {
+          _showMessage(
+            'Não foi possível concluir a autorização. Verifique a conexão ou tente novamente.',
+            error: true,
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        isMercadoPago &&
+        oauthAberto &&
+        !carregando) {
+      _verificarConexaoMercadoPago();
+    }
+  }
 
   Future<void> conectar() async {
     if (isMercadoPago) {
@@ -70,6 +115,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _verificarConexaoMercadoPago() async {
+    if (!mounted || verificandoConexao) return;
     setState(() {
       verificandoConexao = true;
     });
