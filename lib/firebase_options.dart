@@ -59,8 +59,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD6_78B6JKZluSA8krp1S88M4ab5Ail3Oc',
-    appId: '1:16783123127:android:f5550d8d3eaf96278e6332',
+    apiKey: 'AIzaSyC4Jug5svrgq8DLKqSSsVn588xtSFAY_Gs',
+    appId: '1:16783123127:android:a0f5f77bcdd6d6e48e6332',
     messagingSenderId: '16783123127',
     projectId: 'torico-ca479',
     storageBucket: 'torico-ca479.firebasestorage.app',
