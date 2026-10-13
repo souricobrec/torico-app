@@ -17,7 +17,9 @@ Preparação em 12/10/2026. Não criar conta nem enviar artefato nesta missão.
 
 ## Artefato
 
-- [ ] Substituir ID placeholder de forma coordenada com Firebase e assinaturas.
+- [x] Definir ID Android br.com.meutorico.app e alinhar namespace/MainActivity.
+- [ ] Cadastrar novo app Android no mesmo projeto Firebase e validar configuração;
+  não reutilizar o JSON antigo com.example.vendaon. Ver [build Android](android-release-build.md).
 - [ ] Gerar keystore de upload com autorização; backup privado seguro. Nunca
   versionar keystore, senhas ou key.properties. Configurar Play App Signing.
 - [ ] Gerar **AAB de distribuição**, não usar APK assinado em debug para upload.

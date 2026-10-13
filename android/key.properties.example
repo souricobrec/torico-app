@@ -1,0 +1,7 @@
+# Template only. Copy to android/key.properties locally and fill privately.
+# Relative storeFile paths resolve from android/, or use an absolute path.
+# On Windows, prefer forward slashes; never commit the real file or keystore.
+storeFile=<ABSOLUTE_PATH_TO_UPLOAD_KEYSTORE>
+storePassword=<PRIVATE_STORE_PASSWORD>
+keyAlias=<UPLOAD_KEY_ALIAS>
+keyPassword=<PRIVATE_KEY_PASSWORD>

@@ -2,6 +2,10 @@
 
 Data: 12/10/2026. Ambiente: Windows, sem macOS/Xcode.
 
+Registro histórico da branch `feature/store-readiness` (`a379638`). A migração
+Android posterior e o resultado do AAB estão em [android-release-build.md](android-release-build.md).
+Não interpretar a assinatura debug desta tabela como configuração atual da branch Android.
+
 | Verificação | Resultado |
 |---|---|
 | flutter analyze --no-pub | Sem problemas |

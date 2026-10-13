@@ -1,4 +1,4 @@
-package com.example.torico
+package br.com.meutorico.app
 
 import io.flutter.embedding.android.FlutterActivity
 

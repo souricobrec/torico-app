@@ -90,3 +90,9 @@ backend/cloudrun.env.yaml
 backend/firebase-service-account.json
 # Firebase local cache
 .firebase/
+
+# Android upload signing and locally validated Firebase config
+**/key.properties
+*.jks
+*.keystore
+/android/app/google-services.json

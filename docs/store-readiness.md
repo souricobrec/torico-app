@@ -3,6 +3,11 @@
 Revisão: 12/10/2026. Base inspecionada: `visual-pre-lojas`, `4ac50de`.
 Branch desta preparação: `feature/store-readiness`.
 
+Atualização Android: `feature/android-store-build`, baseada em `a379638`.
+Android recebeu identificador definitivo e configuração de assinatura privada;
+o cadastro Firebase e o artefato release ainda dependem das etapas descritas em
+[android-release-build.md](android-release-build.md). iOS permanece inalterado.
+
 **Preparação documental concluída; ainda não pronto para submissão nativa.**
 O PWA validado não demonstra que Android/iOS estejam homologados. Esta missão
 não cria contas de desenvolvedor ou demo, não publica, não muda Firebase,
@@ -14,11 +19,11 @@ backend, OAuth, secrets, DNS ou dados. REDE/Scheduler não foram acionados.
 |---|---|---|
 | Nome | AndroidManifest.xml, Info.plist e MaterialApp: TORICO | Mantido |
 | Versão | pubspec.yaml: 1.0.0+1 | Incrementar build number antes de cada upload |
-| Android | android/app/build.gradle.kts: namespace/applicationId com.example.vendaon | Placeholder; definir ID definitivo antes da primeira publicação |
-| Firebase Android | google-services.json registrado para com.example.vendaon | Não renomear isoladamente; configurar novo app Firebase em missão autorizada |
+| Android | android/app/build.gradle.kts: namespace/applicationId br.com.meutorico.app | Decisão definitiva aplicada na branch Android; MainActivity alinhada |
+| Firebase Android | JSON antigo local para com.example.vendaon, removido do Git | Cadastro novo e opções Firebase Android ainda necessários, manualmente |
 | iOS | project.pbxproj: com.example.vendaon; testes .RunnerTests | Escolher bundle ID definitivo e atualizar juntos os targets |
 | Firebase iOS | firebase_options.dart lança UnsupportedError para iOS; sem GoogleService-Info.plist | Configuração iOS ausente; bloqueia inicialização |
-| Assinatura Android | release usa signingConfigs.debug | Build de verificação apenas; não apto a upload |
+| Assinatura Android | release usa signingConfigs.release; exige key.properties privado | Keystore/configuração não gerados; não há fallback debug |
 | SDK Android local | FlutterExtension.kt: compile/target 36, min 24, NDK 28.2.13676358 | Valores herdados; confirmar no APK/AAB mesclado |
 | iOS mínimo | project.pbxproj: 13.0; podspecs locais firebase_core 4.10.0/firebase_auth 6.5.2 exigem 15.0 | Incompatibilidade; alinhar deployment target em todos os targets/configurações no Mac |
 | Google login | AuthService.loginWithGoogle usa signInWithPopup | Implementação web; adaptar e testar login nativo sem alterar UID/vínculos |
@@ -31,10 +36,10 @@ backend, OAuth, secrets, DNS ou dados. REDE/Scheduler não foram acionados.
 | API | ApiConfig produção: https://api.meutorico.com.br | Preservada |
 | Exclusão de conta | Logout, limpeza local e desconexão não excluem usuário/histórico | Fluxo de exclusão de conta/dados ainda precisa ser implementado |
 
-Sugestão de identificador para decisão do titular: `br.com.meutorico.app`.
-**Não atribuído, reservado ou configurado.** Confirmar disponibilidade e direitos
-da marca; coordenar applicationId, Kotlin package, bundle ID, Firebase, SHA de
-assinatura, URLs de login e provisioning sem migrar/excluir usuários existentes.
+Decisão do titular aplicada ao Android: `br.com.meutorico.app`. Isso não significa
+reserva na Play nem cadastro Firebase concluído. Identificador iOS ainda pendente.
+Coordenar Firebase, SHA de assinatura, login e provisioning sem migrar/excluir
+usuários existentes. Ver [build Android](android-release-build.md).
 
 ## Permissões e dados
 
