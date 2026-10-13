@@ -1,0 +1,58 @@
+[
+  {
+    "file": "icon-512.png",
+    "width": 512,
+    "height": 512,
+    "channels": 4,
+    "bytes": 488462,
+    "provisional": false
+  },
+  {
+    "file": "feature-graphic-1024x500.png",
+    "width": 1024,
+    "height": 500,
+    "channels": 3,
+    "bytes": 82248,
+    "provisional": false
+  },
+  {
+    "file": "provisional-web/01-login.png",
+    "width": 1080,
+    "height": 1920,
+    "channels": 3,
+    "bytes": 70860,
+    "provisional": true
+  },
+  {
+    "file": "provisional-web/02-painel.png",
+    "width": 1080,
+    "height": 1920,
+    "channels": 3,
+    "bytes": 78301,
+    "provisional": true
+  },
+  {
+    "file": "provisional-web/03-historico-basico.png",
+    "width": 1080,
+    "height": 1920,
+    "channels": 3,
+    "bytes": 46262,
+    "provisional": true
+  },
+  {
+    "file": "provisional-web/04-plano.png",
+    "width": 1080,
+    "height": 1920,
+    "channels": 3,
+    "bytes": 44555,
+    "provisional": true
+  },
+  {
+    "file": "provisional-web/05-conta-integracoes.png",
+    "width": 1080,
+    "height": 1920,
+    "channels": 3,
+    "bytes": 55082,
+    "provisional": true
+  }
+]

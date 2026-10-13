@@ -179,15 +179,18 @@ Google Play completa; prazos de retenção e procedimentos de exclusão seguem p
 
 | Material | Estado | Ação necessária |
 |---|---|---|
-| Ícone Play 512×512 | Asset fonte `assets/images/app_icon.png`: 1254×1254, 2.262.445 bytes | Criar derivado PNG 32-bit, até 1.024 KB; preservar marca; validar aparência sem alterar ícone Android |
+| Ícone Play 512×512 | Gerado: `store-assets/google-play/icon-512.png`, PNG RGBA, 488.462 bytes | Aprovação editorial; ícone do app preservado |
 | Logo fonte | `assets/images/torico_logo.png`: 2172×724, 1.423.017 bytes | Referência de identidade, não substitui ícone quadrado |
-| Feature graphic 1024×500 | Não preparada para esta ficha | Criar JPEG/PNG 24-bit sem alpha, navy/dourado; sem badges, preço ou promessa não entregue |
-| Screenshots Android reais | Não homologados/disponíveis para este pacote | Capturar ao menos 2; sugeridos 4–6: login, Painel, Histórico, Plano, Conta; PNG/JPEG sem alpha; conferir dimensões e proporções oficiais vigentes por dispositivo |
+| Feature graphic 1024×500 | Gerada: `store-assets/google-play/feature-graphic-1024x500.png`, PNG RGB sem alpha, 82.248 bytes | Aprovação editorial; navy/dourado, slogan oficial, sem promessa adicional |
+| Prévias web editoriais | 5 PNGs 1080×1920 em `store-assets/google-play/provisional-web/` | Reconstruções HTML/CSS offline baseadas no layout Flutter/PWA, com selo de demonstração; não são capturas do app em execução |
+| Screenshots Android reais | Ainda pendentes; emulador bloqueado por hardware | Substituir prévias por capturas reais de login, Painel, Histórico, Plano e Conta em aparelho homologado, com dados fictícios |
 | Dados de demonstração | Não criados | Planejar dados isolados/fictícios, sem usuário real ou alterações em produção |
 
-Não usar screenshots do PWA como prova da execução Android nem inventar telas.
-Não gerar imagens ou binários nesta preparação. Assets devem representar o app
-entregue, com REDE Pausada e outras plataformas Em preparação.
+Não usar prévias editoriais como prova de execução Android ou como screenshots
+nativos finais. Materiais gráficos foram preparados em 13/10/2026, sem gerar novo
+APK/AAB, deploy ou publicação. REDE Pausada; outras plataformas Em preparação.
+Detalhes, origem, reprodução e tamanhos: `store-assets/google-play/README.md` e
+`manifest.json`. Teste físico e homologação nativa continuam pendentes.
 
 ## 7. Antes de criar o app: decisões e pendências manuais
 
