@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Firebase Auth, Firestore and the TORICO HTTPS API require network access in release. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="TORICO"
         android:name="${applicationName}"
