@@ -17,8 +17,10 @@ prontas para envio.
 | Suporte público | sourico.br.ec@gmail.com (provisório; confirmar monitoramento pelo titular) |
 | Site institucional | https://www.meutorico.com.br — validar conteúdo público antes de cadastrar |
 | App web | https://app.meutorico.com.br — não confundir com a ficha Android |
-| Política de privacidade pretendida | https://www.meutorico.com.br/privacidade — candidata, publicação/conteúdo final ainda precisam de validação |
-| Solicitação externa de exclusão | URL ainda não definida/implementada; não inventar rota funcional |
+| Política de privacidade pública | https://www.meutorico.com.br/privacidade — publicada em 13/10/2026; revisão humana de retenção/obrigações ainda pendente |
+| Termos de uso | https://www.meutorico.com.br/termos |
+| Suporte | https://www.meutorico.com.br/suporte |
+| Solicitação externa de exclusão | https://www.meutorico.com.br/exclusao-de-conta — instruções e contato por e-mail, atendimento manual; não executa exclusão automática |
 
 TORICO tem 6 caracteres. A descrição curta cabe no limite de 80 caracteres.
 Categoria e tags são escolhas editoriais; não definem respostas sobre recursos
@@ -81,7 +83,9 @@ ainda não foi criado. Não enviar senha ou token no Git.
 - Google login usa implementação web; suporte Android ainda precisa homologação.
 - Controle piloto atual não protege o Android como protege a web.
 - Callback Mercado Pago retorna ao PWA; retorno automático nativo/deep link pendente.
-- Exclusão de conta/dados no app e solicitação externa ainda pendentes.
+- Exclusão de conta/dados no app ainda pendente. Página externa pública publicada,
+  com solicitação por e-mail; concluir procedimento operacional de eliminação,
+  retenção e atendimento antes da submissão. A página não homologa esse processo.
 - Pendências OAuth previamente registradas: autenticação Firebase no início da
   conexão, exclusividade da conta vinculada e consumo único do state.
 - Verificar bibliotecas nativas 64-bit/16 KB, recuperação de senha, rede, áudio e
@@ -157,7 +161,7 @@ Firestore, backend e SDKs participam da coleta; serviço de terceiro não signif
 | Criptografia em trânsito | Provavelmente sim, com HTTPS/Firebase | Confirmar todos os fluxos Android, SDKs e logs; criptografia de tokens em repouso não responde essa pergunta |
 | Coleta obrigatória/opcional | Conta necessária; integração voluntária | Preencher por tipo, login e recurso; suporte depende do que usuário envia |
 | Finalidades | Funcionalidade, gerenciamento de conta; segurança quando aplicável | Não marcar publicidade/analytics sem evidência |
-| Exclusão de conta | Fluxo completo ainda não disponível | Implementar opção no app e caminho web externo; logout/limpeza/desconexão não substituem exclusão |
+| Exclusão de conta | Fluxo completo ainda não disponível | Página web externa publicada em /exclusao-de-conta com solicitação manual; implementar opção no app e validar eliminação; logout/limpeza/desconexão não substituem exclusão |
 | Retenção após exclusão | Ainda não definida integralmente | Estabelecer eliminação de conta, vendas, tokens, logs/backups e exceções justificadas; política coerente |
 | Público-alvo | Sugerido: adultos, 18+, comerciantes | Titular confirmar; não direcionado a crianças; IARC é questionário distinto, não inventar classificação |
 | Anúncios | Provável: não contém anúncios | Nenhum SDK publicitário direto no pubspec revisado; confirmar binário/dependências/comportamento |
@@ -166,7 +170,10 @@ Firestore, backend e SDKs participam da coleta; serviço de terceiro não signif
 
 As respostas devem cobrir o conjunto de versões/faixas distribuídas conforme a
 regra Google, inclusive SDKs. Não alegar revisão independente de segurança.
-Documentos legais em `docs/legal/` são rascunhos, não política pública aprovada.
+Documentos em `docs/legal/` são os rascunhos de origem. Páginas públicas derivadas
+foram publicadas em 13/10/2026, identificando Elton Cruz como responsável, conforme
+informado pelo titular. A publicação não significa revisão jurídica ou conformidade
+Google Play completa; prazos de retenção e procedimentos de exclusão seguem pendentes.
 
 ## 6. Materiais gráficos faltantes
 
@@ -185,8 +192,9 @@ entregue, com REDE Pausada e outras plataformas Em preparação.
 ## 7. Antes de criar o app: decisões e pendências manuais
 
 O pacote textual está preparado; o produto **não está pronto para submissão**.
-Faltam homologação nativa em aparelho, correções de acesso/OAuth, exclusão de conta,
-política pública final, auditoria Data safety, reviewer/demo, gráficos/screenshots
+Faltam homologação nativa em aparelho, correções de acesso/OAuth, exclusão de conta
+no app e processo manual validado, revisão humana da política pública, auditoria
+Data safety, reviewer/demo, gráficos/screenshots
 e decisão do titular sobre conta/países/preço. A criação de rascunho na Console
 não substitui esses requisitos. Não executar cadastro/publicação nesta missão.
 
