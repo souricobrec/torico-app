@@ -77,8 +77,9 @@ ainda não foi criado. Não enviar senha ou token no Git.
 ## 2. Estado técnico e bloqueios
 
 - AAB e APK release já gerados e assinados: `br.com.meutorico.app`, targetSdk 36,
-  minSdk 24. Novo build de login nativo em 13/10/2026: versão 1.0.0 (2), APK
-  `build/app/outputs/apk/release-test/torico-native-login-release.apk`; AAB em
+  minSdk 24. Build atual com ícone adaptativo corrigido em 13/10/2026:
+  versão 1.0.0 (3), APK
+  `build/app/outputs/apk/release-test/torico-icon-fixed-release.apk`; AAB em
   `build/app/outputs/bundle/release/app-release.aab`. Dados/hashes em
   `docs/android-physical-test.md`; sem envio à Play.
 - Pixel 8: timeout; Pixel 4: instabilidade de CPU/memória; emulação encerrada.
@@ -186,7 +187,8 @@ Google Play completa; prazos de retenção e procedimentos de exclusão seguem p
 
 | Material | Estado | Ação necessária |
 |---|---|---|
-| Ícone Play 512×512 | Gerado: `store-assets/google-play/icon-512.png`, PNG RGBA, 488.462 bytes | Aprovação editorial; ícone do app preservado |
+| Ícone Play 512×512 | Gerado: `store-assets/google-play/icon-512.png`, PNG RGBA, 488.462 bytes | Aprovação editorial; asset Play preservado, independente das camadas Android |
+| Ícone launcher Android | Corrigido: fundo navy, T oficial central e camadas adaptativas/monochrome, PNGs legados | Testar launcher/recents no emulador e aparelho; asset Play separado e preservado; ver `docs/android-adaptive-icon.md` |
 | Logo fonte | `assets/images/torico_logo.png`: 2172×724, 1.423.017 bytes | Referência de identidade, não substitui ícone quadrado |
 | Feature graphic 1024×500 | Gerada: `store-assets/google-play/feature-graphic-1024x500.png`, PNG RGB sem alpha, 82.248 bytes | Aprovação editorial; navy/dourado, slogan oficial, sem promessa adicional |
 | Prévias web editoriais | 5 PNGs 1080×1920 em `store-assets/google-play/provisional-web/` | Reconstruções HTML/CSS offline baseadas no layout Flutter/PWA, com selo de demonstração; não são capturas do app em execução |

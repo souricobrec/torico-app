@@ -1,5 +1,30 @@
 # TORICO — APK release e teste físico Android
 
+## Atualização do ícone adaptativo — 13/10/2026
+
+Novo APK de teste: **versão 1.0.0 (3)**, branch `feature/android-adaptive-icon`.
+Login/autenticação não foram alterados nesta atualização. Usar este artefato
+para os próximos testes; registros anteriores abaixo são históricos.
+
+- APK: `C:/Users/CRZ/Documents/ChatGPT/TORICO/build/app/outputs/apk/release-test/torico-icon-fixed-release.apk`.
+- Tamanho: 63.599.950 bytes.
+- SHA256 APK: `102F55C84C8B4F6F4FDB331D5DF223240EDDEB447B9B7E9E060973C5F7E46CA5`.
+- AAB: `build/app/outputs/bundle/release/app-release.aab`, 63.875.395 bytes.
+- SHA256 AAB: `BCA059F79149524D0E198714D604220D7283329AA66365C850A52344BBD0C2E1`.
+- Assinatura upload preservada, APK v2/v3 válido; package br.com.meutorico.app,
+  minSdk 24/targetSdk 36. Manifest icon e roundIcon apontam ao mesmo recurso.
+- Análise sem problemas, 52 testes aprovados; build release concluído em 213,2 s.
+- Recurso adaptativo API26+, fundo navy, foreground T oficial, camada monochrome;
+  recursos legados para API24/25. Área segura conferida; ver `android-adaptive-icon.md`.
+
+Instalar com `adb -s <SERIAL> install -r` usando o novo caminho, sem apagar dados.
+Conferir launcher/gaveta, visão de recentes e tema claro/escuro. Testar ícones
+temáticos separadamente (Android13+ escolhe as cores). Se houver cache antigo,
+reiniciar normalmente; não limpar dados do launcher ou desinstalar sem autorização.
+Prévia local: `build/icon-preview/android-icon-masks.png`, simulação, não captura
+de execução. Instalação e validação visual no emulador/aparelho ainda pendentes.
+Backup do AAB v2: `build/android-release-backups/pre-icon-fix/`.
+
 ## Atualização de login nativo — 13/10/2026
 
 Branch `feature/android-current-login`: Android agora usa login oficial e PilotGate,
