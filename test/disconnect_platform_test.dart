@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:torico/screens/settings_screen.dart';
 import 'package:torico/services/local_storage_service.dart';
 import 'package:torico/services/platform_disconnect_service.dart';
+import 'package:torico/screens/pilot_gate.dart';
+import 'package:torico/services/pilot_access_service.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -58,16 +61,30 @@ void main() {
       final storage = LocalStorageService();
       await storage.saveConnectedPlatforms(['Mercado Pago']);
       var logouts = 0;
+      final changes = StreamController<PilotIdentity?>();
+      addTearDown(changes.close);
+      final access = PilotAccessService(allowedUids: {'authorized'});
+      await access.initializeForPlatform(Uri(), isWeb: false);
       await tester.pumpWidget(
         MaterialApp(
-          home: SettingsScreen(
-            plataforma: 'Mercado Pago',
-            platformLoader: () async => ['Mercado Pago'],
-            signOut: () async {
-              logouts++;
-            },
-            disconnectPlatform: (_) async => fail('logout must not disconnect'),
-            loginBuilder: (_) => const Scaffold(body: Text('Login')),
+          home: PilotGate(
+            access: access,
+            authChanges: changes.stream,
+            initialIdentity: const PilotIdentity('authorized'),
+            signIn: (_, _) async {},
+            signInGoogle: () async {},
+            signOut: () async {},
+            appBuilder: (_) => SettingsScreen(
+              plataforma: 'Mercado Pago',
+              platformLoader: () async => ['Mercado Pago'],
+              signOut: () async {
+                logouts++;
+                changes.add(null);
+              },
+              disconnectPlatform: (_) async =>
+                  fail('logout must not disconnect'),
+              loginBuilder: (_) => const Scaffold(body: Text('Login')),
+            ),
           ),
         ),
       );
@@ -79,7 +96,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(logouts, 1);
       expect(await storage.getConnectedPlatforms(), ['Mercado Pago']);
-      expect(find.text('Login'), findsOneWidget);
+      expect(find.byKey(const ValueKey('official-login-card')), findsOneWidget);
+      expect(find.text('Sair da conta'), findsNothing);
     },
   );
 

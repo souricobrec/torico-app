@@ -42,6 +42,17 @@ class PilotAccessService {
               email != null &&
               allowedEmails.contains(email.trim().toLowerCase())));
 
+  Future<void> initializeForPlatform(Uri uri, {required bool isWeb}) async {
+    if (isWeb) {
+      await initialize(uri);
+      return;
+    }
+    // Native has no public host or URL flag. Login is visible, but app access
+    // still requires the same UID or verified-email allowlist; empty fails closed.
+    official = true;
+    requested = true;
+  }
+
   Future<void> initialize(Uri uri) async {
     official = DomainBlockService.isOfficialHost(uri.host);
     if (official) {

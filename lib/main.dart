@@ -27,7 +27,9 @@ Future<void> main() async {
   await Firebase.initializeApp(options: firebaseOptions);
 
   final pilotAccess = PilotAccessService();
-  if (DomainBlockService.shouldBlock) await pilotAccess.initialize(Uri.base);
+  if (DomainBlockService.shouldBlock) {
+    await pilotAccess.initializeForPlatform(initialUri, isWeb: kIsWeb);
+  }
   if (oauthReturn != null) MercadoPagoOAuthReturn.clearUrl(initialUri);
   runApp(ToricoApp(pilotAccess: pilotAccess, oauthReturn: oauthReturn));
 }

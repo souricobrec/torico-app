@@ -50,7 +50,10 @@ void main() {
     'provider conflict links only after login to the matching existing account',
     () async {
       final user = TestUser('existing@example.com');
-      final service = AuthService(auth: TestAuth(user)..conflict = true);
+      final service = AuthService(
+        auth: TestAuth(user)..conflict = true,
+        useWebGoogle: true,
+      );
       await expectLater(
         service.loginWithGoogle(),
         throwsA(isA<FirebaseAuthException>()),
@@ -71,7 +74,10 @@ void main() {
     'different account cannot consume Google credential from a conflict',
     () async {
       final user = TestUser('different@example.com');
-      final service = AuthService(auth: TestAuth(user)..conflict = true);
+      final service = AuthService(
+        auth: TestAuth(user)..conflict = true,
+        useWebGoogle: true,
+      );
       await expectLater(
         service.loginWithGoogle(),
         throwsA(isA<FirebaseAuthException>()),
@@ -85,7 +91,10 @@ void main() {
     'Google sign in uses Firebase identity without creating app records',
     () async {
       final user = TestUser('existing@example.com');
-      final result = await AuthService(auth: TestAuth(user)).loginWithGoogle();
+      final result = await AuthService(
+        auth: TestAuth(user),
+        useWebGoogle: true,
+      ).loginWithGoogle();
       expect(result.user?.uid, 'existing-uid');
       expect(user.links, 0);
     },

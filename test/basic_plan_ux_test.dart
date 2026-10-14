@@ -84,15 +84,28 @@ void main() {
       await prefs.setDouble('total_sold', 1);
       await prefs.setString('unrelated_preference', 'keep');
       var signOuts = 0;
+      final changes = StreamController<PilotIdentity?>();
+      addTearDown(changes.close);
+      final access = PilotAccessService(allowedUids: {'authorized'});
+      await access.initializeForPlatform(Uri(), isWeb: false);
       await tester.pumpWidget(
         MaterialApp(
-          home: SettingsScreen(
-            plataforma: 'Mercado Pago',
-            platformLoader: () async => ['Mercado Pago', 'Rede'],
-            signOut: () async {
-              signOuts++;
-            },
-            loginBuilder: (_) => const Scaffold(body: Text('Tela de login')),
+          home: PilotGate(
+            access: access,
+            authChanges: changes.stream,
+            initialIdentity: const PilotIdentity('authorized'),
+            signIn: (_, _) async {},
+            signInGoogle: () async {},
+            signOut: () async {},
+            appBuilder: (_) => SettingsScreen(
+              plataforma: 'Mercado Pago',
+              platformLoader: () async => ['Mercado Pago', 'Rede'],
+              signOut: () async {
+                signOuts++;
+                changes.add(null);
+              },
+              loginBuilder: (_) => const Scaffold(body: Text('Tela de login')),
+            ),
           ),
         ),
       );
@@ -118,7 +131,8 @@ void main() {
       expect(await storage.getConnectedPlatforms(), isEmpty);
       expect(prefs.containsKey('total_sold'), false);
       expect(prefs.getString('unrelated_preference'), 'keep');
-      expect(find.text('Tela de login'), findsOneWidget);
+      expect(find.byKey(const ValueKey('official-login-card')), findsOneWidget);
+      expect(find.text('Sair da conta'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

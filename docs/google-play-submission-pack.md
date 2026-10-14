@@ -77,11 +77,16 @@ ainda não foi criado. Não enviar senha ou token no Git.
 ## 2. Estado técnico e bloqueios
 
 - AAB e APK release já gerados e assinados: `br.com.meutorico.app`, targetSdk 36,
-  minSdk 24. Não foram recompilados nem enviados nesta missão.
+  minSdk 24. Novo build de login nativo em 13/10/2026: versão 1.0.0 (2), APK
+  `build/app/outputs/apk/release-test/torico-native-login-release.apk`; AAB em
+  `build/app/outputs/bundle/release/app-release.aab`. Dados/hashes em
+  `docs/android-physical-test.md`; sem envio à Play.
 - Pixel 8: timeout; Pixel 4: instabilidade de CPU/memória; emulação encerrada.
   APK/AAB válidos, mas não homologados em execução. Teste físico pendente.
-- Google login usa implementação web; suporte Android ainda precisa homologação.
-- Controle piloto atual não protege o Android como protege a web.
+- Google login Android implementado com google_sign_in + Firebase na branch
+  `feature/android-current-login`; execução real ainda precisa homologação.
+- Controle piloto Android alinhado ao PilotGate com allowlist UID/e-mail verificado;
+  testes e build documentados em `docs/android-physical-test.md`. Homologar no APK.
 - Callback Mercado Pago retorna ao PWA; retorno automático nativo/deep link pendente.
 - Exclusão de conta/dados no app ainda pendente. Página externa pública publicada,
   com solicitação por e-mail; concluir procedimento operacional de eliminação,
@@ -90,6 +95,8 @@ ainda não foi criado. Não enviar senha ou token no Git.
   conexão, exclusividade da conta vinculada e consumo único do state.
 - Verificar bibliotecas nativas 64-bit/16 KB, recuperação de senha, rede, áudio e
   ciclo de vida em hardware adequado. Não declarar aprovação pelo build sozinho.
+- Auditar USE_BIOMETRIC/USE_FINGERPRINT acrescentadas pelas dependências nativas
+  Google/AndroidX biometric; ausência de câmera não elimina a revisão de SDKs.
 
 ## 3. Instruções para futuros testadores fechados
 

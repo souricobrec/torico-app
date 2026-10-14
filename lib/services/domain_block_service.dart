@@ -25,7 +25,8 @@ class DomainBlockService {
 
   static bool get shouldBlock {
     if (!kIsWeb) {
-      return false;
+      // Native apps must use the same authenticated rollout gate as official web.
+      return true;
     }
 
     return shouldBlockHost(Uri.base.host);
