@@ -77,12 +77,12 @@ ainda não foi criado. Não enviar senha ou token no Git.
 ## 2. Estado técnico e bloqueios
 
 - AAB e APK release já gerados e assinados: `br.com.meutorico.app`, targetSdk 36,
-  minSdk 24. Build atual com ícone oficial completo em 13/10/2026:
-  versão 1.0.0 (4), APK
-  `build/app/outputs/apk/release-test/torico-icon-official-release.apk`; AAB em
+  minSdk 24. Build atual com identidade na Conta e ícone oficial completo:
+  versão 1.0.0 (6), APK
+  `build/app/outputs/apk/release-test/torico-account-identity-release.apk`; AAB em
   `build/app/outputs/bundle/release/app-release.aab`. Dados/hashes em
-  `docs/android-adaptive-icon.md` (versão4) e `docs/android-physical-test.md`
-  (histórico/checklist); sem envio à Play.
+  `docs/android-physical-test.md` (versão6) e `docs/android-adaptive-icon.md`
+  (ícone/histórico); sem envio à Play.
 - Pixel 8: timeout; Pixel 4: instabilidade de CPU/memória; emulação encerrada.
   APK/AAB válidos, mas não homologados em execução. Teste físico pendente.
 - Google login Android implementado com google_sign_in + Firebase na branch
@@ -99,6 +99,11 @@ ainda não foi criado. Não enviar senha ou token no Git.
   ciclo de vida em hardware adequado. Não declarar aprovação pelo build sozinho.
 - Auditar USE_BIOMETRIC/USE_FINGERPRINT acrescentadas pelas dependências nativas
   Google/AndroidX biometric; ausência de câmera não elimina a revisão de SDKs.
+- O titular relatou Google login funcional no APK 1.0.0 (5) no emulador. Na branch
+  `feature/account-identity`, Conta mostra perfil Firebase sem UID/tokens e métodos
+  vinculados, com fontes descritas como integrações da conta na nuvem. Não há
+  novo ID/e-mail Mercado Pago exibido; usa “Conta Mercado Pago autorizada”.
+  Homologar a nova UI; relato não substitui teste físico/OAuth nativo completo.
 
 ## 3. Instruções para futuros testadores fechados
 

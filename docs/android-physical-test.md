@@ -1,5 +1,35 @@
 # TORICO — APK release e teste físico Android
 
+## Conta TORICO e fontes na nuvem — versão 1.0.0 (6)
+
+13/10/2026, branch `feature/account-identity`. Análise sem problemas,
+**57 testes aprovados**, AAB release concluído em 175,5 s. APK universal com
+assinatura v2/v3 válida e certificado anterior; código do novo card confirmado
+no artefato. Não foi instalado ou autenticado automaticamente nesta missão.
+
+- APK: `C:/Users/CRZ/Documents/ChatGPT/TORICO/build/app/outputs/apk/release-test/torico-account-identity-release.apk`.
+- Tamanho APK: 63.751.502 bytes.
+- SHA256 APK: `E606577BDBC78318C6A5C7AD3A30DD18CE243A5F49CEA040D82E5CCB10739F52`.
+- AAB: `build/app/outputs/bundle/release/app-release.aab`, 64.039.097 bytes.
+- SHA256 AAB: `4CBCF95FBA146986A616C4972758192D8DC664E1C9866FEAF7D41FD8F7E7DF92`.
+- Package br.com.meutorico.app, versionCode6, minSdk24/targetSdk36.
+- AAB anterior preservado em `build/android-release-backups/pre-account-identity/`.
+
+Teste manual: instalar com `adb -s <SERIAL> install -r` usando esse APK, sem
+apagar dados. Abrir Conta e confirmar nome/e-mail da identidade TORICO atual,
+sem UID; métodos vinculados Google e/ou e-mail/senha, sem inferir último login.
+Conferir “Conectadas à sua conta TORICO” e “Conta Mercado Pago autorizada”, com
+OAuth/webhooks oficiais. Não atribuir o e-mail Firebase à conta Mercado Pago.
+Estado atual não fornece e-mail/ID Mercado Pago para exibição.
+
+Validar textos: sair mantém integração; limpeza local não desconecta; confirmação
+de desconexão explica efeito na conta TORICO em todos os dispositivos e histórico
+preservado. Não confirmar desconexão real durante simples revisão de UI sem
+autorização do titular. REDE continua Pausada; nenhuma ativação foi feita.
+Ícone oficial completo e login anteriores preservados. Relato do titular: Google
+login no APK5 funcionou no emulador; teste físico e outros fluxos seguem pendentes.
+Os artefatos das seções abaixo são registros de versões anteriores.
+
 ## Atualização do ícone adaptativo — 13/10/2026
 
 Novo APK de teste: **versão 1.0.0 (3)**, branch `feature/android-adaptive-icon`.

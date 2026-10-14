@@ -1,5 +1,32 @@
 # TORICO — alinhamento do login Android
 
+## Atualização — identidade na Conta (13/10/2026)
+
+O titular informou que Google login do APK 1.0.0 (5) funcionou no emulador,
+com entrada no painel e recuperação da integração já salva na nuvem. Este é
+um resultado relatado pelo titular; não implica homologação de todos os fluxos.
+
+Branch `feature/account-identity`: somente Conta foi ajustada. Exibe e-mail e
+nome do Firebase currentUser quando disponíveis, sem UID/tokens. Métodos de login
+vinculados são derivados de providerData (Google/e-mail e senha); não se infere
+qual método foi usado na última sessão nem se consulta ID token para exibi-lo.
+Login/autenticação e allowlist não foram alterados.
+
+Fontes passam a ser descritas como conectadas à conta TORICO, não apenas ao
+aparelho. Mercado Pago mostra “Conta Mercado Pago autorizada”, OAuth/webhooks
+oficiais; o estado atual não fornece e-mail/ID Mercado Pago para exibição, e não
+foi acrescentada consulta backend. A conta Mercado Pago pode ser diferente da
+identidade Firebase mostrada. Logout/limpeza mantêm integração na nuvem;
+desconexão afeta o vínculo TORICO em todos os dispositivos, mantendo histórico.
+
+Validação desta UI: análise sem problemas, 57 testes aprovados, build versão
+1.0.0 (6) concluído. APK `build/app/outputs/apk/release-test/torico-account-identity-release.apk`,
+SHA256 `E606577BDBC78318C6A5C7AD3A30DD18CE243A5F49CEA040D82E5CCB10739F52`.
+AAB em `build/app/outputs/bundle/release/app-release.aab`, SHA256
+`4CBCF95FBA146986A616C4972758192D8DC664E1C9866FEAF7D41FD8F7E7DF92`.
+Assinatura v2/v3 verificada, mesmo certificado; não houve login/teste real da
+nova UI nesta missão. Instalar atualização sem limpar dados e conferir Conta.
+
 13/10/2026. Branch `feature/android-current-login`. Sem deploy/publicação.
 
 ## Causa encontrada

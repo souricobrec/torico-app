@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/torico_account_identity.dart';
 
 import '../core/app_colors.dart';
 import '../core/active_sales_sources.dart';
@@ -18,6 +20,7 @@ class SettingsScreen extends StatefulWidget {
   final WidgetBuilder? loginBuilder;
   final Future<void> Function(String)? disconnectPlatform;
   final WidgetBuilder? connectionBuilder;
+  final ToricoAccountIdentity? Function()? accountIdentityLoader;
 
   const SettingsScreen({
     super.key,
@@ -27,6 +30,7 @@ class SettingsScreen extends StatefulWidget {
     this.loginBuilder,
     this.disconnectPlatform,
     this.connectionBuilder,
+    this.accountIdentityLoader,
   });
 
   @override
@@ -37,12 +41,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final LocalStorageService _storage = LocalStorageService();
   final IntegrationService _integrationService = IntegrationService();
 
+  ToricoAccountIdentity? _readAccountIdentity() {
+    if (widget.accountIdentityLoader != null) {
+      return widget.accountIdentityLoader!();
+    }
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      return user == null ? null : ToricoAccountIdentity.fromUser(user);
+    } catch (_) {
+      // Never invent identity if the Firebase session is unavailable.
+      return null;
+    }
+  }
+
   static const List<_IntegrationInfo> integrationCatalog = [
     _IntegrationInfo(
       platform: 'Mercado Pago',
       platformId: 'mercado_pago',
       status: 'Conectado',
-      description: 'Integração oficial ativa por autorização segura.',
+      description:
+          'Conta Mercado Pago autorizada. Conexão via OAuth e webhooks oficiais, vinculada à sua conta TORICO.',
     ),
     _IntegrationInfo(
       platform: 'Stone',
@@ -185,6 +203,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 14),
 
+              ToricoAccountIdentityCard(identity: _readAccountIdentity()),
+              const SizedBox(height: 14),
+
               _PlatformsOverviewCard(
                 connectedPlatforms: connectedPlatforms,
                 disconnectedPlatforms: disconnectedPlatforms,
@@ -210,7 +231,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _CollapsibleIntegrationsSection(
                 title: 'Integrações ativadas',
-                subtitle: 'Fontes já conectadas ao painel.',
+                subtitle: 'Autorizações vinculadas à sua conta TORICO.',
                 expanded: _activeIntegrationsExpanded,
                 count: activeIntegrations.length,
                 onToggle: () {
@@ -318,7 +339,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SettingsActionTile(
                 icon: Icons.link_off_rounded,
                 title: 'Limpar dados deste dispositivo',
-                subtitle: 'Limpa dados locais e encerra a sessão',
+                subtitle:
+                    'Limpa dados locais e sai. Não desconecta Mercado Pago.',
                 iconColor: Colors.redAccent,
                 danger: true,
                 onTap: () {
@@ -331,7 +353,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SettingsActionTile(
                 icon: Icons.logout_rounded,
                 title: 'Sair da conta',
-                subtitle: 'Encerra a sessão neste dispositivo',
+                subtitle:
+                    'Encerra só a sessão. Mantém as integrações na nuvem.',
                 iconColor: Colors.white70,
                 onTap: () {
                   _showLogoutDialog(context);
@@ -365,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return _ToricoDialog(
           title: 'Limpar dados deste dispositivo?',
           message:
-              'Isso removerá os dados locais deste navegador e encerrará sua sessão. As integrações salvas na nuvem não serão removidas. O histórico salvo será mantido.',
+              'Isso removerá os dados locais deste dispositivo e encerrará sua sessão. As integrações salvas na nuvem não serão removidas. O histórico salvo será mantido.',
           primaryText: 'Limpar e sair',
           primaryColor: Colors.redAccent,
           onPrimary: () async {
@@ -426,7 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (dialogContext) => _ToricoDialog(
         title: 'Desconectar Mercado Pago?',
         message:
-            'O TORICO deixará de receber novas vendas desta conta. O histórico já salvo será mantido.',
+            'A autorização Mercado Pago será removida da sua conta TORICO, em todos os dispositivos. O TORICO deixará de receber novas vendas desta conta. O histórico já salvo será mantido.',
         primaryText: 'Desconectar',
         primaryColor: Colors.redAccent,
         onPrimary: () async {
@@ -654,7 +677,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 const SizedBox(height: 14),
 
                 const _PlatformSectionTitle(
-                  title: 'Conectadas neste dispositivo',
+                  title: 'Conectadas à sua conta TORICO',
                   icon: Icons.check_circle_rounded,
                   color: Colors.greenAccent,
                 ),
@@ -688,7 +711,7 @@ class _PlatformsOverviewCard extends StatelessWidget {
                 if (disconnectedPlatforms.isEmpty)
                   const _EmptyPlatformMessage(
                     text:
-                        'Todas as fontes disponíveis já estão ativadas neste dispositivo.',
+                        'Todas as fontes disponíveis já estão conectadas à sua conta TORICO.',
                   )
                 else
                   Wrap(
