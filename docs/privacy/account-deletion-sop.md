@@ -146,3 +146,7 @@ F não serve para declarar conclusão se a remoção operacional falhou, a autor
 ## 9. Decisões antes da operação real
 
 Aprovar [matriz](account-deletion-retention-matrix.md) e [checklist de liberação](account-deletion-review-checklist.md): responsáveis/sistema, verificação alternativa, prazos e mensagens; barreiras/reauth/revogação segura; retenções de backups/logs/trilha/tombstone; acompanhamento após Auth removido; testes em staging e plano de incidente. Não implementar nem ativar com base apenas neste SOP.
+
+## Situação após implementar somente intake local (sem ativação)
+
+[Recebimento autenticado/status](account-deletion-intake-implementation.md) está implementado para revisão e testes locais, desativado por padrão e bloqueado no Cloud Run. O protótipo publicado não mudou. Protocolo real só pode ser mostrado após confirmação persistida do servidor; nenhum receipt, e-mail automático, operador/admin, bloqueio ou exclusão efetiva foi ativado. Este SOP permanece sem liberação operacional; próximos gates exigem autorização própria.

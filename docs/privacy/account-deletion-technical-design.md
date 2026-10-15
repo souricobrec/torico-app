@@ -176,3 +176,7 @@ Fontes primárias consultadas em 15/10/2026 UTC: Firebase verificação de ID To
 Índice de pedido ativo: ao encerrar/rejeitar, liberar somente o ponteiro cujo requestId ainda corresponde ao caso, em compare-and-swap/transação; evento antigo não pode remover índice de pedido posterior. Essa limpeza não apaga lifecycle nem reativa UID concluído. Eventos/recibos/metadata têm schema versionado e não são alternativa para editar perfil.
 
 Escopo de tenancy v1: projeto TORICO atual em modo single-tenant; tokens com tenant não configurado devem ser rejeitados. O uso de caminhos por UID pressupõe esse escopo único. Habilitar múltiplos tenants exige desenho e migração próprios com chave composta tenant+UID em TODOS os índices, lifecycle, pedidos e caminhos de domínio; não basta incluir tenantId num campo e continuar usando chave UID compartilhada. Nada de multitenancy é habilitado nesta proposta.
+
+## Fase 1 de recebimento — implementação local para revisão
+
+O [relatório de implementação](account-deletion-intake-implementation.md) registra endpoints de intake/status, protocolo/idempotência e testes isolados. Destruição, lifecycle/start, revogação e administração continuam NÃO implementados. Wiring do servidor aceita somente emuladores loopback de projeto demo fora de Cloud Run; flag Flutter é false por padrão. Nenhum deploy ou ativação em produção foi realizado. Este adendo preserva as decisões/propostas acima e não aprova retenções ou futuras fases.

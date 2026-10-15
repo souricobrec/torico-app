@@ -16,6 +16,7 @@ async function verifyHealth(environment, detailedPublic = false) {
       PORT: testPort,
       FIREBASE_PROJECT_ID: 'torico-healthz-local-test',
       ...environment,
+      ACCOUNT_DELETION_INTAKE_ENABLED: 'true', // Must still stay disabled outside demo emulators.
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -35,6 +36,11 @@ async function verifyHealth(environment, detailedPublic = false) {
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /application\/json/);
     assert.equal(response.headers.get('cache-control'), 'no-store');
+    const intake = await fetch(`http://127.0.0.1:${port}/v1/account-deletion/requests`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(intake.status, 404);
+    assert.equal((await intake.json()).code, 'feature_disabled');
     const minimal = {
       ok: true, service: 'torico-backend', status: 'healthy',
     };

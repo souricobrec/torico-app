@@ -172,6 +172,53 @@ class AuthService {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
+  bool get requiresPasswordReauthentication {
+    final providers =
+        _auth.currentUser?.providerData.map((p) => p.providerId) ?? [];
+    return !providers.contains('google.com') && providers.contains('password');
+  }
+
+  /// Refreshing an ID Token alone is not recent authentication.
+  Future<void> reauthenticateCurrentUser({String? password}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw FirebaseAuthException(code: 'no-current-user');
+    final generation = _logoutGeneration;
+    final providers = user.providerData.map((p) => p.providerId);
+    try {
+      Future<UserCredential> request;
+      if (providers.contains('google.com')) {
+        if (_useWebGoogle) {
+          request = user.reauthenticateWithPopup(
+            GoogleAuthProvider()
+              ..setCustomParameters({'prompt': 'select_account'}),
+          );
+        } else {
+          final credential = await _nativeGoogleCredential();
+          if (generation != _logoutGeneration ||
+              _auth.currentUser?.uid != user.uid) {
+            throw FirebaseAuthException(code: 'session-ended');
+          }
+          request = user.reauthenticateWithCredential(credential);
+        }
+      } else if (providers.contains('password') &&
+          user.email != null &&
+          password != null &&
+          password.isNotEmpty) {
+        request = user.reauthenticateWithCredential(
+          EmailAuthProvider.credential(email: user.email!, password: password),
+        );
+      } else {
+        throw FirebaseAuthException(code: 'unsupported-reauthentication');
+      }
+      final result = await _finishLogin(request, generation);
+      if (result.user?.uid != user.uid || _auth.currentUser?.uid != user.uid) {
+        throw FirebaseAuthException(code: 'user-mismatch');
+      }
+    } on GoogleSignInException catch (e) {
+      throw FirebaseAuthException(code: nativeGoogleErrorCode(e.code));
+    }
+  }
+
   Future<void> logout() async {
     _logoutGeneration++;
     _pendingGoogleCredential = null;
