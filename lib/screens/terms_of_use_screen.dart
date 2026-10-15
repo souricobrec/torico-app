@@ -1,11 +1,12 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
+import '../core/plan_prices.dart';
 
 class TermsOfUseScreen extends StatelessWidget {
   const TermsOfUseScreen({super.key});
 
-  static const String _updatedAt = '13 de junho de 2026';
+  static const String _updatedAt = '14 de outubro de 2026';
   static const String _contactEmail = 'sourico.br.ec@gmail.com';
 
   @override
@@ -66,7 +67,7 @@ class TermsOfUseScreen extends StatelessWidget {
                   _LegalSection(
                     title: '5. Plano Básico',
                     body:
-                        'O plano básico previsto do TORICO é de R\$ 39,90 por mês.\n\nEnquanto a cobrança oficial do plano não estiver habilitada, o acesso poderá ser disponibilizado em fase de teste, validação ou demonstração.\n\nAs condições comerciais poderão ser atualizadas futuramente, e qualquer alteração relevante será informada aos usuários.',
+                        'O TORICO Básico custa ${PlanPrices.basic}/mês. O TORICO Plus custa ${PlanPrices.plus}/mês, em breve e indisponível para contratação. Plano atribuído não comprova assinatura paga.\n\nEnquanto a cobrança oficial do plano não estiver habilitada, o acesso poderá ser disponibilizado em fase de teste, validação ou demonstração.\n\nAs condições comerciais poderão ser atualizadas futuramente, e qualquer alteração relevante será informada aos usuários.',
                   ),
                   _LegalSection(
                     title: '6. Uso permitido',

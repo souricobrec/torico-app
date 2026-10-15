@@ -1,16 +1,16 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
+import '../core/plan_prices.dart';
 import '../services/user_plan_service.dart';
 import '../widgets/app_snackbar.dart';
 
 class PlanScreen extends StatelessWidget {
-  const PlanScreen({super.key});
+  const PlanScreen({super.key, this.planStream});
+  final Stream<UserPlan>? planStream;
 
   @override
   Widget build(BuildContext context) {
-    final userPlanService = UserPlanService();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -28,7 +28,7 @@ class PlanScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: StreamBuilder<UserPlan>(
-          stream: userPlanService.watchCurrentPlan(),
+          stream: planStream ?? UserPlanService().watchPlanReadOnly(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData) {
@@ -57,6 +57,11 @@ class PlanScreen extends StatelessWidget {
 
                   const SizedBox(height: 18),
 
+                  const Text(
+                    'Plano atribuído não comprova assinatura paga. Cobrança não ativada.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
                   const _SectionTitle('RECURSOS INCLUÍDOS NO BÁSICO'),
 
                   const SizedBox(height: 10),
@@ -91,6 +96,10 @@ class PlanScreen extends StatelessWidget {
                   const SizedBox(height: 18),
 
                   const _SectionTitle('TORICO PLUS'),
+                  const Text(
+                    '${PlanPrices.plus}/mês · Em breve',
+                    style: TextStyle(color: AppColors.goldLight, fontSize: 18),
+                  ),
 
                   const SizedBox(height: 10),
 
@@ -129,13 +138,15 @@ class PlanScreen extends StatelessWidget {
                             size: 22,
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            plan.isPlus
-                                ? 'Plano Plus ativo'
-                                : 'Conhecer TORICO Plus',
-                            style: const TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              plan.isPlus
+                                  ? 'Plano Plus ativo'
+                                  : 'Conhecer TORICO Plus',
+                              style: const TextStyle(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           if (!plan.isPlus) ...[
@@ -232,7 +243,7 @@ class _CurrentPlanCompact extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const _StatusPill(text: 'Ativo'),
+                        const _StatusPill(text: 'Atribuído'),
                       ],
                     ),
 
@@ -260,34 +271,35 @@ class _CurrentPlanCompact extends StatelessWidget {
 
           const SizedBox(height: 14),
 
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               RichText(
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: isPlus ? 'Plus' : 'R\$ 39,90',
+                      text: isPlus ? PlanPrices.plus : PlanPrices.basic,
                       style: const TextStyle(
                         color: AppColors.goldLight,
                         fontSize: 23,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (!isPlus)
-                      TextSpan(
-                        text: ' / mês',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.70),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    TextSpan(
+                      text: ' / mês',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.70),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
                   ],
                 ),
               ),
-              const Spacer(),
               Text(
-                'Plano atual',
+                'Preço comercial',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.64),
                   fontSize: 13.5,
@@ -322,12 +334,14 @@ class _FeatureChip extends StatelessWidget {
         children: [
           Icon(icon, color: AppColors.goldLight, size: 18),
           const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -405,7 +419,7 @@ class _PlusCompactCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        _StatusPill(text: isPlus ? 'Ativo' : 'Em breve'),
+                        const _StatusPill(text: 'Em breve'),
                       ],
                     ),
 

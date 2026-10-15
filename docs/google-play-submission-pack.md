@@ -180,7 +180,7 @@ Firestore, backend e SDKs participam da coleta; serviço de terceiro não signif
 | Público-alvo | Sugerido: adultos, 18+, comerciantes | Titular confirmar; não direcionado a crianças; IARC é questionário distinto, não inventar classificação |
 | Anúncios | Provável: não contém anúncios | Nenhum SDK publicitário direto no pubspec revisado; confirmar binário/dependências/comportamento |
 | Recursos financeiros | Declaração obrigatória; considerar "Other" para acompanhamento de vendas | Não é crédito, investimento, carteira nem inicia transferência; a integração financeira exige avaliação da taxonomia efetiva, não marcar "nenhum" automaticamente |
-| Compras/Plus | Condições futuras não definidas | Sem preço/promessa nova; avaliar política de pagamentos antes de vender recursos digitais |
+| Compras/Plus | Básico R$ 24,90/mês; Plus R$ 39,90/mês, em breve | Cobrança não ativada; Plus sem contratação. Avaliar política de pagamentos antes de vender recursos digitais |
 
 As respostas devem cobrir o conjunto de versões/faixas distribuídas conforme a
 regra Google, inclusive SDKs. Não alegar revisão independente de segurança.

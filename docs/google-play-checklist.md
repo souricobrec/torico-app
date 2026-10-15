@@ -11,7 +11,7 @@ Preparação em 12/10/2026. Não criar conta nem enviar artefato nesta missão.
   verificação de dispositivo Android quando solicitada; não realizado aqui.
 - [ ] Confirmar elegibilidade do tipo de conta para os recursos declarados.
 - [ ] Reservar nome TORICO/identificador definitivo antes do primeiro envio.
-- [ ] Definir países, idioma pt-BR, distribuição/preço (não definidos aqui).
+- [ ] Definir países, idioma pt-BR e distribuição na loja. Preços do serviço aprovados: Básico R$ 24,90/mês; Plus R$ 39,90/mês (em breve, sem contratação). Cobrança não ativada.
 - [ ] Responder classificação IARC, público-alvo e declaração de anúncios,
   acesso ao app e recursos financeiros de forma fiel ao binário.
 

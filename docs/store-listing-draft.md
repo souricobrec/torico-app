@@ -81,7 +81,7 @@ o backend vincula a integração ao usuário TORICO e armazena os tokens criptog
 
 Nome e subtítulo Apple até 30 caracteres; keywords até 100.
 Descrição curta Play até 80; longa até 4.000. Os rascunhos cabem nesses limites.
-Os preços, screenshots, dados demo e categorias finais não foram definidos aqui.
+Preços comerciais aprovados: Básico R$ 24,90/mês; Plus R$ 39,90/mês, em breve e sem contratação. Cobrança não ativada. Screenshots, dados demo e categorias finais exigem validação.
 Revisar estes textos se o produto mudar antes de submeter.
 
 Fontes: [campos Apple](https://developer.apple.com/help/app-store-connect/reference/app-information/app-information/),
