@@ -1,0 +1,57 @@
+[
+  {
+    "host": "app.meutorico.com.br",
+    "status": 200,
+    "final": "https://app.meutorico.com.br/",
+    "flutter": true
+  },
+  {
+    "host": "meutorico.com.br",
+    "status": 200,
+    "final": "https://www.meutorico.com.br/",
+    "flutter": true
+  },
+  {
+    "host": "www.meutorico.com.br",
+    "status": 200,
+    "final": "https://www.meutorico.com.br/",
+    "flutter": true
+  },
+  {
+    "host": "torico-ca479.web.app",
+    "status": 200,
+    "final": "https://torico-ca479.web.app/",
+    "flutter": true
+  },
+  {
+    "host": "torico-ca479.firebaseapp.com",
+    "status": 200,
+    "final": "https://torico-ca479.firebaseapp.com/",
+    "flutter": true
+  },
+  {
+    "path": "/privacidade",
+    "status": 200,
+    "legal": true
+  },
+  {
+    "path": "/termos",
+    "status": 200,
+    "legal": true
+  },
+  {
+    "path": "/suporte",
+    "status": 200,
+    "legal": true
+  },
+  {
+    "path": "/exclusao-de-conta",
+    "status": 200,
+    "legal": true
+  },
+  {
+    "publishedJsMatchesBuild": true,
+    "sha256": "95814334f05003da7f4efac1da9958a3ece95edc488e5bc41d977ead80e2b4fe",
+    "prices": true
+  }
+]
