@@ -11,6 +11,7 @@ import '../services/new_sale_tracker.dart';
 import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import '../widgets/coin_rain.dart';
+import '../widgets/torico_panel_brand.dart';
 
 class PainelScreen extends StatefulWidget {
   final String plataforma;
@@ -152,7 +153,6 @@ class _PainelScreenState extends State<PainelScreen> {
     final largura = tamanhoTela.width;
     final bool isMobile = largura < 600;
 
-    final double logoSize = isMobile ? largura * 0.075 : 44;
     final double cardWidth = isMobile
         ? (largura * 0.74).clamp(300.0, 410.0).toDouble()
         : 560;
@@ -173,16 +173,7 @@ class _PainelScreenState extends State<PainelScreen> {
                   children: [
                     SizedBox(height: isMobile ? 14 : 22),
 
-                    Text(
-                      'TORICO',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: logoSize,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
+                    const ToricoPanelBrand(),
 
                     SizedBox(height: isMobile ? 24 : 38),
 
