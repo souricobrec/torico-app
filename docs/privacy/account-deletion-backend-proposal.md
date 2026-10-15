@@ -59,3 +59,7 @@ Esses testes backend são uma especificação, não testes já executados. Nesta
 ### Pendências anteriores que também bloqueiam ativação segura
 
 O início OAuth MP atual recebe userId via query (server.js:3190) e não valida ID Token; state HMAC não tem consumo único; a mesma conta MP pode aparecer em vários UIDs. Autenticar connect/refresh/status protegidos, consumir nonce uma vez e definir propriedade de grant são pré-requisitos antes de ativar exclusão pública. Tombstone não resolve sozinho spoofing de userId. Nenhuma dessas rotas foi alterada nesta missão.
+
+## Evolução documental — desenho v1 (sem implementação)
+
+O [desenho técnico](account-deletion-technical-design.md) e o [plano de etapas/testes/rollback](account-deletion-implementation-test-plan.md) detalham esta proposta e registram refinamentos ainda NÃO aprovados: intake separado do bloqueio/start e recibo emitido separadamente para lidar com resposta perdida. O texto original acima é mantido como histórico. Matriz de retenção continua pendente; nenhuma rota, Rule, infraestrutura, secret ou operação foi ativada por esses documentos.
