@@ -228,3 +228,7 @@ não substitui esses requisitos. Não executar cadastro/publicação nesta miss�
 Revalidar regras no dia do cadastro. Nenhuma conta, binário, configuração de
 assinatura, Firebase, backend, OAuth, secret ou Scheduler foi alterado neste pacote.
 
+
+## Exclusão de conta — preparação em código (sem novo binário/deploy)
+
+Conta → Excluir minha conta agora possui protótipo de contato manual, explicação e confirmação; prepara e-mail externo, sem enviar ou registrar pedido. Não declarar exclusão completa ou conformidade de loja como concluídas. Backend autenticado com reautenticação, bloqueio de ingestão, revogação, processamento e status ainda depende de autorização e implementação. A página pública existente permanece publicada sem alterações. Auditoria e proposta: `docs/privacy/account-deletion-audit.md` e `docs/privacy/account-deletion-backend-proposal.md`. A experiência manual não é preparação suficiente para Apple sem revisar a restrição a suporte/e-mail obrigatório.

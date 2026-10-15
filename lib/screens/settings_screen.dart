@@ -10,6 +10,7 @@ import '../services/integration_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/platform_disconnect_service.dart';
 import 'about_screen.dart';
+import 'account_deletion_screen.dart';
 import 'login_screen.dart';
 import 'owner_login_screen.dart';
 
@@ -348,6 +349,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
+              const SizedBox(height: 6),
+
+              _SettingsActionTile(
+                icon: Icons.person_remove_outlined,
+                title: 'Excluir minha conta',
+                subtitle: 'Solicitar exclusão da conta e dos dados associados.',
+                iconColor: Colors.redAccent,
+                danger: true,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AccountDeletionScreen(),
+                  ),
+                ),
+              ),
               const SizedBox(height: 6),
 
               _SettingsActionTile(
