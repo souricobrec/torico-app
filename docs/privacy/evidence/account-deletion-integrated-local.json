@@ -1,0 +1,41 @@
+{
+  "baseCommit": "bbeb526",
+  "runId": "run-2026-10-16T00-41-46-699Z",
+  "status": "passed",
+  "project": "demo-torico-intake",
+  "serviceTargets": [
+    "127.0.0.1"
+  ],
+  "productionCredentials": false,
+  "checks": [
+    "isolated demo emulators, fictitious users, credentials-free child environment",
+    "actual server fails closed for Cloud Run marker and disabled flag before parsing",
+    "Flutter service and screen -> actual backend -> Auth/Firestore Emulator",
+    "profiles, sales, totals, integration ciphertext/status and Auth users preserved; only two protocols; no lifecycle",
+    "actual Firestore outage does not confirm receipt"
+  ],
+  "integratedFlutter": {
+    "normalPassed": 5,
+    "firestoreOutagePassed": 1
+  },
+  "standardFlutterPassed": 91,
+  "backendPassed": 33,
+  "dedicatedAuthFirestoreEmulator": "passed",
+  "backendObservedEvents": {
+    "duplicate_request": 5,
+    "request_received": 2,
+    "request_rejected": 1
+  },
+  "logsCheckedForJwtAndFixturePassword": true,
+  "logSha256": {
+    "backend.log": "e32d1a2395e701e428e95ea662f8b24e73730cf1e77fa234d72d1f66f912f3a2",
+    "flutter-normal.log": "563718f5312963abbe068ece74eafb3f0eb9efe8f5239cbca0b67eaec3339a38",
+    "flutter-outage.log": "f53794545adf4f9aac945ae0a5c47edd797471855e833fa4cf90556dec22d7ea"
+  },
+  "limitations": [
+    "FlutterFire adapter and SharedPreferences simulated; HTTP/API/Emulators real",
+    "No native APK or browser login executed",
+    "No production configuration queried",
+    "Outage test does not prove API 503 deadline"
+  ]
+}
