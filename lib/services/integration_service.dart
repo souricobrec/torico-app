@@ -51,6 +51,23 @@ class IntegrationService {
     return false;
   }
 
+  Uri? _preparedMercadoPago;
+  String? _preparedUid;
+  DateTime? _preparedAt;
+  bool get hasPreparedMercadoPago => _preparedMercadoPago != null;
+  Future<bool> openPreparedMercadoPago() {
+    final uri = _preparedMercadoPago;
+    if (_preparedUid != FirebaseAuth.instance.currentUser?.uid ||
+        _preparedAt == null ||
+        DateTime.now().difference(_preparedAt!).inMinutes >= 9) {
+      _preparedMercadoPago = null;
+      throw Exception('Autorização expirada. Inicie a conexão novamente.');
+    }
+    _preparedMercadoPago = null;
+    if (uri == null) return Future.value(false);
+    return MercadoPagoOAuthLauncher().open(uri);
+  }
+
   Future<bool> _openMercadoPagoOAuth() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -58,7 +75,17 @@ class IntegrationService {
       throw Exception('Usuário não autenticado no TORICO.');
     }
 
-    return MercadoPagoOAuthLauncher(apiBaseUrl: _backendBaseUrl).open(user.uid);
+    final token = await user.getIdToken();
+    if (token == null) throw Exception('Entre novamente no TORICO.');
+    final launcher = MercadoPagoOAuthLauncher(apiBaseUrl: _backendBaseUrl);
+    final uri = await launcher.prepare(token);
+    if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
+      throw Exception('A sessão mudou. Inicie a conexão novamente.');
+    }
+    _preparedUid = user.uid;
+    _preparedAt = DateTime.now();
+    _preparedMercadoPago = uri;
+    return false;
   }
 
   Future<bool> isPlatformConnected(String plataforma) async {
@@ -84,6 +111,9 @@ class IntegrationService {
         .doc(platformId)
         .get(const GetOptions(source: Source.server));
 
+    if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
+      throw Exception('A sessão mudou.');
+    }
     if (!doc.exists) {
       return null;
     }
@@ -115,6 +145,9 @@ class IntegrationService {
       }
     }
 
+    if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
+      throw Exception('A sessão mudou.');
+    }
     return connectedPlatforms;
   }
 
@@ -122,6 +155,7 @@ class IntegrationService {
     LocalStorageService storage,
   ) async {
     final connectedPlatforms = await getConnectedPlatforms();
+    if (!storage.isCurrentSession) throw Exception('A sessão mudou.');
     await storage.saveConnectedPlatforms(connectedPlatforms);
     return connectedPlatforms;
   }

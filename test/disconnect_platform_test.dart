@@ -58,7 +58,9 @@ void main() {
   testWidgets(
     'logout preserves local connected status and never disconnects cloud platform',
     (tester) async {
-      final storage = LocalStorageService();
+      final storage = LocalStorageService(
+        identity: () => 'demo-test/authorized',
+      );
       await storage.saveConnectedPlatforms(['Mercado Pago']);
       var logouts = 0;
       final changes = StreamController<PilotIdentity?>();
@@ -75,6 +77,9 @@ void main() {
             signInGoogle: () async {},
             signOut: () async {},
             appBuilder: (_) => SettingsScreen(
+              storage: LocalStorageService(
+                identity: () => 'demo-test/authorized',
+              ),
               plataforma: 'Mercado Pago',
               platformLoader: () async => ['Mercado Pago'],
               signOut: () async {
@@ -104,7 +109,9 @@ void main() {
   testWidgets(
     'platform disconnect confirms, clears only that platform and opens connection choice',
     (tester) async {
-      final storage = LocalStorageService();
+      final storage = LocalStorageService(
+        identity: () => 'demo-test/authorized',
+      );
       await storage.saveConnectedPlatforms(['Mercado Pago']);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble('total_sold', 1);
@@ -112,6 +119,9 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: SettingsScreen(
+            storage: LocalStorageService(
+              identity: () => 'demo-test/authorized',
+            ),
             plataforma: 'Mercado Pago',
             platformLoader: () async => ['Mercado Pago', 'Rede'],
             disconnectPlatform: (platform) async {
@@ -151,11 +161,16 @@ void main() {
   testWidgets(
     'failed disconnect retains connected platform and shows friendly error',
     (tester) async {
-      final storage = LocalStorageService();
+      final storage = LocalStorageService(
+        identity: () => 'demo-test/authorized',
+      );
       await storage.saveConnectedPlatforms(['Mercado Pago']);
       await tester.pumpWidget(
         MaterialApp(
           home: SettingsScreen(
+            storage: LocalStorageService(
+              identity: () => 'demo-test/authorized',
+            ),
             plataforma: 'Mercado Pago',
             platformLoader: () async => ['Mercado Pago'],
             disconnectPlatform: (_) async => throw Exception('private error'),

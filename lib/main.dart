@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
+import 'config/firebase_environment.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'config/api_config.dart';
 import 'config/firebase_auth_config.dart';
 import 'screens/pilot_gate.dart';
@@ -20,11 +22,23 @@ Future<void> main() async {
   // Validate build configuration before opening the app, including release.
   ApiConfig.baseUrl;
 
-  final baseOptions = DefaultFirebaseOptions.currentPlatform;
+  const demoProject = String.fromEnvironment('FIREBASE_DEMO_PROJECT');
+  const emulatorHost = String.fromEnvironment('FIREBASE_EMULATOR_HOST');
+  final baseOptions = FirebaseEnvironment.resolve(
+    environment: ApiConfig.environment,
+    project: demoProject,
+    emulatorHost: emulatorHost,
+    apiBaseUrl: ApiConfig.baseUrl,
+    production: DefaultFirebaseOptions.currentPlatform,
+  );
   final firebaseOptions = kIsWeb
       ? FirebaseAuthConfig.resolveWebOptions(baseOptions, Uri.base)
       : baseOptions;
   await Firebase.initializeApp(options: firebaseOptions);
+  if (demoProject.isNotEmpty) {
+    await FirebaseAuth.instance.useAuthEmulator(emulatorHost, 19099);
+    FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 18891);
+  }
 
   final pilotAccess = PilotAccessService();
   if (DomainBlockService.shouldBlock) {

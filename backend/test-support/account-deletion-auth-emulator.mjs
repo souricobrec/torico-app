@@ -1,5 +1,7 @@
 // Explicit opt-in local integration. No production credentials, imports/exports or cleanup.
 import assert from 'node:assert/strict';
+import { betaSecurityProbes } from './beta-security-probes.mjs';
+import { authenticatedUid } from '../mercado-pago-security.js';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -53,6 +55,7 @@ try {
     assert.equal(response.status,200);return response.json();
   }
   const a=await signup('fixture-a'),b=await signup('fixture-b');
+  await betaSecurityProbes({ auth, db, a, b, projectId });
   const body={confirmation:'delete_account',noticeVersion:intakeNotice,policyVersion:intakeNotice};
   const call=(token,method='POST',suffix='',key='local_fixture_key_12345678901234567890')=>fetch(base+suffix,{
     method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','Idempotency-Key':key},
@@ -70,6 +73,7 @@ try {
   await new Promise(r=>setTimeout(r,1100));
   await auth.revokeRefreshTokens(a.localId); // Fixture in the local Auth Emulator only.
   assert.equal((await call(a.idToken,'GET','/current')).status,401);
+  await assert.rejects(authenticatedUid({ headers: { authorization: `Bearer ${a.idToken}` } }, auth), { status: 401 });
   const root=`http://127.0.0.1:18891/v1/projects/${projectId}/databases/(default)/documents/`;
   for(const user of [a,b]){
     const response=await fetch(root+'account_deletion_requests/'+results[0].requestId,{headers:{Authorization:`Bearer ${user.idToken}`}});

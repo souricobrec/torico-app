@@ -12,17 +12,6 @@ class DomainBlockService {
       .toSet();
   static bool isOfficialHost(String host) =>
       officialHosts.contains(host.trim().toLowerCase());
-  // Bloqueio temporário usado apenas na fase pré-lojas.
-  // Após publicação na Apple App Store e Google Play,
-  // remover esta regra e liberar o domínio oficial normalmente.
-  static const Set<String> _blockedPublicHosts = {
-    'www.meutorico.com.br',
-    'meutorico.com.br',
-    'torico-ca479.web.app',
-    'torico-ca479.firebaseapp.com',
-    'app.meutorico.com.br',
-  };
-
   static bool get shouldBlock {
     if (!kIsWeb) {
       // Native apps must use the same authenticated rollout gate as official web.
@@ -34,24 +23,7 @@ class DomainBlockService {
 
   /// Official hosts must also pass the authenticated allowlist gate.
   static bool shouldBlockHost(String value) {
-    final host = value.trim().toLowerCase();
-    if (isOfficialHost(host)) return true;
-
-    if (host.isEmpty) {
-      return false;
-    }
-
-    // Libera testes locais.
-    if (host == 'localhost' || host == '127.0.0.1' || host == '0.0.0.0') {
-      return false;
-    }
-
-    // Libera canais de preview do Firebase Hosting.
-    // Exemplo: torico-ca479--visual-pre-lojas-axawxjx3.web.app
-    if (host.contains('--visual-pre-lojas')) {
-      return false;
-    }
-
-    return _blockedPublicHosts.contains(host);
+    // Host names are routing information, never an authentication bypass.
+    return true;
   }
 }

@@ -1,8 +1,10 @@
 import express from 'express';
+import { validateEmulatorIsolation } from './environment-isolation.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
+import { authenticatedUid, oauthStateStore, persistOwnedIntegration } from './mercado-pago-security.js';
 import { mercadoPagoReturnPage } from './mercado-pago-return.js';
 import { disconnectPlatformHandler } from './disconnect-platform.js';
 import { accountDeletionIntakeRouter, firestoreIntakeStore } from './account-deletion-intake.js';
@@ -18,6 +20,7 @@ import { intakeEnabled, intakeDispatcher } from './account-deletion-gate.js';
 // - Optional simulator route behind ENABLE_TEST_ENDPOINTS + TORICO_DEV_KEY
 
 dotenv.config();
+validateEmulatorIsolation(process.env);
 
 const app = express();
 
@@ -257,99 +260,6 @@ function validateSalePayload(payload) {
   }
 
   return errors;
-}
-
-function base64UrlEncode(value) {
-  const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-
-  return Buffer.from(stringValue).toString('base64url');
-}
-
-function base64UrlDecode(value) {
-  return Buffer.from(value, 'base64url').toString('utf8');
-}
-
-
-function getOAuthStateSecret(platform = 'mercado_pago') {
-  const platformId = normalizePlatformId(platform);
-
-  if (platformId === 'pagbank') {
-    return PAGBANK_CLIENT_SECRET || TORICO_DEV_KEY;
-  }
-
-  return MERCADO_PAGO_CLIENT_SECRET || TORICO_DEV_KEY;
-}
-
-function createOAuthState({ userId, platform = 'mercado_pago' }) {
-  const platformId = normalizePlatformId(platform);
-  const secret = getOAuthStateSecret(platformId);
-
-  if (!secret) {
-    throw new Error(
-      `Nao foi possivel gerar state OAuth para ${platformId}. Configure o client secret da plataforma ou TORICO_DEV_KEY.`
-    );
-  }
-
-  const payload = {
-    userId,
-    platformId,
-    nonce: crypto.randomUUID(),
-    iat: Date.now(),
-  };
-
-  const encodedPayload = base64UrlEncode(payload);
-
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(encodedPayload)
-    .digest('base64url');
-
-  return `${encodedPayload}.${signature}`;
-}
-
-function verifyOAuthState(state, { platform = 'mercado_pago' } = {}) {
-  const expectedPlatformId = normalizePlatformId(platform);
-  const secret = getOAuthStateSecret(expectedPlatformId);
-
-  if (!secret) {
-    throw new Error(
-      `Nao foi possivel validar state OAuth para ${expectedPlatformId}. Configure o client secret da plataforma ou TORICO_DEV_KEY.`
-    );
-  }
-
-  if (!state || typeof state !== 'string' || !state.includes('.')) {
-    throw new Error('State OAuth ausente ou invalido.');
-  }
-
-  const [encodedPayload, receivedSignature] = state.split('.');
-
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(encodedPayload)
-    .digest('base64url');
-
-  if (receivedSignature !== expectedSignature) {
-    throw new Error('Assinatura do state OAuth invalida.');
-  }
-
-  const payload = JSON.parse(base64UrlDecode(encodedPayload));
-
-  const maxAgeMs = 10 * 60 * 1000;
-  const ageMs = Date.now() - Number(payload.iat || 0);
-
-  if (ageMs < 0 || ageMs > maxAgeMs) {
-    throw new Error('State OAuth expirado.');
-  }
-
-  if (!payload.userId || typeof payload.userId !== 'string') {
-    throw new Error('State OAuth sem userId valido.');
-  }
-
-  if (normalizePlatformId(payload.platformId) !== expectedPlatformId) {
-    throw new Error('State OAuth pertence a outra plataforma.');
-  }
-
-  return payload;
 }
 
 function getTokenEncryptionKeyBuffer() {
@@ -1263,83 +1173,19 @@ function buildMercadoPagoIntegrationContextFromDoc({ integrationDoc, mercadoPago
 }
 
 async function findMercadoPagoIntegrationByMercadoPagoUserId(mercadoPagoUserId) {
-  const normalizedMercadoPagoUserId = String(mercadoPagoUserId || '').trim();
-
-  if (!normalizedMercadoPagoUserId) {
-    return null;
+  const id = String(mercadoPagoUserId || '').trim();
+  if (!id) return null;
+  const snapshot = await db.collectionGroup('integrations')
+    .where('mercadoPagoUserId', '==', id).get();
+  const contexts = snapshot.docs.map(integrationDoc =>
+    buildMercadoPagoIntegrationContextFromDoc({ integrationDoc,
+      mercadoPagoUserId: id, source: 'oauth_integration' })).filter(Boolean);
+  if (contexts.length > 1) {
+    const error = new Error('merchant_ownership_review_required');
+    error.status = 409;
+    throw error;
   }
-
-  try {
-    const snapshot = await db
-      .collectionGroup('integrations')
-      .where('mercadoPagoUserId', '==', normalizedMercadoPagoUserId)
-      .limit(10)
-      .get();
-
-    for (const doc of snapshot.docs) {
-      const context = buildMercadoPagoIntegrationContextFromDoc({
-        integrationDoc: doc,
-        mercadoPagoUserId: normalizedMercadoPagoUserId,
-        source: 'oauth_integration',
-      });
-
-      if (context) {
-        return context;
-      }
-    }
-
-    return null;
-  } catch (error) {
-    const message = String(error?.message || '');
-    const isMissingCollectionGroupIndex =
-      message.includes('COLLECTION_GROUP') ||
-      message.includes('index') ||
-      message.includes('FAILED_PRECONDITION');
-
-    if (!isMissingCollectionGroupIndex) {
-      throw error;
-    }
-
-    console.warn(
-      'Indice collectionGroup Mercado Pago indisponivel. Usando fallback temporario de varredura.',
-      {
-        mercadoPagoUserId: normalizedMercadoPagoUserId,
-        errorMessage: message,
-      }
-    );
-
-    return findMercadoPagoIntegrationByMercadoPagoUserIdFallbackScan(
-      normalizedMercadoPagoUserId
-    );
-  }
-}
-
-async function findMercadoPagoIntegrationByMercadoPagoUserIdFallbackScan(mercadoPagoUserId) {
-  const usersSnapshot = await db.collection('users').limit(1000).get();
-
-  for (const userDoc of usersSnapshot.docs) {
-    const integrationsSnapshot = await userDoc.ref.collection('integrations').get();
-
-    for (const integrationDoc of integrationsSnapshot.docs) {
-      const context = buildMercadoPagoIntegrationContextFromDoc({
-        integrationDoc,
-        mercadoPagoUserId,
-        source: 'fallback_scan_mvp',
-      });
-
-      if (context) {
-        console.warn('Integracao Mercado Pago encontrada via fallback de varredura:', {
-          toricoUserId: context.userId,
-          mercadoPagoUserId: context.mercadoPagoUserId,
-          integrationPath: integrationDoc.ref.path,
-        });
-
-        return context;
-      }
-    }
-  }
-
-  return null;
+  return contexts[0] || null;
 }
 
 function getMercadoPagoMvpFallbackContext() {
@@ -1475,6 +1321,7 @@ async function tryResolveMercadoPagoContextFromResource(req) {
       }
     }
   } catch (error) {
+    if (error.status === 409) throw error;
     console.warn('Nao foi possivel resolver dono do recurso Mercado Pago com fallback de leitura.', {
       message: error.message,
       status: error.status,
@@ -1966,15 +1813,13 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
   // Publish only the status the app is allowed to read; tokens stay private.
   const publicStatusRef = db.collection('users').doc(userId)
     .collection('integration_status').doc('mercado_pago');
-  const batch = db.batch();
-  batch.set(integrationRef, integrationData, { merge: true });
-  batch.set(publicStatusRef, {
-    platform: 'Mercado Pago',
-    platformId: 'mercado_pago',
-    status: 'connected',
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }, { merge: true });
-  await batch.commit();
+  await persistOwnedIntegration(db, userId, integrationData.mercadoPagoUserId, [
+    [integrationRef, integrationData],
+    [publicStatusRef, {
+      platform: 'Mercado Pago', platformId: 'mercado_pago', status: 'connected',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }],
+  ]);
 
   return {
     userId,
@@ -3198,59 +3043,40 @@ app.post('/integrations/:platform/disconnect', disconnectPlatformHandler({
   auth: admin.auth(), db, fieldValue: admin.firestore.FieldValue,
 }));
 
-app.get('/integrations/mercado-pago/connect', (req, res) => {
+// Legacy clients must update; never trust a UID supplied in a browser URL.
+app.get('/integrations/mercado-pago/connect', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.status(401).json({ ok: false, message: 'Atualize o TORICO e inicie a conexão autenticada.' });
+});
+app.post('/integrations/mercado-pago/connect', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
-    const userId = String(req.query.userId || '').trim();
-
-    if (!userId) {
-      return res.status(400).json({
-        ok: false,
-        message:
-          'Informe o userId do usuario TORICO para iniciar a conexao Mercado Pago.',
-      });
+    const userId = await authenticatedUid(req, admin.auth());
+    if (getMissingMercadoPagoOAuthConfig().length) {
+      return res.status(503).json({ ok: false, message: 'Integração indisponível.' });
     }
-
-    const missingConfig = getMissingMercadoPagoOAuthConfig();
-
-    if (missingConfig.length > 0) {
-      return res.status(503).json({
-        ok: false,
-        message:
-          'Integracao Mercado Pago ainda nao configurada completamente no backend.',
-        missingConfig,
-      });
-    }
-
-    const state = createOAuthState({ userId });
-    const authorizationUrl = new URL(MERCADO_PAGO_OAUTH_AUTHORIZE_URL);
-
-    authorizationUrl.searchParams.set('client_id', MERCADO_PAGO_CLIENT_ID);
-    authorizationUrl.searchParams.set('response_type', 'code');
-    authorizationUrl.searchParams.set('platform_id', 'mp');
-    authorizationUrl.searchParams.set('redirect_uri', MERCADO_PAGO_REDIRECT_URI);
-    authorizationUrl.searchParams.set('state', state);
-
-    return res.redirect(authorizationUrl.toString());
+    const state = await oauthStateStore(db).issue(userId);
+    const url = new URL(MERCADO_PAGO_OAUTH_AUTHORIZE_URL);
+    url.searchParams.set('client_id', MERCADO_PAGO_CLIENT_ID);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('platform_id', 'mp');
+    url.searchParams.set('redirect_uri', MERCADO_PAGO_REDIRECT_URI);
+    url.searchParams.set('state', state);
+    return res.json({ authorizationUrl: url.toString() });
   } catch (error) {
-    console.error('Erro ao iniciar OAuth Mercado Pago:', error.message);
-
-    return res.status(500).json({
-      ok: false,
-      message: 'Erro interno ao iniciar conexao Mercado Pago.',
-    });
+    console.warn('mp_authorization_failed', { code: error.code || 'unavailable' });
+    return res.status(error.status || 503).json({ ok: false, message: 'Não foi possível iniciar a conexão.' });
   }
 });
 
 app.get('/integrations/mercado-pago/callback', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
-    const { code, state, error, error_description: errorDescription } = req.query;
+    const { code, state, error } = req.query;
 
     if (error) {
-      console.warn('OAuth Mercado Pago recusado:', {
-        error,
-        errorDescription,
-      });
+      if (typeof state === 'string') await oauthStateStore(db).consume(state);
+      console.warn('mp_authorization_denied');
 
       return res.status(400).send(mercadoPagoReturnPage('error'));
     }
@@ -3267,7 +3093,7 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
       return res.status(503).send(mercadoPagoReturnPage('error'));
     }
 
-    const statePayload = verifyOAuthState(String(state));
+    const statePayload = await oauthStateStore(db).consume(String(state));
 
     const tokenParams = new URLSearchParams();
     tokenParams.set('grant_type', 'authorization_code');
@@ -3290,7 +3116,7 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
     if (!tokenResponse.ok) {
       console.error('Erro ao trocar code por token Mercado Pago:', {
         status: tokenResponse.status,
-        body: tokenResponseBody,
+        code: 'token_exchange_failed',
       });
 
       return res.status(502).send(mercadoPagoReturnPage('error'));
@@ -3310,9 +3136,9 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
 
     return res.status(200).send(mercadoPagoReturnPage('connected'));
   } catch (error) {
-    console.error('Erro no callback Mercado Pago:', error.message);
+    console.error('mp_callback_failed', { code: error.code || 'unavailable' });
 
-    return res.status(500).send(mercadoPagoReturnPage('error'));
+    return res.status(error.status || 500).send(mercadoPagoReturnPage('error'));
   }
 });
 

@@ -15,6 +15,7 @@ import 'login_screen.dart';
 import 'owner_login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
+  final LocalStorageService? storage;
   final String plataforma;
   final Future<List<String>> Function()? platformLoader;
   final Future<void> Function()? signOut;
@@ -26,6 +27,7 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.plataforma,
+    this.storage,
     this.platformLoader,
     this.signOut,
     this.loginBuilder,
@@ -39,7 +41,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final LocalStorageService _storage = LocalStorageService();
+  late final LocalStorageService _storage =
+      widget.storage ?? LocalStorageService();
   final IntegrationService _integrationService = IntegrationService();
 
   ToricoAccountIdentity? _readAccountIdentity() {

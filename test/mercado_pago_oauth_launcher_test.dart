@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:torico/screens/auth_screen.dart';
 import 'package:torico/services/mercado_pago_oauth_launcher.dart';
@@ -20,13 +22,22 @@ void main() {
     expect(find.text('Abrir Mercado Pago'), findsOneWidget);
   });
   test(
-    'opens OAuth immediately in external browser/new tab with Firebase UID',
+    'authenticates preparation then opens trusted OAuth in explicit user gesture',
     () async {
       Uri? opened;
       LaunchMode? usedMode;
       String? window;
       final launcher = MercadoPagoOAuthLauncher(
         apiBaseUrl: 'https://api.meutorico.com.br',
+        client: MockClient((request) async {
+          expect(request.method, 'POST');
+          expect(request.url.queryParameters, isEmpty);
+          expect(request.headers['Authorization'], 'Bearer fixture-token');
+          return http.Response(
+            '{"authorizationUrl":"https://auth.mercadopago.com.br/authorization?state=fixture"}',
+            200,
+          );
+        }),
         launcher:
             (uri, {mode = LaunchMode.platformDefault, webOnlyWindowName}) {
               opened = uri;
@@ -35,11 +46,13 @@ void main() {
               return Future.value(true);
             },
       );
-      final result = launcher.open('firebase-uid');
+      final uri = await launcher.prepare('fixture-token');
+      expect(opened, isNull);
+      final result = launcher.open(uri);
       // Opening must start synchronously, before losing browser user activation.
-      expect(opened?.origin, 'https://api.meutorico.com.br');
-      expect(opened?.path, '/integrations/mercado-pago/connect');
-      expect(opened?.queryParameters, {'userId': 'firebase-uid'});
+      expect(opened?.origin, 'https://auth.mercadopago.com.br');
+      expect(opened?.path, '/authorization');
+      expect(opened?.queryParameters, {'state': 'fixture'});
       expect(usedMode, LaunchMode.externalApplication);
       expect(window, '_blank');
       expect(await result, isTrue);
@@ -51,6 +64,46 @@ void main() {
       launcher: (_, {mode = LaunchMode.platformDefault, webOnlyWindowName}) =>
           Future.value(false),
     );
-    expect(await launcher.open('firebase-uid'), isFalse);
+    expect(
+      await launcher.open(
+        Uri.parse('https://auth.mercadopago.com.br/authorization'),
+      ),
+      isFalse,
+    );
   });
+  test(
+    'invalid preparation never opens a browser or leaks response content',
+    () async {
+      for (final response in [
+        http.Response('private upstream detail', 401),
+        http.Response('private upstream detail', 200),
+        http.Response(
+          '{"authorizationUrl":"https://attacker.example/authorization"}',
+          200,
+        ),
+        http.Response(
+          '{"authorizationUrl":"https://auth.mercadopago.com.br:444/authorization"}',
+          200,
+        ),
+      ]) {
+        final launcher = MercadoPagoOAuthLauncher(
+          client: MockClient((_) async => response),
+          launcher:
+              (
+                _, {
+                mode = LaunchMode.platformDefault,
+                webOnlyWindowName,
+              }) async => fail('must not launch'),
+        );
+        await expectLater(
+          launcher.prepare('fixture'),
+          throwsA(
+            predicate<Object>(
+              (error) => !error.toString().contains('private upstream detail'),
+            ),
+          ),
+        );
+      }
+    },
+  );
 }

@@ -19,7 +19,7 @@ test('successful real callback saves UID before rendering official return', asyn
   const context = vm.createContext({
     app: { get: (_, fn) => { handler = fn; } },
     getMissingMercadoPagoOAuthConfig: () => [],
-    verifyOAuthState: () => ({ userId: 'firebase-test-uid' }),
+    oauthStateStore: () => ({ consume: async () => ({ userId: 'firebase-test-uid' }) }), db: {},
     URLSearchParams,
     MERCADO_PAGO_CLIENT_ID: 'test-only',
     MERCADO_PAGO_CLIENT_SECRET: 'test-only',
@@ -61,6 +61,11 @@ test('integration persists private encrypted tokens and minimal readable status 
     db,
     admin: { firestore: { Timestamp: { fromDate: (d) => d }, FieldValue: { serverTimestamp: () => 'timestamp' } } },
     encryptSecret: (value) => ({ encrypted: value }),
+    persistOwnedIntegration: async (_db, uid, merchant, entries) => {
+      assert.equal(uid, 'firebase-test-uid'); assert.equal(merchant, '123');
+      for (const [ref, data] of entries) writes.push({ ref, data });
+      committed = true;
+    },
   });
   vm.runInContext(save, context);
   await context.saveMercadoPagoIntegration({ userId: 'firebase-test-uid', tokenResponse: { access_token: 'test-access', refresh_token: 'test-refresh', user_id: 123 } });

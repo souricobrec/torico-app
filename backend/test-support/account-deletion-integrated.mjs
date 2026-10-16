@@ -98,7 +98,10 @@ try {
     }
   }
   pass('isolated demo emulators, fictitious users, credentials-free child environment');
-  for (const configuration of [{ K_SERVICE: 'local-cloudrun-simulation' }, { ACCOUNT_DELETION_INTAKE_ENABLED: 'false' }]) {
+  await assert.rejects(startBackend({ K_SERVICE: 'local-cloudrun-simulation' }), /Local child exited before readiness/);
+  assert.equal(backend.exitCode, 1);
+  await stop(backend);
+  for (const configuration of [{ ACCOUNT_DELETION_INTAKE_ENABLED: 'false' }]) {
     await startBackend(configuration);
     const response = await fetch('http://127.0.0.1:18893/v1/account-deletion/requests', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' + 'x'.repeat(3000),

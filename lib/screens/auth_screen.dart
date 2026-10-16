@@ -84,7 +84,9 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
     });
 
     try {
-      final abriu = await _integrationService.connect(widget.plataforma);
+      final abriu = _integrationService.hasPreparedMercadoPago
+          ? await _integrationService.openPreparedMercadoPago()
+          : await _integrationService.connect(widget.plataforma);
 
       if (!mounted) return;
 
@@ -95,6 +97,10 @@ class _AuthScreenState extends State<AuthScreen> with WidgetsBindingObserver {
       if (abriu) {
         _showMessage(
           'Mercado Pago aberto no navegador. Integração ainda não concluída. Após autorizar, volte e toque em verificar conexão.',
+        );
+      } else if (_integrationService.hasPreparedMercadoPago) {
+        _showMessage(
+          'Autorização preparada. Toque em Abrir Mercado Pago para continuar no navegador.',
         );
       } else {
         _showMessage(

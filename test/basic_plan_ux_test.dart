@@ -78,7 +78,9 @@ void main() {
   testWidgets(
     'clear connections confirms, clears only local caches, signs out and opens login',
     (tester) async {
-      final storage = LocalStorageService();
+      final storage = LocalStorageService(
+        identity: () => 'demo-test/authorized',
+      );
       await storage.saveConnectedPlatforms(['Mercado Pago', 'Rede']);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble('total_sold', 1);
@@ -98,6 +100,9 @@ void main() {
             signInGoogle: () async {},
             signOut: () async {},
             appBuilder: (_) => SettingsScreen(
+              storage: LocalStorageService(
+                identity: () => 'demo-test/authorized',
+              ),
               plataforma: 'Mercado Pago',
               platformLoader: () async => ['Mercado Pago', 'Rede'],
               signOut: () async {

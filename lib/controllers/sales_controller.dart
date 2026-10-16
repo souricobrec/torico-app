@@ -12,6 +12,12 @@ class SalesController extends ChangeNotifier {
 
   StreamSubscription<double>? _todayTotalSubscription;
 
+  bool _disposed = false;
+  @override
+  void notifyListeners() {
+    if (!_disposed && _storage.isCurrentSession) super.notifyListeners();
+  }
+
   double totalSold = 0.00;
   Sale? lastSale;
   bool usingCloud = false;
@@ -113,6 +119,7 @@ class SalesController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _todayTotalSubscription?.cancel();
     super.dispose();
   }

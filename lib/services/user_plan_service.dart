@@ -52,37 +52,10 @@ class UserPlanService {
     return _firestore.collection('users').doc(_userId);
   }
 
-  Future<UserPlan> getOrCreateCurrentPlan() async {
-    final snapshot = await _userDoc.get();
+  Future<UserPlan> getOrCreateCurrentPlan() async =>
+      UserPlan.fromMap((await _userDoc.get()).data());
 
-    if (!snapshot.exists || snapshot.data()?['plan'] == null) {
-      await _userDoc.set({
-        'plan': 'basic',
-        'planName': 'TORICO Básico',
-        'planUpdatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      return UserPlan.basic();
-    }
-
-    return UserPlan.fromMap(snapshot.data());
-  }
-
-  Stream<UserPlan> watchCurrentPlan() {
-    return _userDoc.snapshots().asyncMap((snapshot) async {
-      if (!snapshot.exists || snapshot.data()?['plan'] == null) {
-        await _userDoc.set({
-          'plan': 'basic',
-          'planName': 'TORICO Básico',
-          'planUpdatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        return UserPlan.basic();
-      }
-
-      return UserPlan.fromMap(snapshot.data());
-    });
-  }
+  Stream<UserPlan> watchCurrentPlan() => watchPlanReadOnly();
 
   /// Read-only entitlement used by navigation; missing plans remain basic.
   Stream<UserPlan> watchPlanReadOnly() =>

@@ -31,7 +31,12 @@ service cloud.firestore {
 
       allow read: if isOwner(userId);
 
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'displayName', 'email', 'photoURL', 'businessName', 'phone',
+          'updatedAt', 'lastLoginAt', 'onboardingCompleted',
+          'connectedPlatform', 'hasConnectedPlatform', 'selectedPlatform'
+        ]);
 
       allow update: if isOwner(userId)
         && isUpdatingOnlyAllowedUserFields();
