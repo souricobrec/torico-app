@@ -5,7 +5,9 @@ import admin from 'firebase-admin';
 import crypto from 'crypto';
 import { mercadoPagoReturnPage } from './mercado-pago-return.js';
 import { disconnectPlatformHandler } from './disconnect-platform.js';
-import { accountDeletionIntakeRouter, firestoreIntakeStore, intakeParsingError } from './account-deletion-intake.js';
+import { accountDeletionIntakeRouter, firestoreIntakeStore } from './account-deletion-intake.js';
+
+import { intakeEnabled, intakeDispatcher } from './account-deletion-gate.js';
 
 // TORICO Backend
 // Production-focused version:
@@ -20,6 +22,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
+app.use('/v1/account-deletion', intakeDispatcher(() => deletionIntakeRouter));
 app.use(express.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT || 3333;
@@ -3185,17 +3188,11 @@ app.post('/integrations/rede/sync-sales', requireDevKey, async (req, res) => {
 });
 
 // Default OFF. Intake/status only; no deletion, quarantine or revocation.
-app.use('/v1/account-deletion', intakeParsingError);
-app.use('/v1/account-deletion', accountDeletionIntakeRouter({
-  // This phase cannot be enabled on Cloud Run or against the real project.
-  enabled: process.env.ACCOUNT_DELETION_INTAKE_ENABLED === 'true' &&
-    /^(127\.0\.0\.1|localhost|\[::1\]):\d{1,5}$/.test(process.env.FIRESTORE_EMULATOR_HOST || '') &&
-    /^(127\.0\.0\.1|localhost|\[::1\]):\d{1,5}$/.test(process.env.FIREBASE_AUTH_EMULATOR_HOST || '') &&
-    String(process.env.FIREBASE_PROJECT_ID || '').startsWith('demo-') &&
-    !process.env.K_SERVICE,
+const deletionIntakeRouter = accountDeletionIntakeRouter({
+  enabled: intakeEnabled(process.env),
   auth: admin.auth(), store: firestoreIntakeStore(db),
   projectId: process.env.FIREBASE_PROJECT_ID || 'torico-ca479',
-}));
+});
 
 app.post('/integrations/:platform/disconnect', disconnectPlatformHandler({
   auth: admin.auth(), db, fieldValue: admin.firestore.FieldValue,

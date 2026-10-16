@@ -1,5 +1,7 @@
 # Recebimento autenticado de pedidos — fase 1 implementada, somente local
 
+> Histórico da fase inicial. Correções e homologação posteriores: [revisão de hardening](account-deletion-hardening-review.md). Os limites, aliases, limpeza local e testes atuais estão descritos nesse complemento.
+
 Status: código para revisão, **não publicado e impossível de habilitar no Cloud Run nesta versão**. Base do desenho: 8c1ce1c. Nenhuma conta, venda, integração, Rule ou configuração real alterada; sem deploy, migração, APK/AAB, revogação ou bloqueio de webhook. Mantidos allowlist, preços, OAuth/callbacks e REDE/Scheduler.
 
 ## Escopo implementado

@@ -44,15 +44,21 @@ export function firestoreIntakeStore(db, { now = Date.now } = {}) {
           const existing = (await tx.get(ref('account_deletion_requests', existingId))).data();
           const subject = owner && (await tx.get(ref('account_deletion_subjects', owner.subjectRef))).data();
           if (!existing || !owner || subject?.uid !== uid || existing.subjectRef !== owner.subjectRef) throw new Error('Invalid intake index');
-          if (!keyData) tx.set(keyRef, { requestId: existingId, bodyDigest, createdAt: now() });
-          return existing;
+          if (existing.noticeVersion !== body.noticeVersion || existing.policyVersion !== body.policyVersion) throw new IntakeError(409, 'idempotency_conflict');
+          // Maximum 16 aliases/request; legacy indexes add none until reviewed.
+          const aliases = owner.idempotencyAliases ?? 16;
+          if (!keyData && aliases < 16) {
+            tx.set(keyRef, { requestId: existingId, bodyDigest, createdAt: now() });
+            tx.set(index(uid), { ...owner, idempotencyAliases: aliases + 1 });
+          }
+          return { ...existing, duplicate: true };
         }
         const request = { requestId, protocol: `TORICO-${opaque()}`, subjectRef,
           status: 'received', receivedAt: new Date(now()).toISOString(), revision: 1,
           noticeVersion: body.noticeVersion, policyVersion: body.policyVersion,
           completedAt: null, schemaVersion: 1 };
         tx.set(ref('account_deletion_subjects', subjectRef), { uid, activeRequestId: requestId });
-        tx.set(index(uid), { subjectRef, activeRequestId: requestId });
+        tx.set(index(uid), { subjectRef, activeRequestId: requestId, idempotencyAliases: 1 });
         tx.set(ref('account_deletion_requests', requestId), request);
         tx.set(keyRef, { requestId, bodyDigest, createdAt: now() });
         tx.set(ref('account_deletion_requests', requestId).collection('events').doc('received'), {
@@ -76,22 +82,52 @@ export function firestoreIntakeStore(db, { now = Date.now } = {}) {
 }
 
 export function accountDeletionIntakeRouter({ enabled = false, auth, store,
-  projectId = 'torico-ca479', now = Date.now } = {}) {
+  projectId = 'torico-ca479', now = Date.now, observe = record => console.info(JSON.stringify(record)) } = {}) {
   const router = express.Router();
   // Bounded, process-local coarse guard before expensive token verification.
   // Authenticated quotas below are transactional/shared through Firestore.
   const peers = new Map();
+  // Fixed fields only: no SDK errors, headers, claims, bodies, UID or IP.
+  const event = (name, stage, status) => {
+    try { observe({ component: 'account_deletion_intake', event: name, stage, status }); }
+    catch (_) { /* Logging cannot change request outcomes. */ }
+  };
+  const fail = (error, res, stage) => {
+    const status = error instanceof IntakeError ? error.status : 503;
+    event(status === 429 ? 'rate_limited' : status === 401 ? 'authentication_failed' :
+      status === 503 ? 'service_unavailable' : 'request_rejected', stage, status);
+    return respond(error, res);
+  };
+  const storage = async (stage, operation) => {
+    try { return await operation(); }
+    catch (error) {
+      if (!(error instanceof IntakeError)) event('storage_operation_failed', stage, 503);
+      throw error;
+    }
+  };
   router.use(async (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     if (!enabled) return res.status(404).json({ ok: false, code: 'feature_disabled' });
     try {
       const time = now();
       for (const [key, value] of peers) if (value.resetAt <= time) peers.delete(key);
-      const peerKey = req.ip || 'unknown'; // Never trust client X-Forwarded-For here.
+      const peerKey = req.socket.remoteAddress || 'unknown'; // Ignore proxy headers.
       if (!peers.has(peerKey) && peers.size >= 10000) throw new IntakeError(503, 'service_unavailable');
       const peer = peers.get(peerKey) ?? { count: 0, resetAt: time + 60000 };
       if (++peer.count > 120) throw new IntakeError(429, 'rate_limited');
       peers.set(peerKey, peer);
+      // Shared fixed bucket bounds token verification across instances without IP storage.
+      await storage('ingress_quota', () => store.consumeQuota('intake-ingress', 'ingress', 600));
+      next();
+    } catch (error) { fail(error, res, 'ingress'); }
+  });
+  router.use(express.json({ limit: 2048, inflate: false }));
+  router.use((error, req, res, next) => {
+    event('request_rejected', 'parser', error.type === 'entity.too.large' ? 413 : 400);
+    intakeParsingError(error, req, res, next);
+  });
+  router.use(async (req, res, next) => {
+    try {
       const match = /^Bearer (\S{1,8192})$/i.exec(req.headers.authorization || '');
       if (!match) throw new IntakeError(401, 'authentication_required');
       let token;
@@ -107,9 +143,9 @@ export function accountDeletionIntakeRouter({ enabled = false, auth, store,
       if (req.get('x-user-id') || req.get('x-uid')) throw new IntakeError(400, 'invalid_input');
       req.intakeUid = token.uid;
       req.intakeAuthTime = token.auth_time;
-      await store.consumeQuota(token.uid, req.method === 'POST' ? 'register' : 'read', req.method === 'POST' ? 5 : 30);
+      await storage('owner_quota', () => store.consumeQuota(token.uid, req.method === 'POST' ? 'register' : 'read', req.method === 'POST' ? 5 : 30));
       next();
-    } catch (error) { respond(error, res); }
+    } catch (error) { fail(error, res, 'authentication_or_quota'); }
   });
   router.post('/requests', async (req, res) => {
     try {
@@ -127,19 +163,20 @@ export function accountDeletionIntakeRouter({ enabled = false, auth, store,
       }
       const key = req.get('Idempotency-Key');
       if (!/^[A-Za-z0-9_-]{32,128}$/.test(key || '')) throw new IntakeError(400, 'invalid_idempotency_key');
-      const request = await store.register(req.intakeUid, key, {
-        confirmation: body.confirmation, noticeVersion: body.noticeVersion, policyVersion: body.policyVersion });
+      const request = await storage('register', () => store.register(req.intakeUid, key, {
+        confirmation: body.confirmation, noticeVersion: body.noticeVersion, policyVersion: body.policyVersion }));
+      event(request.duplicate ? 'duplicate_request' : 'request_received', 'register', 202);
       res.status(202).json(project(request));
-    } catch (error) { respond(error, res); }
+    } catch (error) { fail(error, res, 'register'); }
   });
   const read = async (req, res) => {
     try {
-      const request = await store.current(req.intakeUid);
+      const request = await storage('read', () => store.current(req.intakeUid));
       if (!request || (req.params.id && req.params.id !== request.requestId)) {
         throw new IntakeError(404, 'request_not_found');
       }
       res.status(200).json(project(request));
-    } catch (error) { respond(error, res); }
+    } catch (error) { fail(error, res, 'read'); }
   };
   router.get('/requests/current', read);
   router.get('/requests/:id', read);

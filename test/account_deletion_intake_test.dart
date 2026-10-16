@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:torico/services/account_deletion_intake_service.dart';
 import 'package:torico/screens/account_deletion_screen.dart';
 import 'package:torico/services/auth_service.dart';
+import 'package:torico/services/local_storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 String received() => jsonEncode({
@@ -48,6 +49,13 @@ class ReauthUser extends Fake implements User {
   @override
   List<UserInfo> get providerData => [Provider(provider)];
   @override
+  Future<UserCredential> reauthenticateWithPopup(AuthProvider provider) async {
+    expect(provider.providerId, 'google.com');
+    calls++;
+    return ReauthResult(this);
+  }
+
+  @override
   Future<UserCredential> reauthenticateWithCredential(
     AuthCredential credential,
   ) async {
@@ -74,6 +82,30 @@ class ReauthAuth extends Fake implements FirebaseAuth {
 }
 
 void main() {
+  test(
+    'clear device removes all account-linked intake keys; server status remains recoverable',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'torico_deletion_intake_key_fixtureA': 'key-a',
+        'torico_deletion_intake_key_fixtureB': 'key-b',
+        'unrelated_preference': true,
+      });
+      await LocalStorageService().clearDeviceData();
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getKeys().where(
+          (key) => key.startsWith('torico_deletion_intake_key_'),
+        ),
+        isEmpty,
+      );
+      expect(prefs.getBool('unrelated_preference'), true);
+      final recovered = await service(
+        MockClient((_) async => http.Response(received(), 200)),
+      ).current();
+      expect(recovered!.protocol, 'TORICO-FIXTURE');
+    },
+  );
+
   setUp(() => SharedPreferences.setMockInitialValues({}));
   test('default disabled does not authenticate or call HTTP', () async {
     var calls = 0;
@@ -180,24 +212,26 @@ void main() {
     },
   );
   for (final provider in ['google.com', 'password']) {
-    test(
-      'recent auth uses Firebase reauthenticate for $provider and keeps UID',
-      () async {
-        final user = ReauthUser(provider);
-        final s = AuthService(
-          auth: ReauthAuth(user),
-          useWebGoogle: false,
-          nativeGoogleCredential: () async =>
-              GoogleAuthProvider.credential(idToken: 'fixture'),
-        );
-        expect(s.requiresPasswordReauthentication, provider == 'password');
-        await s.reauthenticateCurrentUser(
-          password: provider == 'password' ? 'fixture-secret' : null,
-        );
-        expect(user.calls, 1);
-        expect(s.currentUser!.uid, 'same-uid');
-      },
-    );
+    for (final web in [true, false]) {
+      test(
+        'recent auth uses Firebase reauthenticate for $provider on web=$web and keeps UID',
+        () async {
+          final user = ReauthUser(provider);
+          final s = AuthService(
+            auth: ReauthAuth(user),
+            useWebGoogle: web,
+            nativeGoogleCredential: () async =>
+                GoogleAuthProvider.credential(idToken: 'fixture'),
+          );
+          expect(s.requiresPasswordReauthentication, provider == 'password');
+          await s.reauthenticateCurrentUser(
+            password: provider == 'password' ? 'fixture-secret' : null,
+          );
+          expect(user.calls, 1);
+          expect(s.currentUser!.uid, 'same-uid');
+        },
+      );
+    }
   }
   testWidgets(
     'explicit confirmation + reauth registers and shows received, not completed',

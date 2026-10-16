@@ -149,5 +149,10 @@ class LocalStorageService {
     await clearTotalSold();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('sales_sound_enabled');
+    for (final key in prefs.getKeys().toList()) {
+      if (key.startsWith('torico_deletion_intake_key_')) {
+        await prefs.remove(key);
+      }
+    }
   }
 }
