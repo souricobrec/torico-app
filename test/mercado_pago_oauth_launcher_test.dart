@@ -7,6 +7,24 @@ import 'package:torico/services/mercado_pago_oauth_launcher.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
+  test(
+    'OAuth quota does not misclassify a valid session as invalid login',
+    () async {
+      final launcher = MercadoPagoOAuthLauncher(
+        client: MockClient((_) async => http.Response('{}', 429)),
+      );
+      await expectLater(
+        launcher.prepare('fixture'),
+        throwsA(
+          predicate<Object>(
+            (error) =>
+                error.toString().contains('Muitas tentativas') &&
+                !error.toString().contains('Entre novamente'),
+          ),
+        ),
+      );
+    },
+  );
   testWidgets('Mercado Pago explains external camera flow before opening', (
     tester,
   ) async {

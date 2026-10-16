@@ -9,11 +9,15 @@ void main() {
     expect(ApiConfig.resolve('development', ''), 'http://localhost:3333');
     expect(() => ApiConfig.resolve('preview', ''), throwsStateError);
     expect(
-      ApiConfig.resolve('preview', 'https://preview.example.com/'),
-      'https://preview.example.com',
+      ApiConfig.resolve('preview', 'http://127.0.0.1:3333/'),
+      'http://127.0.0.1:3333',
     );
   });
   test('rejects unsafe configuration in release as well', () {
+    expect(
+      () => ApiConfig.resolve('development', 'https://api.meutorico.com.br'),
+      throwsStateError,
+    );
     for (final env in ['preview', 'production']) {
       for (final url in [
         'http://api.example.com',

@@ -43,7 +43,7 @@
         ]
       },
       {
-        "source": "/assets/hashed/**",
+        "source": "/releases/**",
         "headers": [
           {
             "key": "Cache-Control",

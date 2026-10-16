@@ -4,7 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
-import { authenticatedUid, oauthStateStore, persistOwnedIntegration } from './mercado-pago-security.js';
+import { exchangeOAuthToken } from './oauth-token-exchange.js';
+import { authenticatedUid, oauthStateStore, persistOwnedIntegration, canonicalMerchantId, canonicalIntegrationMatches, assertAuthorizationGeneration } from './mercado-pago-security.js';
 import { mercadoPagoReturnPage } from './mercado-pago-return.js';
 import { disconnectPlatformHandler } from './disconnect-platform.js';
 import { accountDeletionIntakeRouter, firestoreIntakeStore } from './account-deletion-intake.js';
@@ -834,7 +835,7 @@ function getPagBankSellerIdFromTokenResponse(tokenResponse) {
   ]);
 }
 
-async function savePagBankIntegration({ userId, tokenResponse }) {
+async function savePagBankIntegration({ userId, tokenResponse, authorization }) {
   const expiresInSeconds = Number(tokenResponse.expires_in || 0);
   const now = new Date();
 
@@ -883,6 +884,7 @@ async function savePagBankIntegration({ userId, tokenResponse }) {
   };
 
   await db.runTransaction(async (transaction) => {
+    await assertAuthorizationGeneration(transaction, db, authorization, userId, 'pagbank');
     transaction.set(integrationRef, integrationData, { merge: true });
     transaction.set(publicStatusRef, publicStatusData, { merge: true });
   });
@@ -1143,7 +1145,7 @@ function buildMercadoPagoIntegrationContextFromDoc({ integrationDoc, mercadoPago
   if (
     data?.platformId !== 'mercado_pago' ||
     data?.status !== 'connected' ||
-    String(data?.mercadoPagoUserId || '') !== String(mercadoPagoUserId || '')
+    canonicalMerchantId(data?.mercadoPagoUserId) !== canonicalMerchantId(mercadoPagoUserId)
   ) {
     return null;
   }
@@ -1173,11 +1175,9 @@ function buildMercadoPagoIntegrationContextFromDoc({ integrationDoc, mercadoPago
 }
 
 async function findMercadoPagoIntegrationByMercadoPagoUserId(mercadoPagoUserId) {
-  const id = String(mercadoPagoUserId || '').trim();
-  if (!id) return null;
-  const snapshot = await db.collectionGroup('integrations')
-    .where('mercadoPagoUserId', '==', id).get();
-  const contexts = snapshot.docs.map(integrationDoc =>
+  const id = canonicalMerchantId(mercadoPagoUserId);
+  const matches = await canonicalIntegrationMatches(db, id);
+  const contexts = matches.map(integrationDoc =>
     buildMercadoPagoIntegrationContextFromDoc({ integrationDoc,
       mercadoPagoUserId: id, source: 'oauth_integration' })).filter(Boolean);
   if (contexts.length > 1) {
@@ -1321,7 +1321,7 @@ async function tryResolveMercadoPagoContextFromResource(req) {
       }
     }
   } catch (error) {
-    if (error.status === 409) throw error;
+    if (error.status === 409 || error.status === 503) throw error;
     console.warn('Nao foi possivel resolver dono do recurso Mercado Pago com fallback de leitura.', {
       message: error.message,
       status: error.status,
@@ -1781,7 +1781,7 @@ async function processMercadoPagoMerchantOrderWebhook({
   };
 }
 
-async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
+async function saveMercadoPagoIntegration({ userId, tokenResponse, authorization }) {
   const expiresInSeconds = Number(tokenResponse.expires_in || 0);
   const now = new Date();
 
@@ -1800,7 +1800,7 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
     status: 'connected',
     tokenType: tokenResponse.token_type || null,
     scope: tokenResponse.scope || null,
-    mercadoPagoUserId: tokenResponse.user_id ? String(tokenResponse.user_id) : null,
+    mercadoPagoUserId: canonicalMerchantId(tokenResponse.user_id),
     publicKey: tokenResponse.public_key || null,
     liveMode: Boolean(tokenResponse.live_mode),
     accessTokenEncrypted: encryptSecret(tokenResponse.access_token),
@@ -1819,7 +1819,7 @@ async function saveMercadoPagoIntegration({ userId, tokenResponse }) {
       platform: 'Mercado Pago', platformId: 'mercado_pago', status: 'connected',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }],
-  ]);
+  ], authorization);
 
   return {
     userId,
@@ -1843,80 +1843,11 @@ function getPagBankOAuthScopeForAuthorizationUrl() {
 }
 
 async function createStoredOAuthState({ userId, platform = 'pagbank' }) {
-  const platformId = normalizePlatformId(platform);
-  const state = `pb${crypto.randomBytes(24).toString('hex')}`;
-  const expiresAt = new Date(Date.now() + OAUTH_STATE_TTL_MS);
-
-  await db.collection('oauth_states').doc(state).set({
-    userId,
-    platformId,
-    state,
-    used: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
-  });
-
-  return state;
+  return oauthStateStore(db, Date.now, platform).issue(userId);
 }
 
 async function verifyStoredOAuthState(state, { platform = 'pagbank' } = {}) {
-  const expectedPlatformId = normalizePlatformId(platform);
-  const stateValue = String(state || '').trim();
-
-  if (!/^[A-Za-z0-9]{8,128}$/.test(stateValue)) {
-    throw new Error('State OAuth PagBank ausente ou invalido.');
-  }
-
-  const stateRef = db.collection('oauth_states').doc(stateValue);
-  const stateSnapshot = await stateRef.get();
-
-  if (!stateSnapshot.exists) {
-    throw new Error('State OAuth PagBank nao encontrado ou ja expirado.');
-  }
-
-  const stateData = stateSnapshot.data() || {};
-
-  if (normalizePlatformId(stateData.platformId) !== expectedPlatformId) {
-    throw new Error('State OAuth PagBank pertence a outra plataforma.');
-  }
-
-  if (!stateData.userId || typeof stateData.userId !== 'string') {
-    throw new Error('State OAuth PagBank sem userId valido.');
-  }
-
-  if (stateData.used) {
-    throw new Error('State OAuth PagBank ja utilizado.');
-  }
-
-  const expiresAt =
-    stateData.expiresAt && typeof stateData.expiresAt.toDate === 'function'
-      ? stateData.expiresAt.toDate()
-      : null;
-
-  if (!expiresAt || expiresAt.getTime() < Date.now()) {
-    await stateRef.set(
-      {
-        used: true,
-        expiredAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    throw new Error('State OAuth PagBank expirado.');
-  }
-
-  await stateRef.set(
-    {
-      used: true,
-      usedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
-
-  return {
-    userId: stateData.userId,
-    platformId: stateData.platformId,
-  };
+  return oauthStateStore(db, Date.now, platform).consume(state);
 }
 app.get('/', (req, res) => {
   return res.status(200).json({
@@ -2010,56 +1941,39 @@ app.get('/health', (req, res) => {
 });
 
 
-app.get('/integrations/pagbank/connect', async (req, res) => {
+app.get('/integrations/pagbank/connect', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return res.status(401).json({ ok: false, message: 'Inicie a conexão autenticada no TORICO.' });
+});
+app.post('/integrations/pagbank/connect', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
-    const userId = String(req.query.userId || '').trim();
-
-    if (!userId) {
-      return res.status(400).json({
-        ok: false,
-        message: 'Informe o userId do usuario TORICO para iniciar a conexao PagBank.',
-      });
+    const userId = await authenticatedUid(req, admin.auth());
+    if (getMissingPagBankOAuthConfig().length) {
+      return res.status(503).json({ ok: false, message: 'Integração indisponível.' });
     }
-
-    const missingConfig = getMissingPagBankOAuthConfig();
-
-    if (missingConfig.length > 0) {
-      return res.status(503).json({
-        ok: false,
-        message: 'Integracao PagBank ainda nao configurada completamente no backend.',
-        missingConfig,
-      });
-    }
-
     const state = await createStoredOAuthState({ userId, platform: 'pagbank' });
-    const authorizationUrl = new URL(PAGBANK_CONNECT_AUTHORIZE_URL);
-
-    authorizationUrl.searchParams.set('response_type', 'code');
-    authorizationUrl.searchParams.set('client_id', PAGBANK_CLIENT_ID);
-    authorizationUrl.searchParams.set('redirect_uri', PAGBANK_REDIRECT_URI);
-    authorizationUrl.searchParams.set('scope', getPagBankOAuthScopeForAuthorizationUrl());
-    authorizationUrl.searchParams.set('state', state);
-
-    return res.redirect(authorizationUrl.toString());
+    const url = new URL(PAGBANK_CONNECT_AUTHORIZE_URL);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('client_id', PAGBANK_CLIENT_ID);
+    url.searchParams.set('redirect_uri', PAGBANK_REDIRECT_URI);
+    url.searchParams.set('scope', getPagBankOAuthScopeForAuthorizationUrl());
+    url.searchParams.set('state', state);
+    return res.json({ authorizationUrl: url.toString() });
   } catch (error) {
-    console.error('Erro ao iniciar OAuth PagBank:', error.message);
-
-    return res.status(500).json({
-      ok: false,
-      message: 'Erro interno ao iniciar conexao PagBank.',
-    });
+    console.warn('pagbank_authorization_failed', { code: error.code || 'unavailable' });
+    return res.status(error.status || 503).json({ ok: false, message: 'Não foi possível iniciar a conexão.' });
   }
 });
 
 app.get('/integrations/pagbank/callback', async (req, res) => {
   try {
-    const { code, state, error, error_description: errorDescription } = req.query;
+    res.set('Cache-Control', 'no-store');
+    const { code, state, error } = req.query;
 
     if (error) {
-      console.warn('OAuth PagBank recusado:', {
-        error,
-        errorDescription,
-      });
+      if (typeof state === 'string') await verifyStoredOAuthState(state);
+      console.warn('pagbank_authorization_denied');
 
       return res.status(400).send(`
         <html>
@@ -2100,37 +2014,15 @@ app.get('/integrations/pagbank/callback', async (req, res) => {
 
     const statePayload = await verifyStoredOAuthState(String(state), { platform: 'pagbank' });
 
-    const tokenResponse = await fetch(PAGBANK_OAUTH_TOKEN_URL, {
-      method: 'POST',
-      headers: buildPagBankHeaders(),
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        code: String(code),
-        redirect_uri: PAGBANK_REDIRECT_URI,
-      }),
+    const tokenResponseBody = await exchangeOAuthToken(PAGBANK_OAUTH_TOKEN_URL, {
+      method: 'POST', headers: buildPagBankHeaders(),
+      body: JSON.stringify({ grant_type: 'authorization_code', code: String(code), redirect_uri: PAGBANK_REDIRECT_URI }),
     });
-
-    const tokenResponseBody = await tokenResponse.json().catch(() => null);
-
-    if (!tokenResponse.ok) {
-      console.error('Erro ao trocar code por token PagBank:', {
-        status: tokenResponse.status,
-        body: tokenResponseBody,
-      });
-
-      return res.status(502).send(`
-        <html>
-          <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
-            <h2>Falha ao conectar PagBank</h2>
-            <p>Nao foi possivel concluir a troca do codigo de autorizacao.</p>
-          </body>
-        </html>
-      `);
-    }
 
     const integration = await savePagBankIntegration({
       userId: statePayload.userId,
       tokenResponse: tokenResponseBody,
+      authorization: statePayload,
     });
 
     console.log('Integracao PagBank conectada:', {
@@ -2151,9 +2043,9 @@ app.get('/integrations/pagbank/callback', async (req, res) => {
       </html>
     `);
   } catch (error) {
-    console.error('Erro no callback PagBank:', error.message);
+    console.error('pagbank_callback_failed', { code: error.code || 'unavailable' });
 
-    return res.status(500).send(`
+    return res.status(error.status || 500).send(`
       <html>
         <body style="font-family: Arial; background: #031226; color: white; padding: 24px;">
           <h2>Erro interno</h2>
@@ -3102,29 +2994,15 @@ app.get('/integrations/mercado-pago/callback', async (req, res) => {
     tokenParams.set('code', String(code));
     tokenParams.set('redirect_uri', MERCADO_PAGO_REDIRECT_URI);
 
-    const tokenResponse = await fetch(MERCADO_PAGO_OAUTH_TOKEN_URL, {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/x-www-form-urlencoded',
-      },
+    const tokenResponseBody = await exchangeOAuthToken(MERCADO_PAGO_OAUTH_TOKEN_URL, {
+      method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
       body: tokenParams,
     });
-
-    const tokenResponseBody = await tokenResponse.json().catch(() => null);
-
-    if (!tokenResponse.ok) {
-      console.error('Erro ao trocar code por token Mercado Pago:', {
-        status: tokenResponse.status,
-        code: 'token_exchange_failed',
-      });
-
-      return res.status(502).send(mercadoPagoReturnPage('error'));
-    }
 
     const integration = await saveMercadoPagoIntegration({
       userId: statePayload.userId,
       tokenResponse: tokenResponseBody,
+      authorization: statePayload,
     });
 
     console.log('Integracao Mercado Pago conectada:', {

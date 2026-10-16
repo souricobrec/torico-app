@@ -33,9 +33,19 @@ class MercadoPagoOAuthLauncher {
           headers: {'Authorization': 'Bearer $token'},
         )
         .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
+    if (response.statusCode == 429) {
+      throw Exception(
+        'Muitas tentativas de conexão. Aguarde alguns minutos e tente novamente.',
+      );
+    }
+    if (response.statusCode == 401) {
       throw Exception(
         'Não foi possível iniciar a conexão. Entre novamente no TORICO.',
+      );
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Integração temporariamente indisponível. Tente novamente mais tarde.',
       );
     }
     Uri uri;

@@ -35,11 +35,17 @@ class ApiConfig {
       'localhost',
       '127.0.0.1',
       '0.0.0.0',
+      '10.0.2.2',
       '[::1]',
       '::1',
     ].contains(uri.host.toLowerCase());
-    if (environment != 'development' && (uri.scheme != 'https' || local)) {
-      throw StateError('Preview and production require a remote HTTPS API.');
+    if (environment == 'production' && (uri.scheme != 'https' || local)) {
+      throw StateError('Production requires a remote HTTPS API.');
+    }
+    if (environment != 'production' && (uri.scheme != 'http' || !local)) {
+      throw StateError(
+        'Non-production requires a local HTTP API and demo emulators.',
+      );
     }
     return uri.replace(path: '').toString();
   }

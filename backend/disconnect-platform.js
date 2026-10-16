@@ -1,3 +1,4 @@
+import { authorizationControlRef } from './mercado-pago-security.js';
 // Only the authenticated Firebase UID owns this operation. No OAuth revocation:
 // a merchant may still use the same authorization elsewhere.
 export function disconnectPlatformHandler({ auth, db, fieldValue }) {
@@ -21,6 +22,11 @@ export function disconnectPlatformHandler({ auth, db, fieldValue }) {
       const publicRef = user.collection('integration_status').doc('mercado_pago');
       await db.runTransaction(async (tx) => {
         await tx.get(privateRef);
+        const controlRef = authorizationControlRef(db, uid);
+        const control = await tx.get(controlRef);
+        const previous = control.data?.()?.generation ?? 0;
+        if (!Number.isSafeInteger(previous) || previous < 0 || previous === Number.MAX_SAFE_INTEGER) throw new Error('Invalid generation');
+        tx.set(controlRef, { generation: previous + 1 }, { merge: true });
         tx.set(privateRef, {
           platformId: 'mercado_pago', status: 'disconnected',
           accessTokenEncrypted: fieldValue.delete(),

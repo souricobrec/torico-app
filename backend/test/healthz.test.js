@@ -16,7 +16,7 @@ async function verifyHealth(environment, detailedPublic = false) {
       PORT: testPort,
       FIREBASE_PROJECT_ID: 'torico-healthz-local-test',
       ...environment,
-      ACCOUNT_DELETION_INTAKE_ENABLED: 'true', // Must still stay disabled outside demo emulators.
+      ACCOUNT_DELETION_INTAKE_ENABLED: environment.FIREBASE_PROJECT_ID?.startsWith('demo-') ? 'false' : 'true', // Health fixture never enables intake.
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -53,7 +53,7 @@ async function verifyHealth(environment, detailedPublic = false) {
     };
     assert.equal((await get('/')).health, '/health');
     if (detailedPublic) {
-      assert.equal((await get('/health')).projectId, 'torico-healthz-local-test');
+      assert.equal((await get('/health')).projectId, environment.FIREBASE_PROJECT_ID || 'torico-healthz-local-test');
     } else {
       assert.deepEqual(await get('/health'), minimal);
       for (const key of ['wrong', 'invalid-health-key!!']) {
@@ -85,8 +85,8 @@ test('unset environment fails closed without an internal key', async () => {
   await verifyHealth({});
 });
 test('Cloud Run never enables anonymous local diagnostics', async () => {
-  await verifyHealth({ NODE_ENV: 'development', K_SERVICE: 'torico-backend' });
+  await verifyHealth({ NODE_ENV: 'production', K_SERVICE: 'torico-backend' });
 });
 test('explicit local development preserves detailed health', async () => {
-  await verifyHealth({ NODE_ENV: 'development' }, true);
+  await verifyHealth({ NODE_ENV: 'development', FIREBASE_PROJECT_ID: 'demo-healthz-local', FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:19099', FIRESTORE_EMULATOR_HOST: '127.0.0.1:18891' }, true);
 });

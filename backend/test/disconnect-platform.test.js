@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { canonicalMerchantId } from '../mercado-pago-security.js';
 import { disconnectPlatformHandler } from '../disconnect-platform.js';
 
 function fixture({ valid = true, fail = false } = {}) {
@@ -41,12 +42,14 @@ test('UID comes only from token, removes encrypted tokens and preserves sales/ag
     query: { userId: 'victim' }, body: { userId: 'victim' } };
   await f.handler(req, f.res);
   assert.equal(f.res.code, 200);
-  assert.deepEqual(f.writes.map(w => w.path), [
+  assert.match(f.writes[0].path, /^oauth_authorization_controls\//);
+  assert.deepEqual(f.writes.slice(1).map(w => w.path), [
     'users/token-owner/integrations/mercado_pago', 'users/token-owner/integration_status/mercado_pago',
   ]);
-  assert.equal(f.writes[0].data.accessTokenEncrypted, 'DELETE');
-  assert.equal(f.writes[0].data.refreshTokenEncrypted, 'DELETE');
-  assert.equal(f.writes[1].data.status, 'disconnected');
+  assert.equal(f.writes[0].data.generation, 1);
+  assert.equal(f.writes[1].data.accessTokenEncrypted, 'DELETE');
+  assert.equal(f.writes[1].data.refreshTokenEncrypted, 'DELETE');
+  assert.equal(f.writes[2].data.status, 'disconnected');
   await f.handler(req, f.res); // idempotent
   assert.equal(f.res.code, 200);
 });
@@ -81,7 +84,7 @@ test('disconnected merchant cannot resolve webhook credentials; connected mercha
   const source = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
   const fn = source.slice(source.indexOf('function buildMercadoPagoIntegrationContextFromDoc('), source.indexOf('async function findMercadoPagoIntegrationByMercadoPagoUserId('));
   let decryptions = 0;
-  const context = vm.createContext({ decryptSecret: () => { decryptions++; return 'test-token'; } });
+  const context = vm.createContext({ canonicalMerchantId, decryptSecret: () => { decryptions++; return 'test-token'; } });
   vm.runInContext(fn, context);
   const doc = (status) => ({ data: () => ({ platformId: 'mercado_pago', status, mercadoPagoUserId: '123' }), ref: { parent: { parent: { id: 'owner' } } } });
   assert.equal(context.buildMercadoPagoIntegrationContextFromDoc({ integrationDoc: doc('disconnected'), mercadoPagoUserId: '123' }), null);

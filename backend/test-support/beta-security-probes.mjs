@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { exchangeOAuthToken } from '../oauth-token-exchange.js';
 import { authenticatedUid, oauthStateStore, persistOwnedIntegration } from '../mercado-pago-security.js';
 
 export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
@@ -35,7 +36,7 @@ export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
     oauthStateStore, getMissingMercadoPagoOAuthConfig: () => [], URLSearchParams,
     MERCADO_PAGO_CLIENT_ID: 'fixture', MERCADO_PAGO_CLIENT_SECRET: 'fixture',
     MERCADO_PAGO_REDIRECT_URI: 'https://api.example.invalid/callback', MERCADO_PAGO_OAUTH_TOKEN_URL: 'https://provider.example.invalid/token',
-    fetch: async () => { exchanges++; return { ok: true, json: async () => ({ user_id: 'fixture' }) }; },
+    exchangeOAuthToken: (url, options) => exchangeOAuthToken(url, options, { fetchImpl: async () => { exchanges++; return { ok: true, json: async () => ({ user_id: 123, access_token: 'fixture' }) }; } }),
     saveMercadoPagoIntegration: async ({ userId }) => { saves++; assert.equal(userId, a.localId); return { userId, status: 'connected' }; },
     mercadoPagoReturnPage: status => status, console: { log() {}, warn() {}, error() {} },
   });
@@ -51,21 +52,24 @@ export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
   assert.equal(callbacks.filter(status => status === 200).length, 1);
   assert.equal(callbacks.filter(status => status === 400).length, 3);
 
+  const ownershipUids = ['ownership-a', 'ownership-b'];
+  const authorization = async uid => { const store = oauthStateStore(db); return store.consume(await store.issue(uid)); };
+  const ownershipContexts = await Promise.all(ownershipUids.map(authorization));
   const write = uid => [db.doc(`users/${uid}/integrations/mercado_pago`),
-    { mercadoPagoUserId: '987001', status: 'connected', accessTokenEncrypted: { fixture: true } }];
-  const races = await Promise.allSettled([a.localId, b.localId].map(uid =>
-    persistOwnedIntegration(db, uid, '987001', [write(uid)])));
+    { platformId: 'mercado_pago', mercadoPagoUserId: '987001', status: 'connected', accessTokenEncrypted: { fixture: true } }];
+  const races = await Promise.allSettled(ownershipUids.map((uid, i) =>
+    persistOwnedIntegration(db, uid, '987001', [write(uid)], ownershipContexts[i])));
   assert.equal(races.filter(r => r.status === 'fulfilled').length, 1);
   const owner = (await db.doc('mp_account_owners/987001').get()).data().userId;
-  await persistOwnedIntegration(db, owner, '987001', [write(owner)]);
-  const other = owner === a.localId ? b.localId : a.localId;
-  await assert.rejects(persistOwnedIntegration(db, other, '987001', [write(other)]), { status: 409 });
+  await persistOwnedIntegration(db, owner, '987001', [write(owner)], await authorization(owner));
+  const other = ownershipUids.find(uid => uid !== owner);
+  await assert.rejects(persistOwnedIntegration(db, other, '987001', [write(other)], await authorization(other)), { status: 409 });
 
   // Existing duplicate fixture records are never overwritten or disconnected.
   for (const uid of ['legacy-a', 'legacy-b']) {
     await db.doc(`users/${uid}/integrations/mercado_pago`).set({ mercadoPagoUserId: '987002', status: 'connected' });
   }
-  await assert.rejects(persistOwnedIntegration(db, 'legacy-a', '987002', []), { status: 409 });
+  await assert.rejects(persistOwnedIntegration(db, 'legacy-a', '987002', [], await authorization('legacy-a')), { status: 409 });
   assert.equal((await db.doc('users/legacy-b/integrations/mercado_pago').get()).data().status, 'connected');
   assert.equal((await db.doc('mp_account_owners/987002').get()).exists, false);
 
@@ -83,7 +87,7 @@ export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
   assert.equal((await call(`users/${b.localId}`, { displayName: { stringValue: 'Fixture' }, plan: { stringValue: 'plus' } })).status, 403);
   await db.doc(`users/${b.localId}`).set({ plan: 'plus', displayName: 'Admin fixture' });
   assert.equal((await call(`users/${b.localId}`)).status, 200);
-  for (const path of ['mp_account_owners/987001', 'mp_oauth_nonces/anything']) {
+  for (const path of ['mp_account_owners/987001', 'mp_oauth_nonces/anything', 'oauth_nonce_slots/anything', 'oauth_authorization_controls/anything']) {
     assert.equal((await call(path)).status, 403);
   }
   console.log('PASS Beta: Auth token/expiry/UID, nonce concurrency/replay/expiry, merchant uniqueness/legacy conflicts, plan Rules/private registries');

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { canonicalMerchantId } from '../mercado-pago-security.js';
 import { mercadoPagoReturnPage } from '../mercado-pago-return.js';
 
 const source = readFileSync(new URL('../server.js', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
@@ -20,6 +21,7 @@ test('successful real callback saves UID before rendering official return', asyn
     app: { get: (_, fn) => { handler = fn; } },
     getMissingMercadoPagoOAuthConfig: () => [],
     oauthStateStore: () => ({ consume: async () => ({ userId: 'firebase-test-uid' }) }), db: {},
+    exchangeOAuthToken: async () => ({ user_id: 123, access_token: 'fixture' }),
     URLSearchParams,
     MERCADO_PAGO_CLIENT_ID: 'test-only',
     MERCADO_PAGO_CLIENT_SECRET: 'test-only',
@@ -58,7 +60,7 @@ test('integration persists private encrypted tokens and minimal readable status 
     batch: () => ({ set: (ref, data) => writes.push({ ref, data }), commit: async () => { committed = true; } }),
   };
   const context = vm.createContext({
-    db,
+    db, canonicalMerchantId,
     admin: { firestore: { Timestamp: { fromDate: (d) => d }, FieldValue: { serverTimestamp: () => 'timestamp' } } },
     encryptSecret: (value) => ({ encrypted: value }),
     persistOwnedIntegration: async (_db, uid, merchant, entries) => {

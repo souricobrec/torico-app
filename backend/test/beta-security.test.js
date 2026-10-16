@@ -58,7 +58,7 @@ test('stable PWA routes revalidate; immutable is restricted to explicit hashed a
   const rules = config.hosting.headers;
   const cache = rule => rule.headers.find(h => h.key === 'Cache-Control').value;
   assert.match(cache(rules.find(r => r.source === '**')), /no-cache.*must-revalidate/);
-  assert.deepEqual(rules.filter(r => cache(r).includes('immutable')).map(r => r.source), ['/assets/hashed/**']);
+  assert.deepEqual(rules.filter(r => cache(r).includes('immutable')).map(r => r.source), ['/releases/**']);
   // Both old shell and old worker are forced to revalidate after cache expiry.
   for (const path of ['/', '/account', '/main.dart.js', '/flutter_service_worker.js', '/flutter_bootstrap.js', '/version.json']) {
     const rule = rules.find(r => r.source === '**');
@@ -69,7 +69,7 @@ test('stable PWA routes revalidate; immutable is restricted to explicit hashed a
 test('two PWA builds use distinct content-versioned URLs and re-running is stable', () => {
   const root = mkdtempSync(join(tmpdir(), 'torico-web-cache-'));
   writeFileSync(join(root, 'main.dart.js'), 'release one');
-  writeFileSync(join(root, 'flutter_bootstrap.js'), '_flutter.buildConfig={"mainJsPath":"main.dart.js"}');
+  writeFileSync(join(root, 'flutter_bootstrap.js'), '/* TORICO_IMMUTABLE_BOOTSTRAP_V1 */ _flutter.buildConfig={"mainJsPath":"main.dart.js"}');
   writeFileSync(join(root, 'index.html'), '<script src="flutter_bootstrap.js"></script>');
   writeFileSync(join(root, 'flutter_service_worker.js'), 'self.registration.unregister();');
   const one = versionWebShell(root);
@@ -77,9 +77,10 @@ test('two PWA builds use distinct content-versioned URLs and re-running is stabl
   writeFileSync(join(root, 'main.dart.js'), 'release two');
   const two = versionWebShell(root);
   assert.notEqual(one.mainSha256, two.mainSha256);
-  assert.notEqual(one.bootstrapSha256, two.bootstrapSha256);
-  assert.ok(readFileSync(join(root, 'index.html'), 'utf8').includes(two.bootstrapSha256));
-  assert.ok(readFileSync(join(root, 'flutter_bootstrap.js'), 'utf8').includes(two.mainSha256));
+  assert.notEqual(one.releaseId, two.releaseId);
+  assert.ok(readFileSync(join(root, 'index.html'), 'utf8').includes(two.releaseId));
+  assert.equal(readFileSync(join(root, 'releases', one.releaseId, 'main.dart.js'), 'utf8'), 'release one');
+  assert.equal(readFileSync(join(root, 'releases', two.releaseId, 'main.dart.js'), 'utf8'), 'release two');
   writeFileSync(join(root, 'flutter_service_worker.js'), 'const RESOURCES = {};');
   assert.throws(() => versionWebShell(root), /separate upgrade review/);
 });
