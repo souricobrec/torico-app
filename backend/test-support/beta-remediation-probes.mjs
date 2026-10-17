@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fixtureOwnershipIndex } from './ownership-index-fixtures.mjs';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { FieldValue } from '@google-cloud/firestore';
 import vm from 'node:vm';
@@ -7,6 +8,10 @@ import { disconnectPlatformHandler } from '../disconnect-platform.js';
 
 export async function remediationProbes({ auth, db, a, b, projectId }) {
   assert.equal(projectId, 'demo-torico-intake');
+  await fixtureOwnershipIndex(db, [
+    { id: 990001, userId: 'numeric-owner' }, { id: '990002', userId: 'alias-owner' },
+    { id: 990003, conflict: true }, { id: 990004, userId: a.localId },
+  ]);
   const evidence = [];
   const pass = text => { evidence.push(text); console.log('PASS remediation: ' + text); };
   const ref = uid => db.doc(`users/${uid}/integrations/mercado_pago`);

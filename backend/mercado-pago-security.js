@@ -4,7 +4,9 @@ export const securityFailure = (status, code) => Object.assign(new Error(code), 
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 export const NONCE_TTL_MS = 600000;
 export const NONCE_QUOTA = 5;
-export const LEGACY_SCAN_LIMIT = 500;
+// Activation requires an independently verified, complete additive backfill.
+export const MP_INDEX_VERSION = 1;
+export const MP_INDEX_METADATA_PATH = 'mp_ownership_index/active';
 
 export async function authenticatedUid(req, auth) {
   const match = /^Bearer ([^\s]+)$/i.exec(req.headers.authorization || '');
@@ -104,22 +106,55 @@ export function oauthStateStore(db, now = Date.now, platform = 'mercado_pago') {
   };
 }
 
-// Bounded complete inventory: numbers, padded strings and legacy aliases are
-// compared without rewriting records. Truncated results never prove absence.
+// No scans or legacy fallback: a certified complete index is required to prove
+// absence. Only backend administrative tooling may certify it (not implemented).
+function indexFailure(code, id, status = 409) {
+  console.warn('mp_ownership_diagnostic', {
+    code, ...(id ? { merchantKey: digest(id) } : {}),
+  });
+  return securityFailure(status, code);
+}
+async function indexEpoch(db, tx) {
+  const ref = db.doc(MP_INDEX_METADATA_PATH);
+  const snapshot = tx ? await tx.get(ref) : await ref.get();
+  const data = snapshot.data();
+  if (!snapshot.exists || data?.version !== MP_INDEX_VERSION || data?.state !== 'ready' ||
+      typeof data.epoch !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(data.epoch)) {
+    throw indexFailure('merchant_index_not_ready', null, 503);
+  }
+  return data.epoch;
+}
+function indexedOwner(snapshot, epoch, id) {
+  if (!snapshot.exists) return null;
+  const data = snapshot.data();
+  if (data?.indexVersion !== MP_INDEX_VERSION || data.indexEpoch !== epoch ||
+      data.state !== 'owned' || typeof data.userId !== 'string' || !data.userId ||
+      data.userId.includes('/') || data.userId.length > 128) {
+    throw indexFailure('merchant_ownership_review_required', id);
+  }
+  return data.userId;
+}
+
 export async function canonicalIntegrationMatches(db, merchantId, tx) {
   const id = canonicalMerchantId(merchantId);
-  const query = db.collectionGroup('integrations').limit(LEGACY_SCAN_LIMIT + 1);
-  const snapshot = tx ? await tx.get(query) : await query.get();
-  if (snapshot.size > LEGACY_SCAN_LIMIT) throw securityFailure(503, 'legacy_inventory_required');
-  return snapshot.docs.filter(doc => {
-    const data = doc.data();
-    if (doc.id !== 'mercado_pago' && data.platformId !== 'mercado_pago') return false;
-    if (!/^users\/[^/]+\/integrations\/mercado_pago$/.test(doc.ref.path)) {
-      throw securityFailure(409, 'legacy_path_review_required');
-    }
-    if (data.mercadoPagoUserId == null && data.status !== 'connected') return false;
-    return canonicalMerchantId(data.mercadoPagoUserId) === id;
-  });
+  // Keep epoch, ownership and credentials in one consistent transaction.
+  if (!tx) return db.runTransaction(transaction => canonicalIntegrationMatches(db, id, transaction));
+  const epoch = await indexEpoch(db, tx);
+  const ownerRef = db.collection('mp_account_owners').doc(id);
+  const owner = tx ? await tx.get(ownerRef) : await ownerRef.get();
+  const uid = indexedOwner(owner, epoch, id);
+  if (!uid) return [];
+  const ref = db.doc(`users/${uid}/integrations/mercado_pago`);
+  const integration = tx ? await tx.get(ref) : await ref.get();
+  if (!integration.exists) return [];
+  const data = integration.data();
+  if (data?.platformId !== 'mercado_pago') throw indexFailure('merchant_integration_review_required', id);
+  let actual;
+  try { actual = canonicalMerchantId(data.mercadoPagoUserId); }
+  catch { throw indexFailure('merchant_integration_review_required', id); }
+  // A UID may explicitly replace its platform account. The old index remains
+  // reserved, but must not route its events using the replacement credentials.
+  return actual === id ? [integration] : [];
 }
 
 export async function persistOwnedIntegration(db, userId, merchantId, writes, authorization) {
@@ -127,18 +162,10 @@ export async function persistOwnedIntegration(db, userId, merchantId, writes, au
   const ownerRef = db.collection('mp_account_owners').doc(id);
   await db.runTransaction(async tx => {
     await assertAuthorizationGeneration(tx, db, authorization, userId);
-    const canonicalOwner = await tx.get(ownerRef);
-    if (canonicalOwner.exists && canonicalOwner.data().userId !== userId) {
-      throw securityFailure(409, 'merchant_ownership_review_required');
-    }
-    const owners = await tx.get(db.collection('mp_account_owners').limit(LEGACY_SCAN_LIMIT + 1));
-    if (owners.size > LEGACY_SCAN_LIMIT) throw securityFailure(503, 'legacy_inventory_required');
-    const existing = await canonicalIntegrationMatches(db, id, tx);
-    if (owners.docs.some(doc => canonicalMerchantId(doc.id) === id && doc.data().userId !== userId) ||
-        existing.some(doc => doc.ref.parent.parent.id !== userId)) {
-      throw securityFailure(409, 'merchant_ownership_review_required');
-    }
-    tx.set(ownerRef, { userId }, { merge: false });
+    const epoch = await indexEpoch(db, tx);
+    const owner = indexedOwner(await tx.get(ownerRef), epoch, id);
+    if (owner && owner !== userId) throw indexFailure('merchant_ownership_review_required', id);
+    tx.set(ownerRef, { userId, indexVersion: MP_INDEX_VERSION, indexEpoch: epoch, state: 'owned' });
     for (const [ref, data] of writes) {
       tx.set(ref, ref.path.endsWith('/integrations/mercado_pago') ? { ...data, mercadoPagoUserId: id } : data, { merge: true });
     }

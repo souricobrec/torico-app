@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fixtureOwnershipIndex } from './ownership-index-fixtures.mjs';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { exchangeOAuthToken } from '../oauth-token-exchange.js';
@@ -6,6 +7,7 @@ import { authenticatedUid, oauthStateStore, persistOwnedIntegration } from '../m
 
 export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
   assert.match(projectId, /^demo-/);
+  await fixtureOwnershipIndex(db, [{ id: '987002', conflict: true }]);
   const req = token => ({ headers: { authorization: `Bearer ${token}` }, query: { userId: b.localId } });
   assert.equal(await authenticatedUid(req(a.idToken), auth), a.localId);
   await assert.rejects(authenticatedUid({ headers: {} }, auth), { status: 401 });
@@ -71,7 +73,7 @@ export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
   }
   await assert.rejects(persistOwnedIntegration(db, 'legacy-a', '987002', [], await authorization('legacy-a')), { status: 409 });
   assert.equal((await db.doc('users/legacy-b/integrations/mercado_pago').get()).data().status, 'connected');
-  assert.equal((await db.doc('mp_account_owners/987002').get()).exists, false);
+  assert.equal((await db.doc('mp_account_owners/987002').get()).data().state, 'conflict');
 
   await db.doc(`users/${a.localId}/sales/fixture-sale`).set({ amount: 1, status: 'approved' });
   const root = `http://127.0.0.1:18891/v1/projects/${projectId}/databases/(default)/documents/`;
@@ -87,8 +89,9 @@ export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
   assert.equal((await call(`users/${b.localId}`, { displayName: { stringValue: 'Fixture' }, plan: { stringValue: 'plus' } })).status, 403);
   await db.doc(`users/${b.localId}`).set({ plan: 'plus', displayName: 'Admin fixture' });
   assert.equal((await call(`users/${b.localId}`)).status, 200);
-  for (const path of ['mp_account_owners/987001', 'mp_oauth_nonces/anything', 'oauth_nonce_slots/anything', 'oauth_authorization_controls/anything']) {
+  for (const path of ['mp_account_owners/987001', 'mp_ownership_index/active', 'mp_oauth_nonces/anything', 'oauth_nonce_slots/anything', 'oauth_authorization_controls/anything']) {
     assert.equal((await call(path)).status, 403);
+    assert.equal((await call(path, { state: { stringValue: 'ready' } })).status, 403);
   }
   console.log('PASS Beta: Auth token/expiry/UID, nonce concurrency/replay/expiry, merchant uniqueness/legacy conflicts, plan Rules/private registries');
 }

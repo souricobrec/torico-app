@@ -1,6 +1,7 @@
 // Explicit opt-in local integration. No production credentials, imports/exports or cleanup.
 import assert from 'node:assert/strict';
 import { remediationProbes } from './beta-remediation-probes.mjs';
+import { indexScaleProbes } from './beta-index-probes.mjs';
 import { betaSecurityProbes } from './beta-security-probes.mjs';
 import { authenticatedUid } from '../mercado-pago-security.js';
 import { createRequire } from 'node:module';
@@ -58,6 +59,7 @@ try {
   const a=await signup('fixture-a'),b=await signup('fixture-b');
   await betaSecurityProbes({ auth, db, a, b, projectId });
   await remediationProbes({ auth, db, a, b, projectId });
+  await indexScaleProbes({ db, projectId });
   const body={confirmation:'delete_account',noticeVersion:intakeNotice,policyVersion:intakeNotice};
   const call=(token,method='POST',suffix='',key='local_fixture_key_12345678901234567890')=>fetch(base+suffix,{
     method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','Idempotency-Key':key},

@@ -13,11 +13,10 @@ test('canonical MP IDs cover safe numbers and padded strings without rounding un
   }
 });
 
-test('legacy inventory fails closed rather than treating truncated scans as absence', async () => {
-  const db = { collectionGroup: () => ({ limit: count => {
-    assert.equal(count, 501); return { get: async () => ({ size: 501, docs: [] }) };
-  } }) };
-  await assert.rejects(canonicalIntegrationMatches(db, '123'), { code: 'legacy_inventory_required' });
+test('missing certification fails closed without scanning legacy documents', async () => {
+  const db = { runTransaction: fn => fn({ get: ref => ref.get() }),
+    doc: () => ({ get: async () => ({ exists: false, data: () => undefined }) }) };
+  await assert.rejects(canonicalIntegrationMatches(db, '123'), { code: 'merchant_index_not_ready' });
 });
 
 test('OAuth deadline covers ignored abort and slow JSON; no late result reaches persistence', async () => {

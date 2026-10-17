@@ -65,3 +65,28 @@ test('official bootstrap config pins all engine and asset base URLs to the curre
   for (const key of ['entrypointBaseUrl', 'assetBase', 'canvasKitBaseUrl']) assert.ok(source.includes(key));
   assert.doesNotMatch(source, /serviceWorkerSettings/);
 });
+
+test('sealed snapshot HTML bootstrap reference is verified byte for byte before assembly or rollback', () => {
+  for (const reference of ['flutter_bootstrap.js?v=abcd', `/releases/${'f'.repeat(64)}/flutter_bootstrap.js`]) {
+    const first = buildFixture('html-original');
+    const a = versionWebShell(first);
+    const html = join(first, 'releases', a.releaseId, 'index.html');
+    writeFileSync(html, readFileSync(html, 'utf8').replace('flutter_bootstrap.js', reference));
+    const second = buildFixture('html-next');
+    const before = readFileSync(join(second, 'index.html'), 'utf8');
+    assert.throws(() => versionWebShell(second, { previousRoots: [first] }), /mismatch/);
+    assert.equal(readFileSync(join(second, 'index.html'), 'utf8'), before);
+    assert.throws(() => versionWebShell(first), /mismatch/);
+  }
+});
+
+test('sealed snapshots reject extra metadata and nested release files absent from manifest', () => {
+  for (const extra of ['torico-release.json', 'releases/unexpected.js']) {
+    const first = buildFixture('extra-file');
+    const a = versionWebShell(first);
+    const path = join(first, 'releases', a.releaseId, extra);
+    mkdirSync(join(path, '..'), { recursive: true });
+    writeFileSync(path, '{}');
+    assert.throws(() => versionWebShell(buildFixture('next-extra'), { previousRoots: [first] }), /Unexpected immutable files/);
+  }
+});

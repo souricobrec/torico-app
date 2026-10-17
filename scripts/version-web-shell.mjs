@@ -1,6 +1,6 @@
 // Local release assembly only: no deploy, credentials, deletion or network.
 import { readFileSync, writeFileSync, readdirSync, lstatSync, mkdirSync, existsSync, renameSync } from 'node:fs';
-import { resolve, relative, dirname, sep } from 'node:path';
+import { resolve, dirname, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -18,17 +18,17 @@ function child(root, path) {
   if (existsSync(root) && lstatSync(root).isSymbolicLink()) throw Error('Symlinks are forbidden in releases.');
   return target;
 }
-function inventory(root, prefix = '') {
+function inventory(root, prefix = '', sealed = false) {
   const files = {};
   for (const entry of readdirSync(resolve(root, prefix), { withFileTypes: true })) {
     const name = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if ((!prefix && ['releases', 'torico-release.json'].includes(name)) || name === 'release-manifest.json') continue;
+    if ((!prefix && !sealed && ['releases', 'torico-release.json'].includes(name)) || name === 'release-manifest.json') continue;
     const path = child(root, name);
     if (lstatSync(path).isSymbolicLink()) throw Error('Symlinks are forbidden in releases.');
-    if (entry.isDirectory()) Object.assign(files, inventory(root, name));
+    if (entry.isDirectory()) Object.assign(files, inventory(root, name, sealed));
     else if (entry.isFile()) {
       const data = readFileSync(path);
-      files[name] = name === 'index.html' ? Buffer.from(data.toString('utf8').replace(shellPattern, 'src="flutter_bootstrap.js"')) : data;
+      files[name] = !sealed && name === 'index.html' ? Buffer.from(data.toString('utf8').replace(shellPattern, 'src="flutter_bootstrap.js"')) : data;
     }
   }
   return files;
@@ -36,7 +36,7 @@ function inventory(root, prefix = '') {
 function verifySnapshot(root, id) {
   const manifest = JSON.parse(readFileSync(child(root, 'release-manifest.json'), 'utf8'));
   if (manifest.version !== 1 || manifest.id !== id || releaseHash(manifest.files) !== id) throw Error('Invalid immutable manifest.');
-  const files = inventory(root);
+  const files = inventory(root, '', true);
   if (Object.keys(files).length !== Object.keys(manifest.files).length) throw Error('Unexpected immutable files.');
   for (const [name, digest] of Object.entries(manifest.files)) {
     if (!files[name] || hash(files[name]) !== digest) throw Error('Immutable snapshot content mismatch.');
