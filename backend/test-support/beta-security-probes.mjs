@@ -89,7 +89,7 @@ export async function betaSecurityProbes({ auth, db, a, b, projectId }) {
   assert.equal((await call(`users/${b.localId}`, { displayName: { stringValue: 'Fixture' }, plan: { stringValue: 'plus' } })).status, 403);
   await db.doc(`users/${b.localId}`).set({ plan: 'plus', displayName: 'Admin fixture' });
   assert.equal((await call(`users/${b.localId}`)).status, 200);
-  for (const path of ['mp_account_owners/987001', 'mp_ownership_index/active', 'mp_oauth_nonces/anything', 'oauth_nonce_slots/anything', 'oauth_authorization_controls/anything']) {
+  for (const path of ['mp_account_owners/987001', 'mp_ownership_index/active', 'mp_index_certificates/anything', 'mp_index_evidence/anything', 'mp_oauth_nonces/anything', 'oauth_nonce_slots/anything', 'oauth_authorization_controls/anything']) {
     assert.equal((await call(path)).status, 403);
     assert.equal((await call(path, { state: { stringValue: 'ready' } })).status, 403);
   }

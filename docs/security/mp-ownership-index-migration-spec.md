@@ -2,6 +2,8 @@
 
 Estado: **proposta; migração e ativação real não autorizadas**. Código preparado em `codex/beta-final-blockers`, sobre `299f7cb`. Este documento não contém comandos de escrita em produção.
 
+**Atualização em `codex/index-certification-readiness`:** o modelo `ready` isolado abaixo foi substituído pelos controles de [certificação independente](mp-index-certification-design.md). Marcador sem certificateId/sourceRevision/writerProtocol, duas assinaturas confiadas e evidência íntegra não libera o runtime. Usar o desenho novo e o [roteiro de inspeção não executado](controlled-infrastructure-read-only-sop.md) para qualquer planejamento futuro. Os exemplos antigos de ready são históricos e não servem para ativação.
+
 ## Por que a migração é obrigatória
 
 Uma consulta por igualdade não encontra todas as representações legadas (`123`, `"123"`, `" 000123 "`). Ignorar os legados na ausência de resultado permitiria tomar uma conta já vinculada. A varredura global foi removida do runtime, mas sua substituição só pode provar ausência após um inventário completo certificado.

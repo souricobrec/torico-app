@@ -19,7 +19,7 @@ function child(root, path) {
   return target;
 }
 function inventory(root, prefix = '', sealed = false) {
-  const files = {};
+  const files = Object.create(null);
   for (const entry of readdirSync(resolve(root, prefix), { withFileTypes: true })) {
     const name = prefix ? `${prefix}/${entry.name}` : entry.name;
     if ((!prefix && !sealed && ['releases', 'torico-release.json'].includes(name)) || name === 'release-manifest.json') continue;
@@ -39,7 +39,7 @@ function verifySnapshot(root, id) {
   const files = inventory(root, '', true);
   if (Object.keys(files).length !== Object.keys(manifest.files).length) throw Error('Unexpected immutable files.');
   for (const [name, digest] of Object.entries(manifest.files)) {
-    if (!files[name] || hash(files[name]) !== digest) throw Error('Immutable snapshot content mismatch.');
+    if (!Object.hasOwn(files, name) || hash(files[name]) !== digest) throw Error('Immutable snapshot content mismatch.');
   }
   return files;
 }

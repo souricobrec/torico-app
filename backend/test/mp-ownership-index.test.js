@@ -2,14 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canonicalIntegrationMatches, MP_INDEX_METADATA_PATH } from '../mercado-pago-security.js';
 
+import { certificationFixture, fixtureTrust } from '../test-support/certification-fixture.mjs';
+
 function fixture() {
+  Object.assign(process.env, fixtureTrust);
+  const certificate = certificationFixture([{id:'123',userId:'owner'}],{epoch:'test-v1'});
   const data = new Map([
-    [MP_INDEX_METADATA_PATH, { version: 1, state: 'ready', epoch: 'test-v1' }],
+    [MP_INDEX_METADATA_PATH, certificate.marker],
+    [`mp_index_certificates/${certificate.marker.certificateId}`, certificate.certificate],
     ['mp_account_owners/123', { indexVersion: 1, indexEpoch: 'test-v1', state: 'owned', userId: 'owner' }],
     ['users/owner/integrations/mercado_pago', { platformId: 'mercado_pago', mercadoPagoUserId: ' 000123 ', status: 'connected' }],
   ]);
+  for (const [prefix,shard] of Object.entries(certificate.shards)) if(Object.keys(shard.claims).length) data.set(`mp_index_evidence/${certificate.marker.certificateId}_${prefix}`,shard);
   const reads = [];
-  const db = { collection: name => ({ doc: id => db.doc(`${name}/${id}`) }),
+  const db = { projectId: 'demo-index-unit', collection: name => ({ doc: id => db.doc(`${name}/${id}`) }),
     runTransaction: fn => fn({ get: ref => ref.get() }),
     collectionGroup: () => { throw Error('No global inventory allowed'); },
     doc: path => ({ path, get: async () => { reads.push(path); return {
@@ -27,7 +33,7 @@ test('501, 1000 and 2001 unrelated/invalid records do not affect targeted resolu
       data.set(`mp_account_owners/invalid-${i}`, { userId: 'legacy' });
     }
     assert.equal((await canonicalIntegrationMatches(db, 123)).length, 1);
-    assert.equal(reads.length, 3);
+    assert.equal(reads.length, 5);
     assert.ok(reads.every(path => !path.includes('unrelated') && !path.includes('invalid-')));
   }
 });

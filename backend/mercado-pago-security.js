@@ -1,4 +1,7 @@
 import crypto from 'node:crypto';
+import { canonicalMerchantId } from './mercado-pago-id.js';
+import { verifiedMerchantEvidence } from './mp-index-certification.js';
+export { canonicalMerchantId } from './mercado-pago-id.js';
 
 export const securityFailure = (status, code) => Object.assign(new Error(code), { status, code });
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -16,19 +19,6 @@ export async function authenticatedUid(req, auth) {
     if (typeof token.uid !== 'string' || !token.uid) throw new Error();
     return token.uid;
   } catch { throw securityFailure(401, 'invalid_authentication'); }
-}
-
-export function canonicalMerchantId(value) {
-  if (typeof value === 'number') {
-    if (!Number.isSafeInteger(value) || value <= 0) throw securityFailure(409, 'merchant_id_review_required');
-    return String(value);
-  }
-  if (typeof value !== 'string' || !/^\d{1,64}$/.test(value.trim())) {
-    throw securityFailure(409, 'merchant_id_review_required');
-  }
-  const canonical = BigInt(value.trim()).toString();
-  if (canonical === '0' || canonical.length > 30) throw securityFailure(409, 'merchant_id_review_required');
-  return canonical;
 }
 
 export function authorizationControlRef(db, userId, platform = 'mercado_pago') {
@@ -114,22 +104,21 @@ function indexFailure(code, id, status = 409) {
   });
   return securityFailure(status, code);
 }
-async function indexEpoch(db, tx) {
-  const ref = db.doc(MP_INDEX_METADATA_PATH);
-  const snapshot = tx ? await tx.get(ref) : await ref.get();
-  const data = snapshot.data();
-  if (!snapshot.exists || data?.version !== MP_INDEX_VERSION || data?.state !== 'ready' ||
-      typeof data.epoch !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(data.epoch)) {
-    throw indexFailure('merchant_index_not_ready', null, 503);
-  }
-  return data.epoch;
+async function indexContext(db, tx, id) {
+  try { return await verifiedMerchantEvidence(db, tx, id); }
+  catch (error) { throw indexFailure(error.code || 'merchant_certification_invalid', id, 503); }
 }
-function indexedOwner(snapshot, epoch, id) {
+function indexedOwner(snapshot, epoch, id, expected) {
+  if (expected?.state === 'conflict' || (expected && !snapshot.exists)) {
+    throw indexFailure('merchant_ownership_review_required', id);
+  }
   if (!snapshot.exists) return null;
   const data = snapshot.data();
   if (data?.indexVersion !== MP_INDEX_VERSION || data.indexEpoch !== epoch ||
       data.state !== 'owned' || typeof data.userId !== 'string' || !data.userId ||
-      data.userId.includes('/') || data.userId.length > 128) {
+      data.userId.includes('/') || data.userId.length > 128 ||
+      (expected && expected.userId !== data.userId) ||
+      (data.merchantId != null && data.merchantId !== id)) {
     throw indexFailure('merchant_ownership_review_required', id);
   }
   return data.userId;
@@ -139,10 +128,10 @@ export async function canonicalIntegrationMatches(db, merchantId, tx) {
   const id = canonicalMerchantId(merchantId);
   // Keep epoch, ownership and credentials in one consistent transaction.
   if (!tx) return db.runTransaction(transaction => canonicalIntegrationMatches(db, id, transaction));
-  const epoch = await indexEpoch(db, tx);
+  const { epoch, expected } = await indexContext(db, tx, id);
   const ownerRef = db.collection('mp_account_owners').doc(id);
   const owner = tx ? await tx.get(ownerRef) : await ownerRef.get();
-  const uid = indexedOwner(owner, epoch, id);
+  const uid = indexedOwner(owner, epoch, id, expected);
   if (!uid) return [];
   const ref = db.doc(`users/${uid}/integrations/mercado_pago`);
   const integration = tx ? await tx.get(ref) : await ref.get();
@@ -162,10 +151,10 @@ export async function persistOwnedIntegration(db, userId, merchantId, writes, au
   const ownerRef = db.collection('mp_account_owners').doc(id);
   await db.runTransaction(async tx => {
     await assertAuthorizationGeneration(tx, db, authorization, userId);
-    const epoch = await indexEpoch(db, tx);
-    const owner = indexedOwner(await tx.get(ownerRef), epoch, id);
+    const { epoch, expected } = await indexContext(db, tx, id);
+    const owner = indexedOwner(await tx.get(ownerRef), epoch, id, expected);
     if (owner && owner !== userId) throw indexFailure('merchant_ownership_review_required', id);
-    tx.set(ownerRef, { userId, indexVersion: MP_INDEX_VERSION, indexEpoch: epoch, state: 'owned' });
+    tx.set(ownerRef, { userId, merchantId: id, indexVersion: MP_INDEX_VERSION, indexEpoch: epoch, state: 'owned' }, { merge: true });
     for (const [ref, data] of writes) {
       tx.set(ref, ref.path.endsWith('/integrations/mercado_pago') ? { ...data, mercadoPagoUserId: id } : data, { merge: true });
     }

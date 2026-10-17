@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
@@ -81,7 +81,7 @@ test('sealed snapshot HTML bootstrap reference is verified byte for byte before 
 });
 
 test('sealed snapshots reject extra metadata and nested release files absent from manifest', () => {
-  for (const extra of ['torico-release.json', 'releases/unexpected.js']) {
+  for (const extra of ['torico-release.json', 'releases/unexpected.js', '__proto__', 'constructor', 'toString']) {
     const first = buildFixture('extra-file');
     const a = versionWebShell(first);
     const path = join(first, 'releases', a.releaseId, extra);
@@ -89,4 +89,20 @@ test('sealed snapshots reject extra metadata and nested release files absent fro
     writeFileSync(path, '{}');
     assert.throws(() => versionWebShell(buildFixture('next-extra'), { previousRoots: [first] }), /Unexpected immutable files/);
   }
+});
+
+test('special filenames participate in manifests and round-trip unchanged; missing files reject rollback input', () => {
+  const first = buildFixture('special-files');
+  for (const name of ['__proto__', 'constructor', 'toString']) writeFileSync(join(first, name), `content-${name}`);
+  const a = versionWebShell(first);
+  const next = buildFixture('special-next');
+  versionWebShell(next, { previousRoots: [first] });
+  const root = join(next, 'releases', a.releaseId);
+  const manifest = JSON.parse(readFileSync(join(root, 'release-manifest.json'), 'utf8'));
+  for (const name of ['__proto__', 'constructor', 'toString']) {
+    assert.equal(Object.hasOwn(manifest.files, name), true);
+    assert.equal(readFileSync(join(root, name), 'utf8'), `content-${name}`);
+  }
+  unlinkSync(join(root, '__proto__')); // Isolated fixture only.
+  assert.throws(() => versionWebShell(buildFixture('missing-special'), { previousRoots: [next] }), /Unexpected immutable files/);
 });
