@@ -1,4 +1,6 @@
 // Ephemeral in-memory keys and fictitious inventory. Never production tooling.
+import { createCertificationTrust, configureCertificationRuntime } from '../certification-runtime.js';
+import { memoryCertificationAnchor } from './memory-certification-anchor.mjs';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { CERT_PROTOCOL, reconcileInventory, evidenceHash, stableJSON } from '../mp-index-certification.js';
 
@@ -9,7 +11,7 @@ export const fixtureTrust = Object.freeze({
 });
 export const signFixturePayload = payload => ({ payload, signatures: keys.map(key => sign(null, Buffer.from(stableJSON(payload)), key.privateKey).toString('base64url')) });
 
-export function certificationFixture(entries, { projectId = 'demo-index-unit', epoch = 'fixture-v1', now = Date.now() } = {}) {
+export function certificationFixture(entries, { projectId = 'demo-index-unit', epoch = 'fixture-v1', now = Date.now(), generation = 1 } = {}) {
   if (!projectId.startsWith('demo-')) throw Error('Synthetic project only');
   const sources = [], owners = [];
   for (const { id, userId, conflict = false } of entries) {
@@ -21,11 +23,31 @@ export function certificationFixture(entries, { projectId = 'demo-index-unit', e
   }
   const plan = reconcileInventory({ sources, owners, epoch });
   const sourceRevision = evidenceHash({ fixture: true, sourceDigest: plan.sourceDigest });
-  const payload = { version: 1, projectId, epoch, sourceRevision, writerProtocol: CERT_PROTOCOL,
+  const payload = { version: 1, generation, projectId, epoch, sourceRevision, writerProtocol: CERT_PROTOCOL,
     capturedAtMs: now - 1000, issuedAtMs: now - 500, expiresAtMs: now + 3600000,
     sourceDigest: plan.sourceDigest, indexDigest: plan.indexDigest, sourceCount: plan.sourceCount,
     merchantCount: plan.merchantCount, shardDigests: plan.shardDigests };
   const certificateId = evidenceHash(payload);
   return { owners, shards: plan.shards, certificate: signFixturePayload(payload),
-    marker: { version: 1, state: 'ready', epoch, certificateId, sourceRevision, writerProtocol: CERT_PROTOCOL } };
+    marker: { version: 1, generation, state: 'ready', epoch, certificateId, sourceRevision, writerProtocol: CERT_PROTOCOL } };
+}
+
+export function fixtureTrustedContext(marker, { projectId = 'demo-index-unit', clock = Date.now, publicKeys = Object.values(fixtureTrust) } = {}) {
+  return { ...createCertificationTrust({ projectId, publicKeys, clock }),
+    anchor: { projectId, generation: marker.generation, certificateId: marker.certificateId, state: 'active' } };
+}
+const anchors = new WeakMap();
+export function fixtureAnchor(db) {
+  if (!db.projectId.startsWith('demo-')) throw Error('Demo project required');
+  if (!anchors.has(db)) anchors.set(db, memoryCertificationAnchor(db.projectId));
+  return anchors.get(db);
+}
+export async function activateFixtureCertificate(db, marker, { clock = Date.now } = {}) {
+  const anchor = fixtureAnchor(db);
+  const previous = await anchor.read();
+  await anchor.advance(previous?.generation ?? 0, { projectId: db.projectId,
+    generation: marker.generation, certificateId: marker.certificateId, state: 'active' });
+  configureCertificationRuntime(db, { trust: createCertificationTrust({ projectId: db.projectId,
+    publicKeys: Object.values(fixtureTrust), clock }), anchor });
+  return anchor;
 }

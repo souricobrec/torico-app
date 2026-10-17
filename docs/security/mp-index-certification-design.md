@@ -2,6 +2,8 @@
 
 Branch: `codex/index-certification-readiness`, base `41e260b`. Código e validação sintética; não é autorização para configurar, certificar, migrar ou publicar em produção.
 
+**Modelo substituído na branch `codex/certification-trust-anchor-fix`:** ver [confiança e antirrollback](certification-anchor-trust-model.md). A versão nova usa contexto confiável separado, geração assinada e âncora independente obrigatória; projetos reais permanecem explicitamente bloqueados. Configuração pública/env ou marker isolado não ativa a certificação. O texto abaixo preserva o histórico do desenho v1.
+
 ## Mudança de significado de ready
 
 `ready` passa a indicar somente que existe uma referência candidata. Não prova completude. O runtime também exige certificado assinado por **duas chaves Ed25519 distintas**, previamente confiadas pela configuração pública controlada do backend, projeto/epoch/revisão compatíveis, prazo válido e evidência íntegra do merchant consultado.

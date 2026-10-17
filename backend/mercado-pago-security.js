@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { withCertificationRuntime } from './certification-runtime.js';
 import { canonicalMerchantId } from './mercado-pago-id.js';
 import { verifiedMerchantEvidence } from './mp-index-certification.js';
 export { canonicalMerchantId } from './mercado-pago-id.js';
@@ -104,8 +105,8 @@ function indexFailure(code, id, status = 409) {
   });
   return securityFailure(status, code);
 }
-async function indexContext(db, tx, id) {
-  try { return await verifiedMerchantEvidence(db, tx, id); }
+async function indexContext(db, tx, id, trusted) {
+  try { return await verifiedMerchantEvidence(db, tx, id, trusted); }
   catch (error) { throw indexFailure(error.code || 'merchant_certification_invalid', id, 503); }
 }
 function indexedOwner(snapshot, epoch, id, expected) {
@@ -124,11 +125,11 @@ function indexedOwner(snapshot, epoch, id, expected) {
   return data.userId;
 }
 
-export async function canonicalIntegrationMatches(db, merchantId, tx) {
+export async function canonicalIntegrationMatches(db, merchantId, tx, trusted) {
   const id = canonicalMerchantId(merchantId);
   // Keep epoch, ownership and credentials in one consistent transaction.
-  if (!tx) return db.runTransaction(transaction => canonicalIntegrationMatches(db, id, transaction));
-  const { epoch, expected } = await indexContext(db, tx, id);
+  if (!tx) return withCertificationRuntime(db, context => db.runTransaction(transaction => canonicalIntegrationMatches(db, id, transaction, context)));
+  const { epoch, expected } = await indexContext(db, tx, id, trusted);
   const ownerRef = db.collection('mp_account_owners').doc(id);
   const owner = tx ? await tx.get(ownerRef) : await ownerRef.get();
   const uid = indexedOwner(owner, epoch, id, expected);
@@ -149,14 +150,14 @@ export async function canonicalIntegrationMatches(db, merchantId, tx) {
 export async function persistOwnedIntegration(db, userId, merchantId, writes, authorization) {
   const id = canonicalMerchantId(merchantId);
   const ownerRef = db.collection('mp_account_owners').doc(id);
-  await db.runTransaction(async tx => {
+  await withCertificationRuntime(db, trusted => db.runTransaction(async tx => {
     await assertAuthorizationGeneration(tx, db, authorization, userId);
-    const { epoch, expected } = await indexContext(db, tx, id);
+    const { epoch, expected } = await indexContext(db, tx, id, trusted);
     const owner = indexedOwner(await tx.get(ownerRef), epoch, id, expected);
     if (owner && owner !== userId) throw indexFailure('merchant_ownership_review_required', id);
     tx.set(ownerRef, { userId, merchantId: id, indexVersion: MP_INDEX_VERSION, indexEpoch: epoch, state: 'owned' }, { merge: true });
     for (const [ref, data] of writes) {
       tx.set(ref, ref.path.endsWith('/integrations/mercado_pago') ? { ...data, mercadoPagoUserId: id } : data, { merge: true });
     }
-  });
+  }));
 }

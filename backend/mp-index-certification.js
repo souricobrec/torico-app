@@ -1,10 +1,12 @@
 // Pure reconciliation + read-only runtime verification. No signing keys,
 // credential discovery, network collector, migration or certification writer.
-import { createHash, createPublicKey, verify } from 'node:crypto';
+import { createHash, verify } from 'node:crypto';
 import { canonicalMerchantId } from './mercado-pago-id.js';
 
 export const CERT_MAX_AGE_MS = 86400000;
-export const CERT_PROTOCOL = 'certified-index-v1';
+export const CERT_PROTOCOL = 'certified-index-v2';
+// Issuance may lead the server by 30 seconds; expiration has ZERO grace.
+export const CERT_ISSUANCE_SKEW_MS = 30000;
 const fail = code => Object.assign(new Error(code), { status: 503, code });
 export function stableJSON(value) {
   if (Array.isArray(value)) return `[${value.map(stableJSON).join(',')}]`;
@@ -76,22 +78,29 @@ export function reconcileInventory({ sources, owners, epoch }) {
 
 // Trust anchors come only from deployment-controlled public configuration,
 // never from certificate contents. Production provisioning is NOT implemented.
-export function verifyCertificate(envelope, { projectId, epoch, sourceRevision, certificateId, now = Date.now(), env = process.env }) {
+export function verifyCertificate(envelope, { epoch, sourceRevision, certificateId, generation }, trusted) {
   try {
     const { payload, signatures } = envelope || {};
-    if (!payload || payload.version !== 1 || payload.projectId !== projectId || payload.epoch !== epoch ||
+    const now = trusted?.clock();
+    const projectId = trusted?.projectId;
+    if (!Number.isSafeInteger(now) || now < 0 || !projectId ||
+        trusted.anchor?.state !== 'active' || trusted.anchor.projectId !== projectId ||
+        trusted.anchor.certificateId !== certificateId || trusted.anchor.generation !== generation ||
+        !Number.isSafeInteger(generation) || generation < 1) throw Error();
+    if (!payload || payload.version !== 1 || payload.projectId !== projectId || payload.epoch !== epoch || payload.generation !== generation ||
         payload.sourceRevision !== sourceRevision || !hex(sourceRevision) || payload.writerProtocol !== CERT_PROTOCOL ||
         evidenceHash(payload) !== certificateId || !hex(payload.sourceDigest) || !hex(payload.indexDigest) ||
         !Number.isSafeInteger(payload.sourceCount) || payload.sourceCount < 0 ||
         !Number.isSafeInteger(payload.merchantCount) || payload.merchantCount < 0 || payload.merchantCount > payload.sourceCount ||
         !Number.isSafeInteger(payload.capturedAtMs) || !Number.isSafeInteger(payload.issuedAtMs) || !Number.isSafeInteger(payload.expiresAtMs) ||
-        payload.capturedAtMs > payload.issuedAtMs || payload.issuedAtMs > now || payload.expiresAtMs <= now ||
+        payload.capturedAtMs > payload.issuedAtMs || payload.issuedAtMs > now + CERT_ISSUANCE_SKEW_MS || payload.expiresAtMs <= now ||
         payload.expiresAtMs <= payload.issuedAtMs || payload.expiresAtMs - payload.capturedAtMs > CERT_MAX_AGE_MS ||
         !payload.shardDigests || Object.keys(payload.shardDigests).length !== 256 ||
         !Array.isArray(signatures) || signatures.length !== 2) throw Error();
     for (let n = 0; n < 256; n++) if (!hex(payload.shardDigests[n.toString(16).padStart(2, '0')])) throw Error();
-    const anchors = [env.MP_INDEX_CERTIFIER_PUBLIC_KEY, env.MP_INDEX_REVIEWER_PUBLIC_KEY].map(pem => createPublicKey(pem));
-    if (anchors.some(key => key.asymmetricKeyType !== 'ed25519') ||
+    const anchors = trusted.publicKeys;
+    if (!Array.isArray(anchors) || anchors.length !== 2 ||
+        anchors.some(key => key.asymmetricKeyType !== 'ed25519') ||
         anchors[0].export({ type: 'spki', format: 'der' }).equals(anchors[1].export({ type: 'spki', format: 'der' }))) throw Error();
     anchors.forEach((key, i) => {
       if (typeof signatures[i] !== 'string' || !/^[A-Za-z0-9_-]{86}$/.test(signatures[i]) ||
@@ -101,14 +110,18 @@ export function verifyCertificate(envelope, { projectId, epoch, sourceRevision, 
   } catch { throw fail('merchant_certification_invalid_or_stale'); }
 }
 
-export async function verifiedMerchantEvidence(db, tx, id) {
+export async function verifiedMerchantEvidence(db, tx, id, trusted) {
   const marker = (await tx.get(db.doc('mp_ownership_index/active'))).data();
-  if (marker?.version !== 1 || marker.state !== 'ready' || !validEpoch(marker.epoch) ||
-      !hex(marker.certificateId) || !hex(marker.sourceRevision) || marker.writerProtocol !== CERT_PROTOCOL) {
+  const allowed = ['version', 'state', 'epoch', 'certificateId', 'sourceRevision', 'writerProtocol', 'generation'];
+  if (!marker || Object.keys(marker).some(key => !allowed.includes(key)) || marker.version !== 1 || marker.state !== 'ready' || !validEpoch(marker.epoch) ||
+      !Number.isSafeInteger(marker.generation) || marker.generation < 1 || !hex(marker.certificateId) || !hex(marker.sourceRevision) || marker.writerProtocol !== CERT_PROTOCOL) {
     throw fail('merchant_index_not_ready');
   }
   const cert = (await tx.get(db.doc(`mp_index_certificates/${marker.certificateId}`))).data();
-  const payload = verifyCertificate(cert, { ...marker, projectId: db.projectId });
+  const payload = verifyCertificate(cert, {
+    epoch: marker.epoch, sourceRevision: marker.sourceRevision,
+    certificateId: marker.certificateId, generation: marker.generation,
+  }, trusted);
   const prefix = merchantPrefix(id), expectedHash = payload.shardDigests[prefix];
   let shard = emptyShard();
   if (expectedHash !== evidenceHash(shard)) {

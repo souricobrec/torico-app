@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { reconcileInventory, verifyCertificate, evidenceHash, merchantPrefix } from '../mp-index-certification.js';
 import { canonicalIntegrationMatches, persistOwnedIntegration, authorizationControlRef } from '../mercado-pago-security.js';
-import { certificationFixture, fixtureTrust, signFixturePayload } from '../test-support/certification-fixture.mjs';
+import { certificationFixture, fixtureTrust, signFixturePayload, activateFixtureCertificate, fixtureTrustedContext } from '../test-support/certification-fixture.mjs';
 
 const entry = { id: '123', userId: 'owner' };
-function fixture() {
+async function fixture() {
   Object.assign(process.env, fixtureTrust);
   const cert = certificationFixture([entry]);
   const docs = new Map([
@@ -23,6 +23,7 @@ function fixture() {
       for (const [path, data] of writes) docs.set(path, data);
       return result;
     } };
+  await activateFixtureCertificate(db, cert.marker);
   return { db, docs, cert };
 }
 
@@ -37,19 +38,19 @@ test('independent reconciliation rejects omitted owners, missing conflicts, dupl
   assert.throws(() => reconcileInventory({ sources: [{ path: 'users/a/integrations/mercado_pago', data: { mercadoPagoUserId: Number.MAX_SAFE_INTEGER + 1 } }], owners: [], epoch: 'e' }), /unresolved_identifier/);
 });
 
-test('certificate requires two distinct pinned signers, source revision, correct project and a fresh lease', () => {
+test('certificate verifies two pinned signers and server time, never options from the binding', () => {
   const cert = certificationFixture([entry]);
-  const opts = { ...cert.marker, projectId: 'demo-index-unit', env: fixtureTrust };
-  assert.equal(verifyCertificate(cert.certificate, opts).merchantCount, 1);
+  const trust = fixtureTrustedContext(cert.marker);
+  assert.equal(verifyCertificate(cert.certificate, cert.marker, trust).merchantCount, 1);
   for (const changed of [
-    { ...opts, env: {} }, { ...opts, projectId: 'production-other' },
-    { ...opts, sourceRevision: '0'.repeat(64) },
-    { ...opts, now: cert.certificate.payload.expiresAtMs },
-    { ...opts, env: { ...fixtureTrust, MP_INDEX_REVIEWER_PUBLIC_KEY: fixtureTrust.MP_INDEX_CERTIFIER_PUBLIC_KEY } },
-  ]) assert.throws(() => verifyCertificate(cert.certificate, changed), /invalid_or_stale/);
-  assert.throws(() => verifyCertificate({ ...cert.certificate, signatures: [cert.certificate.signatures[0], cert.certificate.signatures[0]] }, opts), /invalid_or_stale/);
+    { ...trust, projectId: 'production-other' },
+    { ...trust, clock: () => cert.certificate.payload.expiresAtMs },
+    { ...trust, publicKeys: [trust.publicKeys[0], trust.publicKeys[0]] },
+  ]) assert.throws(() => verifyCertificate(cert.certificate, cert.marker, changed), /invalid_or_stale/);
+  assert.throws(() => verifyCertificate(cert.certificate, { ...cert.marker, sourceRevision: '0'.repeat(64) }, trust), /invalid_or_stale/);
+  assert.throws(() => verifyCertificate({ ...cert.certificate, signatures: [cert.certificate.signatures[0], cert.certificate.signatures[0]] }, cert.marker, trust), /invalid_or_stale/);
   const altered = structuredClone(cert.certificate); altered.payload.sourceCount++;
-  assert.throws(() => verifyCertificate(altered, opts), /invalid_or_stale/);
+  assert.throws(() => verifyCertificate(altered, cert.marker, trust), /invalid_or_stale/);
 });
 
 test('ready alone, deleted certified owner, absent shard and modified evidence fail safely', async () => {
@@ -59,14 +60,14 @@ test('ready alone, deleted certified owner, absent shard and modified evidence f
     (docs, cert) => docs.delete(`mp_index_evidence/${cert.marker.certificateId}_${merchantPrefix('123')}`),
     (docs, cert) => { docs.get(`mp_index_evidence/${cert.marker.certificateId}_${merchantPrefix('123')}`).claims['123'].userId = 'intruder'; },
   ]) {
-    const { db, docs, cert } = fixture(); change(docs, cert);
+    const { db, docs, cert } = await fixture(); change(docs, cert);
     await assert.rejects(canonicalIntegrationMatches(db, 123));
     assert.equal(docs.get('users/owner/integrations/mercado_pago').status, 'connected');
   }
 });
 
 test('same-owner reconnections preserve audit metadata; unsigned UID change and missing legacy owner cannot claim', async () => {
-  const { db, docs } = fixture();
+  const { db, docs } = await fixture();
   docs.set(authorizationControlRef(db, 'owner').path, { generation: 0 });
   const auth = { userId: 'owner', platformId: 'mercado_pago', generation: 0 };
   for (let i = 0; i < 3; i++) await persistOwnedIntegration(db, 'owner', '000123', [], auth);
@@ -81,7 +82,7 @@ test('same-owner reconnections preserve audit metadata; unsigned UID change and 
 });
 
 test('even properly signed stale or inconsistent certification cannot be activated', async () => {
-  const { db, docs, cert } = fixture();
+  const { db, docs, cert } = await fixture();
   const payload = { ...cert.certificate.payload, capturedAtMs: Date.now() - 90000000 };
   const id = evidenceHash(payload);
   docs.set(`mp_index_certificates/${id}`, signFixturePayload(payload));
@@ -91,7 +92,7 @@ test('even properly signed stale or inconsistent certification cannot be activat
 
 test('signed malformed claims cannot be interpreted as certified merchant absence', async () => {
   for (const invalidClaim of [null, false, 0, 'owned', { state: 'unknown' }]) {
-    const { db, docs, cert } = fixture();
+    const { db, docs, cert } = await fixture();
     const prefix = merchantPrefix('123');
     const shard = { version: 1, claims: { 123: invalidClaim } };
     const payload = { ...cert.certificate.payload, shardDigests: { ...cert.certificate.payload.shardDigests, [prefix]: evidenceHash(shard) } };

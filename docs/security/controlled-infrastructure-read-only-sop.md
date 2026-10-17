@@ -14,13 +14,15 @@ Recursos alvo propostos, a confirmar pela autorização:
 | Banco Firestore | `projects/torico-ca479/databases/(default)`; verificar tipo/localização em metadados, sem presumir região pelo Cloud Run |
 | Integrações | Collection group `integrations`; selecionar só platformId, mercadoPagoUserId e status; caminho fornece UID e ID da plataforma |
 | Titularidade | Coleção raiz `mp_account_owners`; selecionar userId, merchantId, indexVersion, indexEpoch, state; ID do documento fornece alias |
-| Estado do índice | `mp_ownership_index/active`; apenas version/state/epoch/certificateId/sourceRevision/writerProtocol |
+| Estado do índice | `mp_ownership_index/active`; apenas version/state/epoch/certificateId/sourceRevision/writerProtocol/generation |
 | Certificação/evidência | `mp_index_certificates/{id}` / `mp_index_evidence/{id}_{prefixo}` somente se existirem e sua leitura for incluída na autorização; não criar caso 404 |
 | Índices físicos | `projects/torico-ca479/databases/(default)/collectionGroups/-/indexes` e field configurations pertinentes a `integrations` |
 | IAM projeto | Política de `projects/torico-ca479`; identidades/papéis/condições, sanitizados |
 | Backend (opcional) | `projects/torico-ca479/locations/us-central1/services/torico-backend`: apenas identidade de execução/revisão e política de acesso se autorizado; não exportar spec/env completo |
 
 Fora do escopo: documentos de vendas/totais, perfis completos, usuários Firebase Auth, Hosting, Scheduler, secrets, tokens OAuth (inclusive criptografados), logs com payloads, chaves privadas e buckets/backups. Não fazer testes de escrita para provar que a credencial é somente leitura: conferir permissões e identidade documentalmente.
+
+Atualização do modelo de certificação: [âncora independente e antirrollback](certification-anchor-trust-model.md). Nenhuma âncora real/adaptador está implementado ou aprovado; não procurar, provisionar ou acessar serviços presumidos. Uma futura inspeção desse recurso exigirá identificação exata do serviço/domínio de autoridade, credencial e orçamento em autorização própria, sem ampliar silenciosamente esta lista. O backend desta fase recusa configurar certificação fora de `demo-*`.
 
 ## Permissões mínimas propostas — não concedidas
 

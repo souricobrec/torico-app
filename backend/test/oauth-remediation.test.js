@@ -16,7 +16,7 @@ test('canonical MP IDs cover safe numbers and padded strings without rounding un
 test('missing certification fails closed without scanning legacy documents', async () => {
   const db = { runTransaction: fn => fn({ get: ref => ref.get() }),
     doc: () => ({ get: async () => ({ exists: false, data: () => undefined }) }) };
-  await assert.rejects(canonicalIntegrationMatches(db, '123'), { code: 'merchant_index_not_ready' });
+  await assert.rejects(canonicalIntegrationMatches(db, '123'), { code: 'certification_anchor_unconfigured' });
 });
 
 test('OAuth deadline covers ignored abort and slow JSON; no late result reaches persistence', async () => {

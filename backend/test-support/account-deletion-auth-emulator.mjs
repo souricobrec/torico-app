@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { remediationProbes } from './beta-remediation-probes.mjs';
 import { indexScaleProbes } from './beta-index-probes.mjs';
 import { certificationProbes } from './certification-probes.mjs';
+import { certificationAnchorProbes } from './certification-anchor-probes.mjs';
 import { betaSecurityProbes } from './beta-security-probes.mjs';
 import { authenticatedUid } from '../mercado-pago-security.js';
 import { createRequire } from 'node:module';
@@ -62,6 +63,7 @@ try {
   await remediationProbes({ auth, db, a, b, projectId });
   await indexScaleProbes({ db, projectId });
   await certificationProbes({ db, projectId });
+  await certificationAnchorProbes({ db, projectId });
   const body={confirmation:'delete_account',noticeVersion:intakeNotice,policyVersion:intakeNotice};
   const call=(token,method='POST',suffix='',key='local_fixture_key_12345678901234567890')=>fetch(base+suffix,{
     method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','Idempotency-Key':key},
